@@ -1,545 +1,141 @@
-
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Mix Americano – Pro Scorer v6</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --bg:#0f172a; --card:#ffffff; --muted:#64748b; --border:#e2e8f0;
-    --accent:#2563eb; --accent-2:#22c55e; --warn:#f59e0b; --danger:#ef4444;
-    --ring:0 0 0 3px rgba(37,99,235,.15); --radius:16px;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f6f7fb;color:#0f172a;}
-  .header{background:linear-gradient(135deg,#0ea5e9 0%, #2563eb 50%, #7c3aed 100%);color:white;padding:28px 20px;}
-  .wrap{max-width:1200px;margin:0 auto;}
-  .title{font-size:28px;font-weight:700;letter-spacing:.2px;margin:0 0 6px}
-  .subtitle{opacity:.9}
-  .cards{padding:18px 20px}
-  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 6px 24px rgba(2,8,23,.06);padding:18px;margin-bottom:16px;}
-  .row{display:grid;grid-template-columns:repeat(12,1fr);gap:12px;align-items:end}
-  label{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.3px;text-transform:uppercase}
-  input,select,textarea{width:100%;border:1px solid var(--border);border-radius:12px;padding:10px 12px;font:inherit;outline:none;background:#fff}
-  input:focus,select:focus,textarea:focus{box-shadow:var(--ring);border-color:#bfdbfe}
-  textarea{min-height:44px;resize:vertical}
-  .btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--border);padding:10px 14px;border-radius:12px;background:#fff;cursor:pointer;font-weight:600}
-  .btn:hover{background:#f8fafc}
-  .btn.primary{background:#111827;color:#fff;border-color:#111827}
-  .btn.success{background:#16a34a;color:#fff;border-color:#16a34a}
-  .btn.accent{background:#2563eb;color:#fff;border-color:#2563eb}
-  .btn.warn{background:#fef3c7;border-color:#f59e0b}
-  .btn + .btn{margin-left:8px}
-  table{border-collapse:collapse;width:100%;font-size:14px}
-  th,td{padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:left;vertical-align:middle}
-  th{background:#f8fafc;font-weight:700}
-  tr:hover{background:#fafafa}
-  .muted{color:var(--muted);font-size:12px}
-  .pill{display:inline-block;padding:4px 10px;border-radius:999px;background:#eef2ff;border:1px solid #c7d2fe}
-  .rank-1{background:#fff7d6} .rank-2{background:#ededed} .rank-3{background:#ffe9d6}
-  .error{color:var(--danger);font-size:12px;margin-top:6px}
-  .ok{color:var(--accent-2);font-size:12px;margin-top:6px}
-  .section-title{font-size:18px;font-weight:700;margin:0 0 10px}
-  @media (max-width: 960px){ .row{grid-template-columns:1fr 1fr} }
-</style>
-</head>
-<body>
-  <div class="header">
-    <div class="wrap">
-      <div class="title">🎾 Mix Americano – Pro Scorer</div>
-      <div class="subtitle">Input dinamis · Waktu otomatis · Validasi · Save/Load · CSV & PDF · Randomize</div>
-    </div>
-  </div>
-
-  <div class="cards wrap">
-    <div class="card">
-      <div class="section-title">Pengaturan Sesi</div>
-      <div class="row">
-        <div style="grid-column:span 3">
-          <label>Tanggal</label>
-          <input id="sessionDate" type="date"/>
-        </div>
-        <div style="grid-column:span 3">
-          <label>Jam Mulai</label>
-          <input id="startTime" type="time" value="19:00"/>
-        </div>
-        <div style="grid-column:span 3">
-          <label>Menit/Ronde</label>
-          <input id="minutesPerRound" type="number" min="5" value="12"/>
-        </div>
-        <div style="grid-column:span 3">
-          <label>Jumlah Ronde</label>
-          <input id="roundCount" type="number" min="1" value="10"/>
-        </div>
-
-        <div style="grid-column:span 8">
-          <label>Daftar Pemain (pisahkan dengan koma)</label>
-          <textarea id="players" placeholder="contoh: Della, Rangga, Fai, Gizla, Abdi, Diana, Kris, Ichsan, Marchel, Altundri"></textarea>
-        </div>
-        <div style="grid-column:span 4">
-          <label>&nbsp;</label><br/>
-          <button id="btnApplyPlayers" class="btn accent">Terapkan Pemain</button>
-          <button id="btnRandomize" class="btn">Randomize Ronde</button>
-          <button id="btnTemplate10" class="btn">Template 10 Pemain</button>
-          <button id="btnReset" class="btn warn">Reset</button>
-          <div class="muted" style="margin-top:6px">
-            <label><input type="checkbox" id="autoReroll" /> Auto re-roll sampai valid 100%</label>
-          </div>
-        </div>
-
-        <div style="grid-column:span 6">
-          <label>Sesi Tersimpan</label>
-          <div style="display:flex;gap:8px">
-            <select id="savedList"></select>
-            <button id="btnLoad" class="btn">Load</button>
-            <button id="btnDelete" class="btn">Delete</button>
-          </div>
-        </div>
-        <div style="grid-column:span 6">
-          <label>&nbsp;</label><br/>
-          <button id="btnSave" class="btn primary">Save</button>
-          <button id="btnExportRounds" class="btn">Export Rounds CSV</button>
-          <button id="btnExportStandings" class="btn">Export Standings CSV</button>
-          <button id="btnExportPDF" class="btn success">Export PDF</button>
-          <span id="saveMsg" class="muted"></span>
-        </div>
-      </div>
-      <div id="globalError" class="error" style="display:none"></div>
-      <div id="globalInfo" class="muted" style="display:none"></div>
-    </div>
-
-    <div id="pdfArea">
-      <div class="card">
-        <div class="section-title">Jadwal & Input Skor</div>
-        <div class="muted" style="margin-bottom:8px">
-          Validasi: 4 pemain unik/ronde; skor 0–30; jika salah satu skor diisi, pasangannya wajib diisi. Tidak boleh ada pasangan rekan atau matchup yang terulang di ronde lain.
-        </div>
-        <div style="overflow-x:auto">
-          <table id="roundsTable">
-            <thead>
-              <tr>
-                <th>#</th><th>Waktu</th>
-                <th>Player1A</th><th>Player2A</th>
-                <th>Player1B</th><th>Player2B</th>
-                <th>Skor A</th><th>Skor B</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-        <div id="tableError" class="error" style="display:none"></div>
-      </div>
-
-      <div class="card">
-        <div class="section-title">Klasemen</div>
-        <div style="overflow-x:auto">
-          <table id="standings">
-            <thead>
-              <tr>
-                <th>Rank</th><th>Pemain</th><th>Total</th><th>Selisih</th><th>W</th><th>L</th><th>D</th><th>WinRate</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-        <div class="muted">Ranking: Total ↓ → Selisih ↓ → Menang ↓</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- libs for PDF -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNa5lZ8YcE0nTQd3F9gkxz2b1c5mW7CdwgC9fC7kOAvZ3N3k7SgqL+Gz1f9i1b8v2z7OJPj0VQO6n2rt7hU5gA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha512-Yk5XyYwG+QmG3Hf6QqVYyQ6F8s2QKQa5g5y0lqYx1v3pS8qv4V+2m7lKjv6w5nWvGf8GJ0oGJ4Y3l7iHk1JQ3g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mix Americano – 2 Lapangan (v12)</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
   <script>
-  // Ensure JS runs after DOM loaded
-  window.addEventListener('DOMContentLoaded', () => {
-
-    // ===== Utilities =====
-    const pad = n => String(n).padStart(2,'0');
-    const toHM = d => pad(d.getHours())+':'+pad(d.getMinutes());
-    const csvEscape = v => { if(v==null) return ''; const s=String(v); return /[,\"\\n]/.test(s)? '\"'+s.replace(/\"/g,'\"\"')+'\"' : s; };
-    const comb2 = n => (n*(n-1))/2;
-
-    // ===== State =====
-    let players = [];
-    let rounds = []; // {a1,a2,b1,b2,scoreA,scoreB}
-    const KEY = "mixamericano:sessions:v3";
-
-    // ===== Auto Generator (pairs & matchups) =====
-    const pairKey = (a,b) => [a,b].sort().join('|');
-    const matchKeyFromPairs = (p1,p2) => [p1,p2].sort().join(' vs ');
-
-    function autoGenerateRounds(playerList, R){
-      const list = playerList.slice();
-      const N = list.length;
-      const result = [];
-      const plays = Object.fromEntries(list.map(p=>[p,0]));
-      const seenPairs = new Set();
-      const seenMatches = new Set();
-      if (N < 4){
-        for (let i=0;i<R;i++) result.push({a1:'',a2:'',b1:'',b2:'',scoreA:'',scoreB:''});
-        return result;
-      }
-      for (let r=0; r<R; r++){
-        const sorted = list.slice().sort((p,q)=> plays[p]-plays[q] || p.localeCompare(q));
-        let candidates = sorted.slice(0, Math.min(6, sorted.length));
-        if (candidates.length < 4) candidates = sorted.slice(0,4);
-        const chosen = candidates.slice(0,4);
-        const combos = [
-          [ [chosen[0],chosen[1]], [chosen[2],chosen[3]] ],
-          [ [chosen[0],chosen[2]], [chosen[1],chosen[3]] ],
-          [ [chosen[0],chosen[3]], [chosen[1],chosen[2]] ],
-        ];
-        let best = combos[0], bestScore = Infinity;
-        for (const combo of combos){
-          const [tA,tB] = combo;
-          const pkA = pairKey(tA[0], tA[1]);
-          const pkB = pairKey(tB[0], tB[1]);
-          const mk  = matchKeyFromPairs(pkA, pkB);
-          let score = 0;
-          if (seenPairs.has(pkA)) score += 5;
-          if (seenPairs.has(pkB)) score += 5;
-          if (seenMatches.has(mk)) score += 10;
-          score += (plays[tA[0]] + plays[tA[1]] + plays[tB[0]] + plays[tB[1]]) * 0.1;
-          if (score < bestScore){ bestScore = score; best = combo; }
-        }
-        const [[a1,a2],[b1,b2]] = best;
-        result.push({ a1, a2, b1, b2, scoreA:'', scoreB:'' });
-        plays[a1]++; plays[a2]++; plays[b1]++; plays[b2]++;
-        seenPairs.add(pairKey(a1,a2)); seenPairs.add(pairKey(b1,b2));
-        seenMatches.add(matchKeyFromPairs(pairKey(a1,a2), pairKey(b1,b2)));
-      }
-      return result;
-    }
-
-    function isScheduleValid(roundsArr){
-      const seenPairs = new Set();
-      const seenMatches = new Set();
-      const mKey = (a1,a2,b1,b2)=> [pairKey(a1,a2), pairKey(b1,b2)].sort().join(' vs ');
-      for (const r of roundsArr){
-        if (!(r.a1&&r.a2&&r.b1&&r.b2)) continue;
-        const pa = pairKey(r.a1,r.a2), pb = pairKey(r.b1,r.b2);
-        const mk = mKey(r.a1,r.a2,r.b1,r.b2);
-        if (seenPairs.has(pa) || seenPairs.has(pb)) return false;
-        if (seenMatches.has(mk)) return false;
-        seenPairs.add(pa); seenPairs.add(pb); seenMatches.add(mk);
-      }
-      return true;
-    }
-
-    function autoGenerateRoundsRandom(playerList, R, attempts=3000){
-      if (playerList.length < 4){
-        return Array.from({length:R}, ()=>({a1:'',a2:'',b1:'',b2:'',scoreA:'',scoreB:''}));
-      }
-      let last = null;
-      for (let t=0; t<attempts; t++){
-        const shuffled = playerList.slice().sort(()=>Math.random()-0.5);
-        const candidate = autoGenerateRounds(shuffled, R);
-        if (isScheduleValid(candidate)) return candidate;
-        last = candidate;
-      }
-      return last || autoGenerateRounds(playerList, R);
-    }
-
-    async function randomizeSchedule(autoReroll){
-      const R = parseInt(document.getElementById('roundCount').value||'10',10);
-      const N = players.length;
-      const info = document.getElementById('globalInfo');
-      info.style.display = 'none'; info.textContent = '';
-
-      // Quick feasibility check for unique teammates: need 2R <= C(N,2)
-      const maxPairs = comb2(N);
-      if (2*R > maxPairs){
-        info.style.display = 'block';
-        info.textContent = `ℹ️ Catatan: 2×Ronde (${2*R}) > kombinasi pasangan unik C(${N},2)=${maxPairs}. Jadwal tanpa pasangan dobel mungkin tidak selalu bisa.`;
-      }
-
-      if (!autoReroll){
-        rounds = autoGenerateRoundsRandom(players, R, 4000);
-      } else {
-        // Try until valid (bounded attempts)
-        let tries = 0, candidate;
-        const limit = 12000;
-        do {
-          candidate = autoGenerateRoundsRandom(players, R, 1); // 1 attempt inside, outer loop controls
-          tries++;
-          if (isScheduleValid(candidate)) break;
-        } while (tries < limit);
-        rounds = candidate;
-        if (!isScheduleValid(candidate)){
-          info.style.display = 'block';
-          info.textContent += (info.textContent? ' ' : '') + '⚠️ Sudah dicoba banyak kombinasi namun masih ada duplikasi; kurangi jumlah ronde atau tambah pemain, lalu klik Randomize lagi.';
-        }
-      }
-      renderRoundsTable(); computeStandings();
-    }
-
-    // ===== Rendering =====
-    function renderRoundsTable(){
-      const tbody = document.querySelector('#roundsTable tbody');
-      const start = document.getElementById('startTime').value || '19:00';
-      const minutes = parseInt(document.getElementById('minutesPerRound').value||'12',10);
-      const R = parseInt(document.getElementById('roundCount').value||'10',10);
-      while (rounds.length < R) rounds.push({a1:'',a2:'',b1:'',b2:'',scoreA:'',scoreB:''});
-      if (rounds.length > R) rounds = rounds.slice(0, R);
-      const [h,m] = start.split(':').map(Number);
-      const base = new Date(); base.setHours(h); base.setMinutes(m); base.setSeconds(0); base.setMilliseconds(0);
-      tbody.innerHTML = '';
-      for (let i=0;i<R;i++){
-        const r = rounds[i];
-        const t0 = new Date(base.getTime()+i*minutes*60000);
-        const t1 = new Date(t0.getTime()+minutes*60000);
-        const tr = document.createElement('tr');
-        const makeSelect = (key) => {
-          const sel = document.createElement('select');
-          sel.className = 'input';
-          const optEmpty = document.createElement('option'); optEmpty.value=''; optEmpty.textContent='—'; sel.appendChild(optEmpty);
-          players.forEach(p => { const opt=document.createElement('option'); opt.value=p; opt.textContent=p; if (r[key]===p) opt.selected=true; sel.appendChild(opt); });
-          sel.addEventListener('change', e => { rounds[i] = {...rounds[i], [key]: e.target.value}; validateAll(); computeStandings(); });
-          return sel;
-        };
-        const tdIdx = document.createElement('td'); tdIdx.textContent = 'R'+(i+1);
-        const tdTime= document.createElement('td'); tdTime.textContent = toHM(t0)+'–'+toHM(t1);
-        const tdA1  = document.createElement('td'); tdA1.appendChild(makeSelect('a1'));
-        const tdA2  = document.createElement('td'); tdA2.appendChild(makeSelect('a2'));
-        const tdB1  = document.createElement('td'); tdB1.appendChild(makeSelect('b1'));
-        const tdB2  = document.createElement('td'); tdB2.appendChild(makeSelect('b2'));
-        const tdSA  = document.createElement('td'); const inSA=document.createElement('input'); inSA.className='input'; inSA.inputMode='numeric'; inSA.value=r.scoreA||'';
-        inSA.addEventListener('input', e => { rounds[i]={...rounds[i],scoreA:e.target.value.replace(/[^0-9]/g,'')}; validateAll(); computeStandings(); }); tdSA.appendChild(inSA);
-        const tdSB  = document.createElement('td'); const inSB=document.createElement('input'); inSB.className='input'; inSB.inputMode='numeric'; inSB.value=r.scoreB||'';
-        inSB.addEventListener('input', e => { rounds[i]={...rounds[i],scoreB:e.target.value.replace(/[^0-9]/g,'')}; validateAll(); computeStandings(); }); tdSB.appendChild(inSB);
-        tr.appendChild(tdIdx); tr.appendChild(tdTime);
-        tr.appendChild(tdA1); tr.appendChild(tdA2); tr.appendChild(tdB1); tr.appendChild(tdB2);
-        tr.appendChild(tdSA); tr.appendChild(tdSB);
-        tbody.appendChild(tr);
-      }
-      validateAll();
-    }
-
-    function computeStandings(){
-      const data = {}; players.forEach(p=> data[p]={ total:0, diff:0, win:0, lose:0, draw:0 });
-      rounds.forEach(r=>{
-        const a = Number(r.scoreA||0), b = Number(r.scoreB||0);
-        if (!(r.a1&&r.a2&&r.b1&&r.b2)) return;
-        [r.a1,r.a2].forEach(p=>{ if (data[p]){ data[p].total+=a; data[p].diff+=(a-b); } });
-        [r.b1,r.b2].forEach(p=>{ if (data[p]){ data[p].total+=b; data[p].diff+=(b-a); } });
-        if (a>0||b>0){
-          if (a>b){ [r.a1,r.a2].forEach(p=>data[p]&&data[p].win++); [r.b1,r.b2].forEach(p=>data[p]&&data[p].lose++); }
-          else if (a<b){ [r.b1,r.b2].forEach(p=>data[p]&&data[p].win++); [r.a1,r.a2].forEach(p=>data[p]&&data[p].lose++); }
-          else { [r.a1,r.a2,r.b1,r.b2].forEach(p=>data[p]&&data[p].draw++); }
-        }
-      });
-      let arr = Object.entries(data).map(([player,v])=>({player, ...v}));
-      arr.sort((p,q)=> q.total-p.total || q.diff-p.diff || q.win-p.win || p.player.localeCompare(q.player));
-      let rank=1; arr.forEach((it,i)=>{ if(i>0){const pv=arr[i-1]; const tie=(it.total===pv.total && it.diff===pv.diff && it.win===pv.win); rank = tie? rank : i+1;} it.rank=rank; const gp=it.win+it.lose+it.draw; it.winRate = gp? it.win/gp : 0; });
-      const tbody = document.querySelector('#standings tbody'); tbody.innerHTML='';
-      arr.forEach(s=>{ const tr=document.createElement('tr'); tr.className = s.rank===1?'rank-1': s.rank===2?'rank-2': s.rank===3?'rank-3':'';
-        tr.innerHTML = `<td><span class="pill">${s.rank}</span></td><td style="font-weight:600">${s.player}</td><td>${s.total}</td><td>${s.diff}</td><td>${s.win}</td><td>${s.lose}</td><td>${s.draw}</td><td>${(s.winRate*100).toFixed(1)}%</td>`; tbody.appendChild(tr);
-      });
-    }
-
-    // ===== Validation =====
-    function validateAll(){
-      let errors = [];
-      const dateVal = document.getElementById('sessionDate').value;
-      if (!dateVal) errors.push('Tanggal wajib diisi.');
-
-      const tableErrors = [];
-      rounds.forEach((r,i)=>{
-        const names = [r.a1,r.a2,r.b1,r.b2];
-        if (names.some(n=>!n)) tableErrors.push(`R${i+1}: nama pemain belum lengkap.`);
-        const clean = names.filter(Boolean);
-        const set = new Set(clean); if (set.size !== clean.length) tableErrors.push(`R${i+1}: ada nama pemain yang dobel dalam ronde.`);
-        if (clean.some(n=> !players.includes(n))) tableErrors.push(`R${i+1}: ada pemain yang tidak ada di daftar pemain.`);
-        const a = r.scoreA, b = r.scoreB;
-        if ((a!=='' && b==='') || (a==='' && b!=='')) tableErrors.push(`R${i+1}: isi kedua skor.`);
-        if (a!=='' && (isNaN(Number(a)) || Number(a)<0 || Number(a)>30)) tableErrors.push(`R${i+1}: skor A harus 0–30.`);
-        if (b!=='' && (isNaN(Number(b)) || Number(b)<0 || Number(b)>30)) tableErrors.push(`R${i+1}: skor B harus 0–30.`);
-      });
-      // cross-round duplicate teammates & matchups
-      const seenPairs = new Set(), seenMatches = new Set();
-      for (let i=0;i<rounds.length;i++){
-        const r = rounds[i]; if (!(r.a1&&r.a2&&r.b1&&r.b2)) continue;
-        const pa=pairKey(r.a1,r.a2), pb=pairKey(r.b1,r.b2);
-        const mk=matchKeyFromPairs(pa,pb);
-        if (seenPairs.has(pa)) tableErrors.push(`R${i+1}: pasangan rekan (${r.a1}+${r.a2}) sudah dipakai di ronde sebelumnya.`);
-        if (seenPairs.has(pb)) tableErrors.push(`R${i+1}: pasangan rekan (${r.b1}+${r.b2}) sudah dipakai di ronde sebelumnya.`);
-        if (seenMatches.has(mk)) tableErrors.push(`R${i+1}: matchup (${r.a1}+${r.a2}) vs (${r.b1}+${r.b2}) sudah pernah terjadi.`);
-        seenPairs.add(pa); seenPairs.add(pb); seenMatches.add(mk);
-      }
-
-      const ge = document.getElementById('globalError');
-      const te = document.getElementById('tableError');
-      if (errors.length){ ge.style.display='block'; ge.textContent='⚠️ '+errors[0]; } else { ge.style.display='none'; ge.textContent=''; }
-      if (tableErrors.length){ te.style.display='block'; te.innerHTML='• '+tableErrors.join('<br/>• '); } else { te.style.display='none'; te.textContent=''; }
-      return !(errors.length || tableErrors.length);
-    }
-
-    // ===== Save / Load =====
-    function getAllSessions(){ try{ return JSON.parse(localStorage.getItem(KEY)||'{}'); }catch(e){ return {}; } }
-    function setAllSessions(o){ localStorage.setItem(KEY, JSON.stringify(o)); }
-    function refreshSavedList(){
-      const sel = document.getElementById('savedList');
-      const all = getAllSessions(); sel.innerHTML=''; Object.keys(all).sort().forEach(k=>{ const op=document.createElement('option'); op.value=k; op.textContent=k; sel.appendChild(op); });
-    }
-    function saveSession(){
-      // if (!validateAll()){ document.getElementById('saveMsg').textContent=''; return; }
-      const payload = {
-        date: document.getElementById('sessionDate').value,
-        start: document.getElementById('startTime').value,
-        minutes: parseInt(document.getElementById('minutesPerRound').value||'12',10),
-        R: parseInt(document.getElementById('roundCount').value||'10',10),
-        players, rounds
-      };
-      const all = getAllSessions(); all[payload.date] = payload; setAllSessions(all);
-      refreshSavedList(); const msg=document.getElementById('saveMsg'); msg.textContent='✅ Tersimpan.'; setTimeout(()=>msg.textContent='',1800);
-    }
-    function loadSelected(){
-      const sel=document.getElementById('savedList'); const key=sel.value; if(!key) return;
-      const s=getAllSessions()[key];
-      document.getElementById('sessionDate').value=s.date||'';
-      document.getElementById('startTime').value=s.start||'19:00';
-      document.getElementById('minutesPerRound').value=s.minutes||12;
-      document.getElementById('roundCount').value=s.R||10;
-      players=(s.players||[]);
-      document.getElementById('players').value = players.join(', ');
-      rounds=(s.rounds||[]).map(x=>({...x}));
-      renderRoundsTable(); computeStandings();
-    }
-    function deleteSelected(){
-      const sel=document.getElementById('savedList'); const key=sel.value; if(!key) return;
-      const all=getAllSessions(); delete all[key]; setAllSessions(all); refreshSavedList();
-    }
-
-    // ===== CSV / PDF =====
-    function exportRoundsCSV(){
-      const header=['Time','Player1A','Player2A','Player1B','Player2B','SkorA','SkorB'];
-      const start=document.getElementById('startTime').value||'19:00';
-      const minutes=parseInt(document.getElementById('minutesPerRound').value||'12',10);
-      const R=parseInt(document.getElementById('roundCount').value||'10',10);
-      const [h,m]=start.split(':').map(Number); const base=new Date(); base.setHours(h); base.setMinutes(m); base.setSeconds(0); base.setMilliseconds(0);
-      const rows=[]; for(let i=0;i<R;i++){ const t0=new Date(base.getTime()+i*minutes*60000); const t1=new Date(t0.getTime()+minutes*60000);
-        const r=rounds[i]||{a1:'',a2:'',b1:'',b2:'',scoreA:'',scoreB:''};
-        rows.push([toHM(t0)+'–'+toHM(t1), r.a1, r.a2, r.b1, r.b2, r.scoreA||'', r.scoreB||'']); }
-      const csv=[header, ...rows].map(r=>r.map(csvEscape).join(',')).join('\\n');
-      const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-      const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='rounds.csv'; a.click(); URL.revokeObjectURL(url);
-    }
-    function exportStandingsCSV(){
-      const data = computeForExport();
-      const header=['Player','Total','Selisih','Menang','Kalah','Seri','WinRate','Rank'];
-      const rows = data.map(s=>[s.player,s.total,s.diff,s.win,s.lose,s.draw,(s.winRate*100).toFixed(1)+'%',s.rank]);
-      const csv=[header, ...rows].map(r=>r.map(csvEscape).join(',')).join('\\n');
-      const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-      const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='standings.csv'; a.click(); URL.revokeObjectURL(url);
-    }
-    function computeForExport(){
-      const data={}; players.forEach(p=>data[p]={total:0,diff:0,win:0,lose:0,draw:0});
-      rounds.forEach(r=>{ const a=Number(r.scoreA||0), b=Number(r.scoreB||0);
-        if (!(r.a1&&r.a2&&r.b1&&r.b2)) return;
-        [r.a1,r.a2].forEach(p=>{ if(data[p]){data[p].total+=a; data[p].diff+=(a-b);} });
-        [r.b1,r.b2].forEach(p=>{ if(data[p]){data[p].total+=b; data[p].diff+=(b-a);} });
-        if (a>0||b>0){ if(a>b){[r.a1,r.a2].forEach(p=>data[p]&&data[p].win++); [r.b1,r.b2].forEach(p=>data[p]&&data[p].lose++); }
-        else if(a<b){[r.b1,r.b2].forEach(p=>data[p]&&data[p].win++); [r.a1,r.a2].forEach(p=>data[p]&&data[p].lose++);} else {[r.a1,r.a2,r.b1,r.b2].forEach(p=>data[p]&&data[p].draw++);} } });
-      let arr=Object.entries(data).map(([player,v])=>({player,...v}));
-      arr.sort((p,q)=> q.total-p.total || q.diff-p.diff || q.win-p.win || p.player.localeCompare(q.player));
-      let rank=1; arr.forEach((it,i)=>{ if(i>0){const pv=arr[i-1]; const tie=(it.total===pv.total && it.diff===pv.diff && it.win===pv.win); rank=tie?rank:i+1;} it.rank=rank; const gp=it.win+it.lose+it.draw; it.winRate=gp?it.win/gp:0; });
-      return arr;
-    }
-    async function exportPDF(){
-      const area=document.getElementById('pdfArea');
-      const { jsPDF } = window.jspdf; const pdf=new jsPDF('p','pt','a4');
-      const canvas=await html2canvas(area,{scale:2,background:'#ffffff'});
-      const pageWidth=595, pageHeight=842, margin=24;
-      const imgWidth=pageWidth-margin*2; const imgHeight=canvas.height*imgWidth/canvas.width;
-      let y=0, page=0;
-      while (y < imgHeight){
-        if (page>0) pdf.addPage();
-        const srcY = y * (canvas.height / imgHeight);
-        const sHeight = Math.min(canvas.height - srcY, canvas.height * (pageHeight - margin*2) / imgHeight);
-        const slice = document.createElement('canvas'); slice.width=canvas.width; slice.height=sHeight;
-        const ctx=slice.getContext('2d'); ctx.drawImage(canvas,0,srcY,canvas.width,sHeight,0,0,slice.width,slice.height);
-        const sliceData = slice.toDataURL('image/png'); const sliceHeightPt = (sHeight / canvas.width) * imgWidth;
-        pdf.addImage(sliceData,'PNG',margin,margin,imgWidth,sliceHeightPt);
-        y += sliceHeightPt; page++;
-      }
-      const dateStr=document.getElementById('sessionDate').value || 'session'; pdf.save(`MixAmericano_${dateStr}.pdf`);
-    }
-
-    // ===== Events =====
-    document.getElementById('btnTemplate10').addEventListener('click', ()=>{
-      const TEMPLATE_10 = [
-        { a1:"Della", a2:"Altundri", b1:"Gizla", b2:"Rangga" },
-        { a1:"Altundri", a2:"Rangga", b1:"Marchel", b2:"Kris" },
-        { a1:"Della", a2:"Gizla", b1:"Fai", b2:"Diana" },
-        { a1:"Abdi", a2:"Ichsan", b1:"Altundri", b2:"Rangga" },
-        { a1:"Fai", a2:"Ichsan", b1:"Abdi", b2:"Diana" },
-        { a1:"Della", a2:"Marchel", b1:"Gizla", b2:"Kris" },
-        { a1:"Della", a2:"Ichsan", b1:"Abdi", b2:"Gizla" },
-        { a1:"Fai", a2:"Marchel", b1:"Diana", b2:"Kris" },
-        { a1:"Fai", a2:"Altundri", b1:"Rangga", b2:"Diana" },
-        { a1:"Abdi", a2:"Ichsan", b1:"Marchel", b2:"Kris" },
-      ];
-      document.getElementById('roundCount').value = 10;
-      document.getElementById('minutesPerRound').value = 12;
-      players = Array.from(new Set(TEMPLATE_10.flatMap(r=>[r.a1,r.a2,r.b1,r.b2])));
-      document.getElementById('players').value = players.join(', ');
-      rounds = TEMPLATE_10.map(r=>({...r, scoreA:'', scoreB:''}));
-      renderRoundsTable(); computeStandings();
-    });
-
-    document.getElementById('btnApplyPlayers').addEventListener('click', ()=>{
-      const raw = document.getElementById('players').value || '';
-      players = raw.split(',').map(s=>s.trim()).filter(Boolean);
-      const R = parseInt(document.getElementById('roundCount').value||'10',10);
-      rounds = autoGenerateRounds(players, R);
-      renderRoundsTable(); computeStandings();
-    });
-
-    document.getElementById('btnRandomize').addEventListener('click', ()=>{
-      const raw = document.getElementById('players').value || '';
-      players = raw.split(',').map(s=>s.trim()).filter(Boolean);
-      const auto = document.getElementById('autoReroll').checked;
-      randomizeSchedule(auto);
-    });
-
-    document.getElementById('btnReset').addEventListener('click', ()=>{
-      players=[]; rounds=[]; document.getElementById('players').value='';
-      renderRoundsTable(); computeStandings();
-    });
-
-    document.getElementById('startTime').addEventListener('change', renderRoundsTable);
-    document.getElementById('minutesPerRound').addEventListener('input', renderRoundsTable);
-    document.getElementById('roundCount').addEventListener('input', ()=>{
-      const R = parseInt(document.getElementById('roundCount').value||'10',10);
-      rounds = autoGenerateRounds(players, R);
-      renderRoundsTable(); computeStandings();
-    });
-
-    document.getElementById('btnSave').addEventListener('click', saveSession);
-    document.getElementById('btnLoad').addEventListener('click', ()=>loadSelected());
-    document.getElementById('btnDelete').addEventListener('click', ()=>deleteSelected());
-    document.getElementById('btnExportRounds').addEventListener('click', exportRoundsCSV);
-    document.getElementById('btnExportStandings').addEventListener('click', exportStandingsCSV);
-    document.getElementById('btnExportPDF').addEventListener('click', exportPDF);
-
-    function refreshSavedList(){
-      const sel = document.getElementById('savedList');
-      const all = getAllSessions(); sel.innerHTML=''; Object.keys(all).sort().forEach(k=>{ const op=document.createElement('option'); op.value=k; op.textContent=k; sel.appendChild(op); });
-    }
-    function getAllSessions(){ try{ return JSON.parse(localStorage.getItem(KEY)||'{}'); }catch(e){ return {}; } }
-    function setAllSessions(o){ localStorage.setItem(KEY, JSON.stringify(o)); }
-
-    // Init
-    refreshSavedList();
-    // Start with an empty table
-    renderRoundsTable(); computeStandings();
-  });
+    tailwind.config = { darkMode: 'class' };
   </script>
+</head>
+<body class="bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
+  <header class="sticky top-0 z-10 shadow-sm">
+    <div class="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 text-white">
+      <div class="mx-auto max-w-7xl px-4 py-4 md:py-6 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
+        <div class="flex items-center gap-3">
+          <div class="h-10 w-10 md:h-12 md:w-12 rounded-2xl bg-white/20 grid place-items-center shadow"><span class="text-lg md:text-xl">🎾</span></div>
+          <div>
+            <h1 class="text-xl md:text-2xl font-bold leading-tight">Mix Americano – 2 Lapangan</h1>
+            <p class="text-xs md:text-sm text-white/90">Simulasi 2 jam, 2 lapangan • Ranking: <span class="font-semibold">Total ↓ → Selisih ↓ → Menang ↓</span></p>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-2 items-center">
+          <button id="btnTheme" class="px-3 py-2 rounded-xl bg-white/20 text-white font-semibold shadow hover:bg-white/30" title="Toggle Dark Mode">🌙/☀️</button>
+          <div class="flex items-center gap-2 bg-white/10 rounded-xl p-2">
+            <label class="text-xs">Skala</label>
+            <input id="uiScale" type="range" min="80" max="130" value="100" class="w-28 accent-white">
+          </div>
+          <button id="btnSave" class="px-4 py-2 rounded-xl bg-white text-indigo-700 font-semibold shadow hover:opacity-90">💾 Save ke JSON</button>
+          <div class="flex items-stretch gap-2 bg-white/10 rounded-xl p-1">
+            <select id="datePicker" class="px-3 py-2 rounded-lg bg-white/90 text-gray-900">
+              <option value="">Pilih tanggal…</option>
+            </select>
+            <button id="btnLoadByDate" class="px-3 py-2 rounded-lg bg-white text-indigo-700 font-semibold shadow hover:opacity-90">Load</button>
+          </div>
+          <button id="btnImportJSON" class="px-3 py-2 rounded-lg bg-emerald-600 text-white font-semibold shadow hover:opacity-90">Load JSON File</button>
+          <input id="fileInputJSON" type="file" accept="application/json" class="hidden" />
+        </div>
+      </div>
+    </div>
+    <div class="bg-white/90 dark:bg-gray-800/90 backdrop-blur border-b border-gray-200 dark:border-gray-700">
+      <div class="max-w-7xl mx-auto px-4 py-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+        <div>
+          <label class="block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Tanggal</label>
+          <input id="sessionDate" type="date" class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100">
+        </div>
+        <div>
+          <label class="block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Mulai</label>
+          <input id="startTime" type="time" class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value="19:00">
+        </div>
+        <div>
+          <label class="block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Menit/Ronde</label>
+          <input id="minutesPerRound" type="number" min="5" class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value="12">
+        </div>
+        <div>
+          <label class="block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Ronde/Lapangan</label>
+          <input id="roundCount" type="number" min="1" class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value="10">
+        </div>
+      </div>
+      <!-- Collapsible players panel -->
+      <div class="max-w-7xl mx-auto px-4 pb-4">
+        <div class="mt-2 p-3 rounded-2xl border bg-white dark:bg-gray-800 dark:border-gray-700">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <button id="btnCollapsePlayers" class="px-2 py-1 text-xs rounded-lg border bg-white dark:bg-gray-800 dark:border-gray-700">▼ Pemain</button>
+              <span class="text-xs text-gray-500 dark:text-gray-400">klik untuk expand/collapse</span>
+            </div>
+            <div class="flex gap-2">
+              <button id="btnPasteText" class="px-2 py-1 text-xs rounded-lg border bg-white dark:bg-gray-800 dark:border-gray-700">Edit sebagai teks</button>
+              <button id="btnClearPlayers" class="px-2 py-1 text-xs rounded-lg border bg-white dark:bg-gray-800 dark:border-gray-700">Kosongkan</button>
+            </div>
+          </div>
+          <div id="playersPanel" class="mt-3 hidden">
+            <div class="flex gap-2 mb-2">
+              <input id="newPlayer" placeholder="Nama pemain…" class="flex-1 border rounded-lg px-3 py-2 bg-white dark:bg-gray-900 dark:border-gray-700">
+              <button id="btnAddPlayer" class="px-3 py-2 rounded-lg bg-indigo-600 text-white">Tambah</button>
+            </div>
+            <ul id="playersList" class="min-h-[44px] grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2"></ul>
+            <div id="playersWarnings" class="text-xs mt-2"></div>
+            <div id="textModal" class="hidden mt-2">
+              <textarea id="playersText" rows="6" class="w-full border rounded-xl px-3 py-2 bg-white dark:bg-gray-900 dark:border-gray-700" placeholder="Satu nama per baris"></textarea>
+              <div class="flex gap-2 mt-2">
+                <button id="btnApplyText" class="px-3 py-2 rounded-lg bg-emerald-600 text-white">Terapkan</button>
+                <button id="btnCancelText" class="px-3 py-2 rounded-lg border bg-white dark:bg-gray-800 dark:border-gray-700">Batal</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
+    <section class="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+        <button id="btnApplyPlayersActive" class="px-4 py-2 rounded-xl bg-indigo-600 text-white shadow hover:bg-indigo-700">Terapkan (Tab Aktif) & Auto Pasangan</button>
+        <button id="btnResetActive" class="px-4 py-2 rounded-xl border shadow hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-700">♻️ Reset Tab Aktif</button>
+        <button id="btnClearScores" class="px-4 py-2 rounded-xl border shadow hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-700">Clear Skor (Kedua Tab)</button>
+        <button id="btnExportRounds" class="px-4 py-2 rounded-xl border shadow hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-700">Export Rounds CSV</button>
+        <button id="btnExportStandings" class="px-4 py-2 rounded-xl border shadow hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-700">Export Standings CSV</button>
+      </div>
+      <div id="globalInfo" class="text-sm text-gray-600 dark:text-gray-300 mt-3"></div>
+      <div class="flex items-center gap-2"><span id="unsavedDot" class="hidden inline-block w-2 h-2 rounded-full bg-amber-500"></span><span id="lastSaved" class="text-xs text-gray-500 dark:text-gray-400"></span></div>
+    </section>
+
+    <section class="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow">
+      <div class="border-b border-gray-200 dark:border-gray-700 flex gap-3 mb-3 overflow-x-auto">
+        <button id="tab1" class="pb-2 border-b-2 tab-active">Lapangan 1</button>
+        <button id="tab2" class="pb-2 border-b-2 border-transparent text-gray-500">Lapangan 2</button>
+      </div>
+      <div id="court1" class="space-y-3"></div>
+      <div id="court2" class="space-y-3 hidden"></div>
+      <div id="errors" class="mt-3"></div>
+    </section>
+
+    <section class="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow">
+      <h2 class="text-lg md:text-xl font-semibold mb-2">Klasemen Gabungan</h2>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm dark-table" id="standings">
+          <thead>
+            <tr class="text-left border-b border-gray-200 dark:border-gray-700">
+              <th class="py-2 pr-4">Rank</th>
+              <th class="py-2 pr-4">Pemain</th>
+              <th class="py-2 pr-4">Total</th>
+              <th class="py-2 pr-4">Selisih</th>
+              <th class="py-2 pr-4">W</th>
+              <th class="py-2 pr-4">L</th>
+              <th class="py-2 pr-4">D</th>
+              <th class="py-2 pr-4">WinRate</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
 </body>
 </html>

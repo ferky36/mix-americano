@@ -1,0 +1,22 @@
+/* styles.css for v12 */
+:root { --ui-zoom: 100%; }
+body { font-size: clamp(14px, calc(14px * var(--ui-zoom) / 100), 20px); }
+.tab-active { border-color:#111827; color:#111827; }
+.dark .tab-active { border-color:#e5e7eb; color:#e5e7eb; }
+
+/* Standings highlight with dark-mode variants */
+.rank-1 { background: #fff7d6; }
+.rank-2 { background: #ededed; }
+.rank-3 { background: #ffe9d6; }
+.dark .rank-1 { background: rgba(255, 247, 214, 0.12); color: #e5e7eb; }
+.dark .rank-2 { background: rgba(237, 237, 237, 0.08); color: #e5e7eb; }
+.dark .rank-3 { background: rgba(255, 233, 214, 0.10); color: #e5e7eb; }
+
+/* Ensure table text is visible in dark mode */
+.dark-table tbody tr td { color: inherit; }
+.dark .dark-table thead th { color: #e5e7eb; }
+.dark .dark-table tbody td { color: #e5e7eb; }
+
+/* Drag rows */
+.row-dragging { opacity: .6; }
+.row-drop-target { outline: 2px dashed #6d28d9; outline-offset: 2px; }
