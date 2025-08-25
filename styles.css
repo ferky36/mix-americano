@@ -1,38 +1,28 @@
-/* styles.css for v12 */
 :root { --ui-zoom: 100%; }
 body { font-size: clamp(14px, calc(14px * var(--ui-zoom) / 100), 20px); }
 .tab-active { border-color:#111827; color:#111827; }
 .dark .tab-active { border-color:#e5e7eb; color:#e5e7eb; }
 
-/* Standings highlight with dark-mode variants */
-.rank-1 { background: #fff7d6; }
-.rank-2 { background: #ededed; }
-.rank-3 { background: #ffe9d6; }
-.dark .rank-1 { background: rgba(255, 247, 214, 0.12); color: #e5e7eb; }
-.dark .rank-2 { background: rgba(237, 237, 237, 0.08); color: #e5e7eb; }
-.dark .rank-3 { background: rgba(255, 233, 214, 0.10); color: #e5e7eb; }
+/* Standings highlight + dark mode */
+.rank-1 { background:#fff7d6; }
+.rank-2 { background:#ededed; }
+.rank-3 { background:#ffe9d6; }
+.dark .rank-1 { background:rgba(255,247,214,.12); color:#e5e7eb; }
+.dark .rank-2 { background:rgba(237,237,237,.08); color:#e5e7eb; }
+.dark .rank-3 { background:rgba(255,233,214,.10); color:#e5e7eb; }
+.dark .dark-table thead th,
+.dark .dark-table tbody td { color:#e5e7eb; }
 
-/* Ensure table text is visible in dark mode */
-.dark-table tbody tr td { color: inherit; }
-.dark .dark-table thead th { color: #e5e7eb; }
-.dark .dark-table tbody td { color: #e5e7eb; }
+/* Court responsive wrapper */
+.court-wrapper { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+.court-wrapper table { min-width:640px; width:100%; }
+.court-wrapper td, .court-wrapper th { white-space:nowrap; }
 
-/* Drag rows */
-.row-dragging { opacity: .6; }
-.row-drop-target { outline: 2px dashed #6d28d9; outline-offset: 2px; }
+/* Drag indicators */
+.row-dragging { opacity:.6; }
+.row-drop-target { outline:2px dashed #6d28d9; outline-offset:2px; }
 
-/* Court table: responsive di HP */
-.court-wrapper{
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.court-wrapper table{
-  min-width: 640px;   /* biar tidak pecah, tapi tetap bisa di-scroll di HP */
-  width: 100%;
-}
-
-/* Biar isi sel tidak pecah aneh */
-.court-wrapper td, .court-wrapper th{
-  white-space: nowrap;
-}
+/* Animations for header/filter panels on mobile */
+@keyframes slideDown { from{opacity:0; transform:translateY(-6px);} to{opacity:1; transform:translateY(0);} }
+.hdr-slide { animation:slideDown .18s ease-out; }
+.filter-slide { animation:slideDown .18s ease-out; }

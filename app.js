@@ -5,7 +5,7 @@ const toHM = (d) => pad(d.getHours()) + ":" + pad(d.getMinutes());
 const csvEscape = (v) => {
   if (v == null) return "";
   const s = String(v);
-  return /[,"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  return /[,\"\n]/.test(s) ? '"' + s.replace(/\"/g, '""') + '"' : s;
 };
 const byId = (id) => document.getElementById(id);
 const parsePlayersText = (t) =>
@@ -21,7 +21,7 @@ let activeTab = 1,
   rounds2 = [],
   dirty = false,
   autosaveTimer = null;
-let store = { sessions: {}, lastTs: null }; // in-memory, source of truth after load
+let store = { sessions: {}, lastTs: null };
 const THEME_KEY = "mix-americano-theme";
 
 // Theme
@@ -34,7 +34,7 @@ function toggleTheme() {
   localStorage.setItem(THEME_KEY, dark ? "dark" : "light");
 }
 
-// Date/session helpers
+// Sessions
 function populateDatePicker() {
   const sel = byId("datePicker");
   const cur = sel.value;
@@ -61,6 +61,17 @@ function currentPayload() {
     ts: new Date().toISOString(),
   };
 }
+function markDirty() {
+  dirty = true;
+  byId("unsavedDot").classList.remove("hidden");
+}
+function markSaved(ts) {
+  dirty = false;
+  byId("unsavedDot").classList.add("hidden");
+  if (ts)
+    byId("lastSaved").textContent =
+      "Saved " + new Date(ts).toLocaleTimeString();
+}
 function saveToStore() {
   const d = byId("sessionDate").value || "";
   if (!d) {
@@ -69,9 +80,7 @@ function saveToStore() {
   }
   store.sessions[d] = currentPayload();
   store.lastTs = new Date().toISOString();
-  dirty = false;
-  byId("unsavedDot").classList.add("hidden");
-  byId("lastSaved").textContent = "Saved " + new Date().toLocaleTimeString();
+  markSaved(store.lastTs);
   populateDatePicker();
   byId("datePicker").value = d;
   return true;
@@ -96,9 +105,9 @@ function loadJSONFromFile(file) {
       if (!data.sessions) throw new Error("Invalid JSON");
       store = data;
       populateDatePicker();
-      alert("JSON dimuat. Silakan pilih tanggal lalu klik Load.");
-    } catch (err) {
-      console.error(err);
+      alert("JSON dimuat. Pilih tanggal lalu klik Load.");
+    } catch (e) {
+      console.error(e);
       alert("File JSON tidak valid.");
     }
   };
@@ -107,7 +116,7 @@ function loadJSONFromFile(file) {
 function loadSessionByDate() {
   const d = byId("datePicker").value || "";
   if (!d) {
-    alert("Pilih tanggal di dropdown.");
+    alert("Pilih tanggal dulu.");
     return;
   }
   const data = store.sessions[d];
@@ -126,17 +135,6 @@ function loadSessionByDate() {
   renderAll();
   markSaved(data.ts);
 }
-function markDirty() {
-  dirty = true;
-  byId("unsavedDot").classList.remove("hidden");
-}
-function markSaved(ts) {
-  dirty = false;
-  byId("unsavedDot").classList.add("hidden");
-  if (ts)
-    byId("lastSaved").textContent =
-      "Saved " + new Date(ts).toLocaleTimeString();
-}
 function startAutoSave() {
   if (autosaveTimer) clearInterval(autosaveTimer);
   autosaveTimer = setInterval(() => {
@@ -144,7 +142,16 @@ function startAutoSave() {
   }, 30000);
 }
 
-// Players (no dnd)
+// PLAYERS UI
+function escapeHtml(s) {
+  return s.replace(
+    /[&<>'"]/g,
+    (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[
+        c
+      ])
+  );
+}
 function renderPlayersList() {
   const ul = byId("playersList");
   ul.innerHTML = "";
@@ -175,15 +182,6 @@ function renderPlayersList() {
     " | Menit/ronde: " +
     (byId("minutesPerRound").value || 12);
 }
-function escapeHtml(s) {
-  return s.replace(
-    /[&<>'"]/g,
-    (c) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[
-        c
-      ])
-  );
-}
 function addPlayer(name) {
   name = (name || "").trim();
   if (!name) return;
@@ -208,7 +206,6 @@ function showTextModal() {
 function hideTextModal() {
   byId("textModal").classList.add("hidden");
 }
-
 function levenshtein(a, b) {
   a = a.toLowerCase();
   b = b.toLowerCase();
@@ -242,7 +239,7 @@ function validateNames() {
   const items = [];
   if (dups.length) {
     items.push(
-      '<div class="text-amber-600">Duplikat: ' +
+      "<div class='text-amber-600'>Duplikat: " +
         dups.map(([a, b]) => players[a] + " ↔ " + players[b]).join(", ") +
         "</div>"
     );
@@ -256,7 +253,7 @@ function validateNames() {
   }
   if (sugg.length) {
     items.push(
-      '<div class="text-blue-600">Mirip (cek typo): ' +
+      "<div class='text-blue-600'>Mirip (cek typo): " +
         sugg.map((s) => s[0] + " ~ " + s[1]).join(", ") +
         "</div>"
     );
@@ -264,6 +261,7 @@ function validateNames() {
   warn.innerHTML = items.join("");
 }
 
+// COURT
 function initRoundsLength() {
   const R = parseInt(byId("roundCount").value || "10", 10);
   while (rounds1.length < R)
@@ -273,22 +271,20 @@ function initRoundsLength() {
   if (rounds1.length > R) rounds1 = rounds1.slice(0, R);
   if (rounds2.length > R) rounds2 = rounds2.slice(0, R);
 }
+function renderCourt(container, arr) {
+  const start = byId("startTime").value || "19:00";
+  const minutes = parseInt(byId("minutesPerRound").value || "12", 10);
+  const R = parseInt(byId("roundCount").value || "10", 10);
+  const [h, m] = start.split(":").map(Number);
+  const base = new Date();
+  base.setHours(h || 19, m || 0, 0, 0);
 
-function renderCourt(container, arr){
-  const start = byId('startTime').value || '19:00';
-  const minutes = parseInt(byId('minutesPerRound').value || '12', 10);
-  const R = parseInt(byId('roundCount').value || '10', 10);
-  const [h, m] = start.split(':').map(Number);
-  const base = new Date(); base.setHours(h || 19, m || 0, 0, 0);
+  container.innerHTML = "";
+  const wrapper = document.createElement("div");
+  wrapper.className = "court-wrapper overflow-x-auto";
 
-  container.innerHTML = '';
-
-  // ⬇️ wrapper scrollable biar aman di HP
-  const wrapper = document.createElement('div');
-  wrapper.className = 'court-wrapper overflow-x-auto';
-
-  const table = document.createElement('table');
-  table.className = 'min-w-full text-sm dark-table';
+  const table = document.createElement("table");
+  table.className = "min-w-full text-sm dark-table";
   table.innerHTML = `
     <thead>
       <tr class="text-left border-b border-gray-200 dark:border-gray-700">
@@ -303,58 +299,105 @@ function renderCourt(container, arr){
         <th class="py-2 pr-4">Skor B</th>
       </tr>
     </thead>
-    <tbody></tbody>
-  `;
-  const tbody = table.querySelector('tbody');
+    <tbody></tbody>`;
+  const tbody = table.querySelector("tbody");
 
-  for(let i=0;i<R;i++){
-    const r = arr[i] || {a1:'',a2:'',b1:'',b2:'',scoreA:'',scoreB:''};
-    const t0 = new Date(base.getTime() + i*minutes*60000);
-    const t1 = new Date(t0.getTime() + minutes*60000);
+  for (let i = 0; i < R; i++) {
+    const r = arr[i] || {
+      a1: "",
+      a2: "",
+      b1: "",
+      b2: "",
+      scoreA: "",
+      scoreB: "",
+    };
+    const t0 = new Date(base.getTime() + i * minutes * 60000);
+    const t1 = new Date(t0.getTime() + minutes * 60000);
 
-    const tr = document.createElement('tr');
-    tr.className = 'border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/40';
-    tr.draggable = true; tr.dataset.index = i;
-    tr.addEventListener('dragstart', (e)=>{ tr.classList.add('row-dragging'); e.dataTransfer.setData('text/plain', String(i)); });
-    tr.addEventListener('dragend', ()=> tr.classList.remove('row-dragging'));
-    tr.addEventListener('dragover', (e)=>{ e.preventDefault(); tr.classList.add('row-drop-target'); });
-    tr.addEventListener('dragleave', ()=> tr.classList.remove('row-drop-target'));
-    tr.addEventListener('drop', (e)=>{ e.preventDefault(); tr.classList.remove('row-drop-target'); const from=Number(e.dataTransfer.getData('text/plain')); const to=Number(tr.dataset.index); if(isNaN(from)||isNaN(to)||from===to) return; const item=arr.splice(from,1)[0]; arr.splice(to,0,item); markDirty(); renderAll(); });
+    const tr = document.createElement("tr");
+    tr.className =
+      "border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/40";
+    tr.draggable = true;
+    tr.dataset.index = i;
+    tr.addEventListener("dragstart", (e) => {
+      tr.classList.add("row-dragging");
+      e.dataTransfer.setData("text/plain", String(i));
+    });
+    tr.addEventListener("dragend", () => tr.classList.remove("row-dragging"));
+    tr.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      tr.classList.add("row-drop-target");
+    });
+    tr.addEventListener("dragleave", () =>
+      tr.classList.remove("row-drop-target")
+    );
+    tr.addEventListener("drop", (e) => {
+      e.preventDefault();
+      tr.classList.remove("row-drop-target");
+      const from = Number(e.dataTransfer.getData("text/plain"));
+      const to = Number(tr.dataset.index);
+      if (isNaN(from) || isNaN(to) || from === to) return;
+      const item = arr.splice(from, 1)[0];
+      arr.splice(to, 0, item);
+      markDirty();
+      renderAll();
+    });
 
-    const tdHandle = document.createElement('td'); tdHandle.textContent = '≡'; tdHandle.className='py-2 pr-4 text-gray-400'; tr.appendChild(tdHandle);
-    const tdIdx = document.createElement('td'); tdIdx.textContent = 'R'+(i+1); tdIdx.className='py-2 pr-4 font-medium'; tr.appendChild(tdIdx);
-    const tdTime = document.createElement('td'); tdTime.textContent = toHM(t0)+'–'+toHM(t1); tdTime.className='py-2 pr-4'; tr.appendChild(tdTime);
+    const tdHandle = document.createElement("td");
+    tdHandle.textContent = "≡";
+    tdHandle.className = "py-2 pr-4 text-gray-400";
+    tr.appendChild(tdHandle);
+    const tdIdx = document.createElement("td");
+    tdIdx.textContent = "R" + (i + 1);
+    tdIdx.className = "py-2 pr-4 font-medium";
+    tr.appendChild(tdIdx);
+    const tdTime = document.createElement("td");
+    tdTime.textContent = toHM(t0) + "–" + toHM(t1);
+    tdTime.className = "py-2 pr-4";
+    tr.appendChild(tdTime);
 
-    // ⬇️ SELECT: pakai max-width biar kecil di HP, longgar di desktop
-    function selCell(k){
-      const td = document.createElement('td');
-      const sel = document.createElement('select');
-      sel.className = 'border rounded-lg px-2 py-1 min-w-[6rem] max-w-[7rem] sm:max-w-[10rem] bg-white dark:bg-gray-900 dark:border-gray-700';
-      sel.appendChild(new Option('—',''));
-      players.forEach(p=> sel.appendChild(new Option(p,p)));
-      sel.value = r[k] || '';
-      sel.addEventListener('change', (e)=>{ arr[i] = {...arr[i],[k]:e.target.value}; markDirty(); validateAll(); computeStandings(); });
-      td.appendChild(sel); return td;
+    function selCell(k) {
+      const td = document.createElement("td");
+      const sel = document.createElement("select");
+      sel.className =
+        "border rounded-lg px-2 py-1 min-w-[6rem] max-w-[7rem] sm:max-w-[10rem] bg-white dark:bg-gray-900 dark:border-gray-700";
+      sel.appendChild(new Option("—", ""));
+      players.forEach((p) => sel.appendChild(new Option(p, p)));
+      sel.value = r[k] || "";
+      sel.addEventListener("change", (e) => {
+        arr[i] = { ...arr[i], [k]: e.target.value };
+        markDirty();
+        validateAll();
+        computeStandings();
+      });
+      td.appendChild(sel);
+      return td;
     }
-
-    // ⬇️ INPUT skor: kecilkan di HP
-    function scCell(k){
-      const td = document.createElement('td');
-      const inp = document.createElement('input');
-      inp.className = 'border rounded-lg px-2 py-1 w-[3.5rem] sm:w-[4.5rem] bg-white dark:bg-gray-900 dark:border-gray-700';
-      inp.inputMode = 'numeric';
-      inp.value = r[k] || '';
-      inp.addEventListener('input', (e)=>{ arr[i] = {...arr[i],[k]: String(e.target.value).replace(/[^0-9]/g,'')}; markDirty(); validateAll(); computeStandings(); });
-      td.appendChild(inp); return td;
+    function scCell(k) {
+      const td = document.createElement("td");
+      const inp = document.createElement("input");
+      inp.className =
+        "border rounded-lg px-2 py-1 w-[3.5rem] sm:w-[4.5rem] bg-white dark:bg-gray-900 dark:border-gray-700";
+      inp.inputMode = "numeric";
+      inp.value = r[k] || "";
+      inp.addEventListener("input", (e) => {
+        arr[i] = {
+          ...arr[i],
+          [k]: String(e.target.value).replace(/[^0-9]/g, ""),
+        };
+        markDirty();
+        validateAll();
+        computeStandings();
+      });
+      td.appendChild(inp);
+      return td;
     }
-
-    tr.appendChild(selCell('a1'));
-    tr.appendChild(selCell('a2'));
-    tr.appendChild(selCell('b1'));
-    tr.appendChild(selCell('b2'));
-    tr.appendChild(scCell('scoreA'));
-    tr.appendChild(scCell('scoreB'));
-
+    tr.appendChild(selCell("a1"));
+    tr.appendChild(selCell("a2"));
+    tr.appendChild(selCell("b1"));
+    tr.appendChild(selCell("b2"));
+    tr.appendChild(scCell("scoreA"));
+    tr.appendChild(scCell("scoreB"));
     tbody.appendChild(tr);
   }
 
@@ -362,7 +405,7 @@ function renderCourt(container, arr){
   container.appendChild(wrapper);
 }
 
-
+// RENDER + VALIDATION + STANDINGS
 function renderAll() {
   initRoundsLength();
   renderCourt(byId("court1"), rounds1);
@@ -386,27 +429,35 @@ function renderAll() {
   }
 }
 
+// Validasi: pasangan boleh sama; duplikat lawan dicek PER lapangan; double-booking tetap dicek
 function validateAll() {
   const R = parseInt(byId("roundCount").value || "10", 10);
   const problems = [];
 
-  // 1) Double booking (pemain muncul di dua lapangan pada ronde yang sama)
+  // Double booking per ronde
   for (let i = 0; i < R; i++) {
     const names = [
-      rounds1[i]?.a1, rounds1[i]?.a2, rounds1[i]?.b1, rounds1[i]?.b2,
-      rounds2[i]?.a1, rounds2[i]?.a2, rounds2[i]?.b1, rounds2[i]?.b2,
+      rounds1[i]?.a1,
+      rounds1[i]?.a2,
+      rounds1[i]?.b1,
+      rounds1[i]?.b2,
+      rounds2[i]?.a1,
+      rounds2[i]?.a2,
+      rounds2[i]?.b1,
+      rounds2[i]?.b2,
     ].filter(Boolean);
     const set = new Set(names);
-    if (set.size !== names.length) {
-      problems.push("Bentrok jadwal: R" + (i + 1) + " ada pemain di dua lapangan.");
-    }
+    if (set.size !== names.length)
+      problems.push(
+        "Bentrok jadwal: R" + (i + 1) + " ada pemain di dua lapangan."
+      );
   }
 
-  // 2) Duplikat LAWAN dicek PER LAPANGAN (pasangan dibiarkan)
   const teamKey = (p, q) => [p || "", q || ""].sort().join(" & ");
   const matchKey = (r) => {
     if (!(r && r.a1 && r.a2 && r.b1 && r.b2)) return "";
-    const tA = teamKey(r.a1, r.a2), tB = teamKey(r.b1, r.b2);
+    const tA = teamKey(r.a1, r.a2),
+      tB = teamKey(r.b1, r.b2);
     return [tA, tB].sort().join(" vs ");
   };
 
@@ -416,31 +467,35 @@ function validateAll() {
       const r = arr[i];
       if (!(r && r.a1 && r.a2 && r.b1 && r.b2)) continue;
       const key = matchKey(r);
-      if (seenMatch.has(key)) {
+      if (seenMatch.has(key))
         problems.push(
-          "Duplikat lawan (dalam " + label + "): " +
-          key + " muncul lagi di R" + (i + 1) +
-          " (sebelumnya " + seenMatch.get(key) + ")."
+          "Duplikat lawan (dalam " +
+            label +
+            "): " +
+            key +
+            " muncul lagi di R" +
+            (i + 1) +
+            " (sebelumnya " +
+            seenMatch.get(key) +
+            ")."
         );
-      } else {
-        seenMatch.set(key, "R" + (i + 1));
-      }
+      else seenMatch.set(key, "R" + (i + 1));
     }
   }
-
   scanCourt(rounds1, "Lap 1");
   scanCourt(rounds2, "Lap 2");
 
   const box = byId("errors");
-  box.innerHTML = problems.length
-    ? "<div class='p-3 rounded-xl bg-red-50 text-red-700 border border-red-200 text-sm'><div class='font-semibold mb-1'>Validasi:</div><ul class='list-disc pl-5 space-y-1'>" +
-        problems.map((p) => "<li>" + p + "</li>").join("") +
-      "</ul></div>"
-    : "<div class='p-3 rounded-xl bg-green-50 text-green-700 border border-green-200 text-sm'>Tidak ada masalah penjadwalan.</div>";
-
+  const okHTML = `<div class="p-3 rounded-xl bg-green-50 text-green-700 border border-green-200 text-sm">Tidak ada masalah penjadwalan.</div>`;
+  const errHTML = `<div class="p-3 rounded-xl bg-red-50 text-red-700 border border-red-200 text-sm">
+      <div class="font-semibold mb-1">Validasi:</div>
+      <ul class="list-disc pl-5 space-y-1">${problems
+        .map((p) => `<li>${p}</li>`)
+        .join("")}</ul>
+    </div>`;
+  box.innerHTML = problems.length ? errHTML : okHTML;
   return problems.length === 0;
 }
-
 
 function computeStandings() {
   const data = {};
@@ -480,6 +535,7 @@ function computeStandings() {
     });
   apply(rounds1);
   apply(rounds2);
+
   let arr = Object.entries(data).map(([player, v]) => {
     const gp = v.win + v.lose + v.draw;
     return { player, ...v, winRate: gp ? v.win / gp : 0 };
@@ -501,6 +557,7 @@ function computeStandings() {
     }
     s.rank = rank;
   });
+
   const tbody = byId("standings").querySelector("tbody");
   tbody.innerHTML = "";
   arr.forEach((s) => {
@@ -513,47 +570,32 @@ function computeStandings() {
         : s.rank === 3
         ? "rank-3"
         : "";
-    tr.innerHTML = `<td class="py-2 pr-4 font-semibold">${
-      s.rank
-    }</td><td class="py-2 pr-4 font-medium">${
-      s.player
-    }</td><td class="py-2 pr-4">${s.total}</td><td class="py-2 pr-4">${
-      s.diff
-    }</td><td class="py-2 pr-4">${s.win}</td><td class="py-2 pr-4">${
-      s.lose
-    }</td><td class="py-2 pr-4">${s.draw}</td><td class="py-2 pr-4">${(
-      s.winRate * 100
-    ).toFixed(1)}%</td>`;
+    tr.innerHTML = `<td class="py-2 pr-4 font-semibold">${s.rank}</td>
+                    <td class="py-2 pr-4 font-medium">${s.player}</td>
+                    <td class="py-2 pr-4">${s.total}</td>
+                    <td class="py-2 pr-4">${s.diff}</td>
+                    <td class="py-2 pr-4">${s.win}</td>
+                    <td class="py-2 pr-4">${s.lose}</td>
+                    <td class="py-2 pr-4">${s.draw}</td>
+                    <td class="py-2 pr-4">${(s.winRate * 100).toFixed(
+                      1
+                    )}%</td>`;
     tbody.appendChild(tr);
   });
 }
 
-// Pairing autofill (active tab only)
+// AUTO FILL (tab aktif)
 function autoFillActiveTab() {
   const R = parseInt(byId("roundCount").value || "10", 10);
   players = Array.from(byId("playersList").querySelectorAll(".player-name"))
     .map((el) => el.textContent.trim())
     .filter(Boolean);
   if (players.length < 4) return;
+
   const other = activeTab === 1 ? rounds2 : rounds1;
   let target = activeTab === 1 ? rounds1 : rounds2;
   target = [];
-  const seenTeam = new Set(),
-    seenMatch = new Set();
-  const teamKey = (a, b) => [a, b].sort().join(" & ");
-  const matchKey = (a1, a2, b1, b2) => {
-    const tA = teamKey(a1, a2),
-      tB = teamKey(b1, b2);
-    return [tA, tB].sort().join(" vs ");
-  };
-  for (let i = 0; i < R; i++) {
-    const r = other[i];
-    if (r && r.a1 && r.a2 && r.b1 && r.b2) {
-      seenTeam.add(teamKey(r.a1, r.a2));
-      seenTeam.add(teamKey(r.b1, r.b2));
-      seenMatch.add(matchKey(r.a1, r.a2, r.b1, r.b2));
-    }
-  }
+
   const seenAppear = Object.fromEntries(players.map((p) => [p, 0]));
   function chooseFour(i) {
     const busy = new Set();
@@ -564,67 +606,33 @@ function autoFillActiveTab() {
     if (cand.length < 4) return null;
     return [cand[0], cand[1], cand[2], cand[3]];
   }
+
   for (let i = 0; i < R; i++) {
-    let chosen = null;
-    for (let attempt = 0; attempt < 200; attempt++) {
-      let four = chooseFour(i);
-      if (!four) {
-        const busy = new Set();
-        const o = other[i] || {};
-        [o?.a1, o?.a2, o?.b1, o?.b2].forEach((x) => x && busy.add(x));
-        four = players.filter((p) => !busy.has(p)).slice(0, 4);
-        if (four.length < 4) break;
-      }
-      const [A, B, C, D] = four;
-      const options = [
-        [A, B, C, D],
-        [A, C, B, D],
-        [A, D, B, C],
-      ];
-      const ok = options.filter((o) => {
-        const [a1, a2, b1, b2] = o;
-        const tA = teamKey(a1, a2),
-          tB = teamKey(b1, b2);
-        const mk = matchKey(a1, a2, b1, b2);
-        return !seenTeam.has(tA) && !seenTeam.has(tB) && !seenMatch.has(mk);
-      });
-      const pick = (ok.length ? ok : options)[0];
-      chosen = pick;
-      if (chosen) break;
-    }
-    if (!chosen) {
-      const four =
-        chooseFour(i) ||
-        players
-          .filter(
-            (p) =>
-              !(
-                other[i] &&
-                [other[i].a1, other[i].a2, other[i].b1, other[i].b2].includes(p)
-              )
-          )
-          .slice(0, 4);
-      if (!four || four.length < 4) {
+    let four = chooseFour(i);
+    if (!four) {
+      const busy = new Set();
+      const o = other[i] || {};
+      [o?.a1, o?.a2, o?.b1, o?.b2].forEach((x) => x && busy.add(x));
+      four = players.filter((p) => !busy.has(p)).slice(0, 4);
+      if (four.length < 4) {
         target.push({});
         continue;
       }
-      chosen = [four[0], four[1], four[2], four[3]];
     }
-    const [a1, a2, b1, b2] = chosen;
-    target.push({ a1, a2, b1, b2, scoreA: "", scoreB: "" });
-    seenTeam.add(teamKey(a1, a2));
-    seenTeam.add(teamKey(b1, b2));
-    seenMatch.add(matchKey(a1, a2, b1, b2));
-    seenAppear[a1]++;
-    seenAppear[a2]++;
-    seenAppear[b1]++;
-    seenAppear[b2]++;
+    const [A, B, C, D] = four;
+    // pasangan boleh sama; cek lawan dilakukan di validateAll per lapangan
+    target.push({ a1: A, a2: B, b1: C, b2: D, scoreA: "", scoreB: "" });
+    seenAppear[A]++;
+    seenAppear[B]++;
+    seenAppear[C]++;
+    seenAppear[D]++;
   }
+
   if (activeTab === 1) rounds1 = target;
   else rounds2 = target;
 }
 
-// Export CSV
+// EXPORTS
 function exportRoundsCSV() {
   const header = [
     "Tanggal",
@@ -754,11 +762,43 @@ function exportStandingsCSV() {
   URL.revokeObjectURL(url);
 }
 
-// Events
+// EVENTS
 byId("btnTheme").addEventListener("click", toggleTheme);
-// byId("uiScale").addEventListener("input", (e) => {
-//   document.documentElement.style.setProperty("--ui-zoom", e.target.value + "%");
-// });
+
+// Header menu toggle (HP)
+const btnHdrMenu = document.getElementById("btnHdrMenu");
+if (btnHdrMenu) {
+  btnHdrMenu.addEventListener("click", () => {
+    const panel = document.getElementById("hdrControls");
+    panel.classList.toggle("hidden");
+    if (!panel.classList.contains("hidden")) panel.classList.add("hdr-slide");
+    setTimeout(() => panel.classList.remove("hdr-slide"), 220);
+  });
+  window.addEventListener("resize", () => {
+    const panel = document.getElementById("hdrControls");
+    if (window.innerWidth >= 768) panel.classList.remove("hidden");
+  });
+}
+
+// Filter panel toggle (HP)
+const btnFilter = document.getElementById("btnFilter");
+if (btnFilter) {
+  btnFilter.addEventListener("click", () => {
+    const panel = document.getElementById("filterPanel");
+    const willShow = panel.classList.contains("hidden");
+    panel.classList.toggle("hidden");
+    btnFilter.textContent = willShow
+      ? "🔎 Sembunyikan Filter"
+      : "🔎 Filter / Jadwal";
+    if (willShow) panel.classList.add("filter-slide");
+    setTimeout(() => panel.classList.remove("filter-slide"), 220);
+  });
+  window.addEventListener("resize", () => {
+    const panel = document.getElementById("filterPanel");
+    if (window.innerWidth >= 768) panel.classList.remove("hidden");
+  });
+}
+
 byId("btnCollapsePlayers").addEventListener("click", () =>
   byId("playersPanel").classList.toggle("hidden")
 );
