@@ -20,3 +20,19 @@ body { font-size: clamp(14px, calc(14px * var(--ui-zoom) / 100), 20px); }
 /* Drag rows */
 .row-dragging { opacity: .6; }
 .row-drop-target { outline: 2px dashed #6d28d9; outline-offset: 2px; }
+
+/* Court table: responsive di HP */
+.court-wrapper{
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.court-wrapper table{
+  min-width: 640px;   /* biar tidak pecah, tapi tetap bisa di-scroll di HP */
+  width: 100%;
+}
+
+/* Biar isi sel tidak pecah aneh */
+.court-wrapper td, .court-wrapper th{
+  white-space: nowrap;
+}

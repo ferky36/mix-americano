@@ -274,116 +274,94 @@ function initRoundsLength() {
   if (rounds2.length > R) rounds2 = rounds2.slice(0, R);
 }
 
-function renderCourt(container, arr) {
-  const start = byId("startTime").value || "19:00";
-  const minutes = parseInt(byId("minutesPerRound").value || "12", 10);
-  const R = parseInt(byId("roundCount").value || "10", 10);
-  const [h, m] = start.split(":").map(Number);
-  const base = new Date();
-  base.setHours(h || 19, m || 0, 0, 0);
-  container.innerHTML = "";
-  const table = document.createElement("table");
-  table.className = "min-w-full text-sm dark-table";
-  table.innerHTML =
-    '<thead><tr class="text-left border-b border-gray-200 dark:border-gray-700"><th class="py-2 pr-4">≡</th><th class="py-2 pr-4">#</th><th class="py-2 pr-4">Waktu</th><th class="py-2 pr-4">Player1A</th><th class="py-2 pr-4">Player2A</th><th class="py-2 pr-4">Player1B</th><th class="py-2 pr-4">Player2B</th><th class="py-2 pr-4">Skor A</th><th class="py-2 pr-4">Skor B</th></tr></thead><tbody></tbody>';
-  const tbody = table.querySelector("tbody");
-  for (let i = 0; i < R; i++) {
-    const r = arr[i] || {
-      a1: "",
-      a2: "",
-      b1: "",
-      b2: "",
-      scoreA: "",
-      scoreB: "",
-    };
-    const t0 = new Date(base.getTime() + i * minutes * 60000);
-    const t1 = new Date(t0.getTime() + minutes * 60000);
-    const tr = document.createElement("tr");
-    tr.className =
-      "border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/40";
-    tr.draggable = true;
-    tr.dataset.index = i;
-    tr.addEventListener("dragstart", (e) => {
-      tr.classList.add("row-dragging");
-      e.dataTransfer.setData("text/plain", String(i));
-    });
-    tr.addEventListener("dragend", () => tr.classList.remove("row-dragging"));
-    tr.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      tr.classList.add("row-drop-target");
-    });
-    tr.addEventListener("dragleave", () =>
-      tr.classList.remove("row-drop-target")
-    );
-    tr.addEventListener("drop", (e) => {
-      e.preventDefault();
-      tr.classList.remove("row-drop-target");
-      const from = Number(e.dataTransfer.getData("text/plain"));
-      const to = Number(tr.dataset.index);
-      if (isNaN(from) || isNaN(to) || from === to) return;
-      const item = arr.splice(from, 1)[0];
-      arr.splice(to, 0, item);
-      markDirty();
-      renderAll();
-    });
-    const tdHandle = document.createElement("td");
-    tdHandle.textContent = "≡";
-    tdHandle.className = "py-2 pr-4 text-gray-400";
-    tr.appendChild(tdHandle);
-    const tdIdx = document.createElement("td");
-    tdIdx.textContent = "R" + (i + 1);
-    tdIdx.className = "py-2 pr-4 font-medium";
-    tr.appendChild(tdIdx);
-    const tdTime = document.createElement("td");
-    tdTime.textContent = toHM(t0) + "–" + toHM(t1);
-    tdTime.className = "py-2 pr-4";
-    tr.appendChild(tdTime);
-    function selCell(k) {
-      const td = document.createElement("td");
-      const sel = document.createElement("select");
-      sel.className =
-        "border rounded-lg px-2 py-1 w-40 sm:w-44 bg-white dark:bg-gray-900 dark:border-gray-700";
-      sel.appendChild(new Option("—", ""));
-      players.forEach((p) => sel.appendChild(new Option(p, p)));
-      sel.value = r[k] || "";
-      sel.addEventListener("change", (e) => {
-        arr[i] = { ...arr[i], [k]: e.target.value };
-        markDirty();
-        validateAll();
-        computeStandings();
-      });
-      td.appendChild(sel);
-      return td;
+function renderCourt(container, arr){
+  const start = byId('startTime').value || '19:00';
+  const minutes = parseInt(byId('minutesPerRound').value || '12', 10);
+  const R = parseInt(byId('roundCount').value || '10', 10);
+  const [h, m] = start.split(':').map(Number);
+  const base = new Date(); base.setHours(h || 19, m || 0, 0, 0);
+
+  container.innerHTML = '';
+
+  // ⬇️ wrapper scrollable biar aman di HP
+  const wrapper = document.createElement('div');
+  wrapper.className = 'court-wrapper overflow-x-auto';
+
+  const table = document.createElement('table');
+  table.className = 'min-w-full text-sm dark-table';
+  table.innerHTML = `
+    <thead>
+      <tr class="text-left border-b border-gray-200 dark:border-gray-700">
+        <th class="py-2 pr-4">≡</th>
+        <th class="py-2 pr-4">#</th>
+        <th class="py-2 pr-4">Waktu</th>
+        <th class="py-2 pr-4">Player1A</th>
+        <th class="py-2 pr-4">Player2A</th>
+        <th class="py-2 pr-4">Player1B</th>
+        <th class="py-2 pr-4">Player2B</th>
+        <th class="py-2 pr-4">Skor A</th>
+        <th class="py-2 pr-4">Skor B</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  `;
+  const tbody = table.querySelector('tbody');
+
+  for(let i=0;i<R;i++){
+    const r = arr[i] || {a1:'',a2:'',b1:'',b2:'',scoreA:'',scoreB:''};
+    const t0 = new Date(base.getTime() + i*minutes*60000);
+    const t1 = new Date(t0.getTime() + minutes*60000);
+
+    const tr = document.createElement('tr');
+    tr.className = 'border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/40';
+    tr.draggable = true; tr.dataset.index = i;
+    tr.addEventListener('dragstart', (e)=>{ tr.classList.add('row-dragging'); e.dataTransfer.setData('text/plain', String(i)); });
+    tr.addEventListener('dragend', ()=> tr.classList.remove('row-dragging'));
+    tr.addEventListener('dragover', (e)=>{ e.preventDefault(); tr.classList.add('row-drop-target'); });
+    tr.addEventListener('dragleave', ()=> tr.classList.remove('row-drop-target'));
+    tr.addEventListener('drop', (e)=>{ e.preventDefault(); tr.classList.remove('row-drop-target'); const from=Number(e.dataTransfer.getData('text/plain')); const to=Number(tr.dataset.index); if(isNaN(from)||isNaN(to)||from===to) return; const item=arr.splice(from,1)[0]; arr.splice(to,0,item); markDirty(); renderAll(); });
+
+    const tdHandle = document.createElement('td'); tdHandle.textContent = '≡'; tdHandle.className='py-2 pr-4 text-gray-400'; tr.appendChild(tdHandle);
+    const tdIdx = document.createElement('td'); tdIdx.textContent = 'R'+(i+1); tdIdx.className='py-2 pr-4 font-medium'; tr.appendChild(tdIdx);
+    const tdTime = document.createElement('td'); tdTime.textContent = toHM(t0)+'–'+toHM(t1); tdTime.className='py-2 pr-4'; tr.appendChild(tdTime);
+
+    // ⬇️ SELECT: pakai max-width biar kecil di HP, longgar di desktop
+    function selCell(k){
+      const td = document.createElement('td');
+      const sel = document.createElement('select');
+      sel.className = 'border rounded-lg px-2 py-1 min-w-[6rem] max-w-[7rem] sm:max-w-[10rem] bg-white dark:bg-gray-900 dark:border-gray-700';
+      sel.appendChild(new Option('—',''));
+      players.forEach(p=> sel.appendChild(new Option(p,p)));
+      sel.value = r[k] || '';
+      sel.addEventListener('change', (e)=>{ arr[i] = {...arr[i],[k]:e.target.value}; markDirty(); validateAll(); computeStandings(); });
+      td.appendChild(sel); return td;
     }
-    function scCell(k) {
-      const td = document.createElement("td");
-      const inp = document.createElement("input");
-      inp.className =
-        "border rounded-lg px-2 py-1 w-16 sm:w-20 bg-white dark:bg-gray-900 dark:border-gray-700";
-      inp.inputMode = "numeric";
-      inp.value = r[k] || "";
-      inp.addEventListener("input", (e) => {
-        arr[i] = {
-          ...arr[i],
-          [k]: String(e.target.value).replace(/[^0-9]/g, ""),
-        };
-        markDirty();
-        validateAll();
-        computeStandings();
-      });
-      td.appendChild(inp);
-      return td;
+
+    // ⬇️ INPUT skor: kecilkan di HP
+    function scCell(k){
+      const td = document.createElement('td');
+      const inp = document.createElement('input');
+      inp.className = 'border rounded-lg px-2 py-1 w-[3.5rem] sm:w-[4.5rem] bg-white dark:bg-gray-900 dark:border-gray-700';
+      inp.inputMode = 'numeric';
+      inp.value = r[k] || '';
+      inp.addEventListener('input', (e)=>{ arr[i] = {...arr[i],[k]: String(e.target.value).replace(/[^0-9]/g,'')}; markDirty(); validateAll(); computeStandings(); });
+      td.appendChild(inp); return td;
     }
-    tr.appendChild(selCell("a1"));
-    tr.appendChild(selCell("a2"));
-    tr.appendChild(selCell("b1"));
-    tr.appendChild(selCell("b2"));
-    tr.appendChild(scCell("scoreA"));
-    tr.appendChild(scCell("scoreB"));
+
+    tr.appendChild(selCell('a1'));
+    tr.appendChild(selCell('a2'));
+    tr.appendChild(selCell('b1'));
+    tr.appendChild(selCell('b2'));
+    tr.appendChild(scCell('scoreA'));
+    tr.appendChild(scCell('scoreB'));
+
     tbody.appendChild(tr);
   }
-  container.appendChild(table);
+
+  wrapper.appendChild(table);
+  container.appendChild(wrapper);
 }
+
 
 function renderAll() {
   initRoundsLength();
@@ -778,9 +756,9 @@ function exportStandingsCSV() {
 
 // Events
 byId("btnTheme").addEventListener("click", toggleTheme);
-byId("uiScale").addEventListener("input", (e) => {
-  document.documentElement.style.setProperty("--ui-zoom", e.target.value + "%");
-});
+// byId("uiScale").addEventListener("input", (e) => {
+//   document.documentElement.style.setProperty("--ui-zoom", e.target.value + "%");
+// });
 byId("btnCollapsePlayers").addEventListener("click", () =>
   byId("playersPanel").classList.toggle("hidden")
 );
