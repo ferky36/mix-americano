@@ -52,3 +52,9 @@ body { font-size: clamp(14px, calc(14px * var(--ui-zoom) / 100), 20px); }
 .court-close:hover { opacity: 1; }
 
 #courtsToolbar { scroll-behavior: auto; } /* cegah smooth scroll ngesot */
+
+/* mini dropdown gender/level pada item pemain */
+.player-meta select{
+  font-size: 11px;
+  padding: 2px 6px;
+}

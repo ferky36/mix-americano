@@ -111,6 +111,13 @@
   <main class="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
     <section class="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow">
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+        <select id="pairMode" class="px-3 py-2 rounded-xl border shadow text-sm dark:bg-gray-900 dark:border-gray-700">
+          <option value="free">Mode Pairing: Bebas</option>
+          <option value="mixed">Mixed Gender (M+F vs M+F)</option>
+          <option value="lvl_bal">Level Balance (beg+pro vs beg+pro)</option>
+          <option value="lvl_same">Level Sama (beg vs beg, pro vs pro)</option>
+        </select>
+
         <button id="btnApplyPlayersActive" class="px-4 py-2 rounded-xl bg-indigo-600 text-white shadow hover:bg-indigo-700">Terapkan (Tab Aktif) & Auto Pasangan</button>
         <button id="btnResetActive" class="px-4 py-2 rounded-xl border shadow hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-700">♻️ Reset Tab Aktif</button>
         <button id="btnClearScores" class="px-4 py-2 rounded-xl border shadow hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-700">Clear Skor (Kedua Tab)</button>
