@@ -222,7 +222,7 @@ function validateAll(){
     ? "<div class='p-3 rounded-xl bg-red-50 text-red-700 border border-red-200 text-sm'><div class='font-semibold mb-1'>Validasi:</div><ul class='list-disc pl-5 space-y-1'>"+problems.map(p=>"<li>"+p+"</li>").join("")+"</ul></div>"
     : "<div class='p-3 rounded-xl bg-green-50 text-green-700 border border-green-200 text-sm'>Tidak ada masalah penjadwalan.</div>";
   return problems.length===0;
-}
+
 
 
 function computeStandings(){
