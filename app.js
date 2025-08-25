@@ -55,13 +55,18 @@ function currentPayload(){
     minutesPerRound: byId('minutesPerRound').value,
     roundCount: byId('roundCount').value,
     players: players.join('\n'),
-    roundsByCourt,               // <-- simpan struktur baru
-    // kompat (optional): masih ikut simpan 2 yang pertama agar file lama tetap terbaca
+
+    // 🔹 format baru
+    roundsByCourt,
+
+    // 🔹 kompat: tetap tulis 2 lapangan pertama agar JSON lama tetap kebaca
     rounds1: roundsByCourt[0] || [],
     rounds2: roundsByCourt[1] || [],
+
     ts: new Date().toISOString()
   };
 }
+
 
 function markDirty() {
   dirty = true;
@@ -99,68 +104,99 @@ function saveToJSONFile() {
   a.click();
   URL.revokeObjectURL(url);
 }
-function loadJSONFromFile(file) {
+function loadJSONFromFile(file){
   const r = new FileReader();
-  r.onload = (ev) => {
-    try {
-      const data = JSON.parse(ev.target.result);
-      if (!data.sessions) throw new Error("Invalid JSON");
-      store = data;
+  r.onload = (ev)=>{
+    try{
+      const raw = JSON.parse(ev.target.result);
+
+      // 🔹 dukung dua bentuk file:
+      //    A) { sessions: { "YYYY-MM-DD": payload, ... }, lastTs: ... }
+      //    B) { "YYYY-MM-DD": payload, ... }  (tanpa wrapper 'sessions')
+      let incoming = raw;
+      if (!incoming.sessions) {
+        // bentuk B → bungkus jadi bentuk A
+        incoming = { sessions: raw, lastTs: new Date().toISOString() };
+      }
+
+      // 🔹 normalisasi tiap payload
+      Object.keys(incoming.sessions).forEach(dateKey=>{
+        incoming.sessions[dateKey] = normalizeLoadedSession(incoming.sessions[dateKey]);
+      });
+
+      store = incoming;
       populateDatePicker();
-      alert("JSON dimuat. Pilih tanggal lalu klik Load.");
-    } catch (e) {
+
+      alert('JSON dimuat. Pilih tanggal lalu klik Load.');
+    }catch(e){
       console.error(e);
-      alert("File JSON tidak valid.");
+      alert('File JSON tidak valid.');
     }
   };
   r.readAsText(file);
 }
-function loadSessionByDate() {
-  const d = byId("datePicker").value || "";
-  if (!d) {
-    alert("Pilih tanggal dulu.");
-    return;
-  }
-  const data = store.sessions[d];
-  if (!data) {
-    alert("Tidak ada data untuk tanggal tsb.");
-    return;
-  }
-  byId("sessionDate").value = data.date || d;
-  byId("startTime").value = data.startTime || "19:00";
-  byId("minutesPerRound").value = data.minutesPerRound || "12";
-  byId("roundCount").value = data.roundCount || "10";
-  rounds1 = Array.isArray(data.rounds1) ? data.rounds1 : [];
-  rounds2 = Array.isArray(data.rounds2) ? data.rounds2 : [];
-  players = parsePlayersText(data.players || "");
+
+function loadSessionByDate(){
+  const d = byId('datePicker').value || '';
+  if(!d){ alert('Pilih tanggal dulu.'); return; }
+
+  let data = store.sessions[d];
+  if(!data){ alert('Tidak ada data untuk tanggal tsb.'); return; }
+
+  // 🔹 normalisasi jika yang masuk masih format lama
+  data = normalizeLoadedSession(data);
+
+  // 🔹 isi UI
+  byId('sessionDate').value    = data.date || d;
+  byId('startTime').value      = data.startTime || '19:00';
+  byId('minutesPerRound').value= data.minutesPerRound || '12';
+  byId('roundCount').value     = data.roundCount || '10';
+
+  players        = parsePlayersText(data.players || '');
+  roundsByCourt  = (data.roundsByCourt || []).map(arr => Array.isArray(arr) ? arr : []);
+
+  // fallback: minimal 1 lapangan
+  if (roundsByCourt.length === 0) roundsByCourt = [[]];
+
+  // 🔹 reset ke Lapangan 1, panjang ronde disesuaikan
+  activeCourt = 0;
+  ensureRoundsLengthForAllCourts();
+
   renderPlayersList();
   renderAll();
   markSaved(data.ts);
 }
-function normalizeLoadedSession(data){
-  // kompat: file lama punya rounds1/rounds2
-  if (!Array.isArray(data.roundsByCourt)) {
-    const rc = [];
-    if (Array.isArray(data.rounds1)) rc.push(data.rounds1);
-    if (Array.isArray(data.rounds2)) rc.push(data.rounds2);
-    if (rc.length === 0) rc.push([]); // minimal 1 lapangan
-    data.roundsByCourt = rc;
-  }
-  return data;
-}
 
-function startAutoSave() {
-  if (autosaveTimer) clearInterval(autosaveTimer);
-  autosaveTimer = setInterval(() => {
-    if (dirty) saveToStore();
-  }, 30000);
-}
+// Pastikan panjang tiap lapangan sesuai 'roundCount'
 function ensureRoundsLengthForAllCourts(){
   const R = parseInt(byId('roundCount').value || '10', 10);
   roundsByCourt.forEach((arr, ci)=>{
     while(arr.length < R) arr.push({a1:'',a2:'',b1:'',b2:'',scoreA:'',scoreB:''});
     if(arr.length > R) roundsByCourt[ci] = arr.slice(0, R);
   });
+}
+
+// Konversi JSON lama -> struktur baru
+function normalizeLoadedSession(data){
+  // Kalau sudah ada roundsByCourt: pakai itu
+  if (Array.isArray(data.roundsByCourt)) return data;
+
+  // JSON lama: hanya rounds1/rounds2
+  const rc = [];
+  if (Array.isArray(data.rounds1)) rc.push(data.rounds1);
+  if (Array.isArray(data.rounds2)) rc.push(data.rounds2);
+  if (rc.length === 0) rc.push([]); // minimal 1 lapangan
+
+  data.roundsByCourt = rc;
+  return data;
+}
+
+
+function startAutoSave() {
+  if (autosaveTimer) clearInterval(autosaveTimer);
+  autosaveTimer = setInterval(() => {
+    if (dirty) saveToStore();
+  }, 30000);
 }
 
 
