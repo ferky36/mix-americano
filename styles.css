@@ -26,3 +26,29 @@ body { font-size: clamp(14px, calc(14px * var(--ui-zoom) / 100), 20px); }
 @keyframes slideDown { from{opacity:0; transform:translateY(-6px);} to{opacity:1; transform:translateY(0);} }
 .hdr-slide { animation:slideDown .18s ease-out; }
 .filter-slide { animation:slideDown .18s ease-out; }
+
+/* Modal overlay fix */
+#reportModal { display:none; }
+#reportModal:not(.hidden) { display:block; }
+
+.court-tab {
+  border-bottom-width: 2px;
+  border-color: transparent;
+  padding: .4rem .75rem;
+  border-radius: .5rem .5rem 0 0;
+}
+.court-tab.active {
+  border-color: #111827;
+  color: #111827;
+}
+.dark .court-tab.active {
+  border-color: #e5e7eb;
+  color: #e5e7eb;
+}
+.court-close {
+  opacity: .7;
+  margin-left: .35rem;
+}
+.court-close:hover { opacity: 1; }
+
+#courtsToolbar { scroll-behavior: auto; } /* cegah smooth scroll ngesot */

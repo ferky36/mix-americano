@@ -15,14 +15,13 @@ const parsePlayersText = (t) =>
     .filter(Boolean);
 
 // State
-let activeTab = 1,
-  players = [],
-  rounds1 = [],
-  rounds2 = [],
-  dirty = false,
-  autosaveTimer = null;
-let store = { sessions: {}, lastTs: null };
-const THEME_KEY = "mix-americano-theme";
+let activeCourt = 0;                      // index lapangan aktif
+let roundsByCourt = [ [] ];               // array of courts, masing2 array rounds
+let players = [];
+let dirty=false, autosaveTimer=null;
+let store = { sessions:{}, lastTs:null };
+const THEME_KEY='mix-americano-theme';
+
 
 // Theme
 function applyThemeFromStorage() {
@@ -49,18 +48,21 @@ function populateDatePicker() {
     });
   if (Array.from(sel.options).some((o) => o.value === cur)) sel.value = cur;
 }
-function currentPayload() {
+function currentPayload(){
   return {
-    date: byId("sessionDate").value || "",
-    startTime: byId("startTime").value,
-    minutesPerRound: byId("minutesPerRound").value,
-    roundCount: byId("roundCount").value,
-    players: players.join("\n"),
-    rounds1,
-    rounds2,
-    ts: new Date().toISOString(),
+    date: byId('sessionDate').value || '',
+    startTime: byId('startTime').value,
+    minutesPerRound: byId('minutesPerRound').value,
+    roundCount: byId('roundCount').value,
+    players: players.join('\n'),
+    roundsByCourt,               // <-- simpan struktur baru
+    // kompat (optional): masih ikut simpan 2 yang pertama agar file lama tetap terbaca
+    rounds1: roundsByCourt[0] || [],
+    rounds2: roundsByCourt[1] || [],
+    ts: new Date().toISOString()
   };
 }
+
 function markDirty() {
   dirty = true;
   byId("unsavedDot").classList.remove("hidden");
@@ -135,12 +137,32 @@ function loadSessionByDate() {
   renderAll();
   markSaved(data.ts);
 }
+function normalizeLoadedSession(data){
+  // kompat: file lama punya rounds1/rounds2
+  if (!Array.isArray(data.roundsByCourt)) {
+    const rc = [];
+    if (Array.isArray(data.rounds1)) rc.push(data.rounds1);
+    if (Array.isArray(data.rounds2)) rc.push(data.rounds2);
+    if (rc.length === 0) rc.push([]); // minimal 1 lapangan
+    data.roundsByCourt = rc;
+  }
+  return data;
+}
+
 function startAutoSave() {
   if (autosaveTimer) clearInterval(autosaveTimer);
   autosaveTimer = setInterval(() => {
     if (dirty) saveToStore();
   }, 30000);
 }
+function ensureRoundsLengthForAllCourts(){
+  const R = parseInt(byId('roundCount').value || '10', 10);
+  roundsByCourt.forEach((arr, ci)=>{
+    while(arr.length < R) arr.push({a1:'',a2:'',b1:'',b2:'',scoreA:'',scoreB:''});
+    if(arr.length > R) roundsByCourt[ci] = arr.slice(0, R);
+  });
+}
+
 
 // PLAYERS UI
 function escapeHtml(s) {
@@ -346,6 +368,7 @@ function renderCourt(container, arr) {
     const tdHandle = document.createElement("td");
     tdHandle.textContent = "≡";
     tdHandle.className = "py-2 pr-4 text-gray-400";
+    tdHandle.style.cursor = "grab";
     tr.appendChild(tdHandle);
     const tdIdx = document.createElement("td");
     tdIdx.textContent = "R" + (i + 1);
@@ -405,171 +428,161 @@ function renderCourt(container, arr) {
   container.appendChild(wrapper);
 }
 
+function renderCourtActive(){
+  ensureRoundsLengthForAllCourts();
+  const container = byId('courtContainer');
+  container.innerHTML = '';
+  const arr = roundsByCourt[activeCourt] || [];
+  renderCourt(container, arr);  // gunakan fungsi renderCourt Anda yang sudah ada
+}
+
+
 // RENDER + VALIDATION + STANDINGS
-function renderAll() {
-  initRoundsLength();
-  renderCourt(byId("court1"), rounds1);
-  renderCourt(byId("court2"), rounds2);
+function renderAll(){
+  ensureRoundsLengthForAllCourts();
+  renderCourtsToolbar();
+  renderCourtActive();
   validateAll();
   computeStandings();
-  if (activeTab === 1) {
-    byId("court1").classList.remove("hidden");
-    byId("court2").classList.add("hidden");
-    byId("tab1").classList.add("tab-active");
-    byId("tab2").classList.remove("tab-active");
-    byId("tab2").classList.add("text-gray-500", "border-transparent");
-    byId("tab1").classList.remove("text-gray-500", "border-transparent");
-  } else {
-    byId("court2").classList.remove("hidden");
-    byId("court1").classList.add("hidden");
-    byId("tab2").classList.add("tab-active");
-    byId("tab1").classList.remove("tab-active");
-    byId("tab1").classList.add("text-gray-500", "border-transparent");
-    byId("tab2").classList.remove("text-gray-500", "border-transparent");
-  }
 }
+
+function renderCourtsToolbar(){
+  const bar = byId('courtsToolbar');
+  const addBtn = byId('btnAddCourt');
+
+  // simpan posisi scroll sebelum kita rebuild
+  const prevScroll = bar.scrollLeft;
+
+  // styling anti-wrap (kalau belum ada di HTML)
+  bar.classList.add('overflow-x-auto','whitespace-nowrap','flex','items-center','gap-2');
+
+  // bersihkan semua tab (jangan hapus tombol add)
+  [...bar.querySelectorAll('.court-tab, .court-close-wrap, .court-holder')].forEach(el => el.remove());
+
+  roundsByCourt.forEach((_, idx)=>{
+    const btn = document.createElement('button');
+    btn.className = 'court-tab court-holder text-sm border-b-2 px-3 py-1.5 rounded-t-lg ' +
+                    (idx===activeCourt ? 'active' : 'text-gray-500 border-transparent');
+    btn.textContent = 'Lapangan ' + (idx+1);
+    btn.addEventListener('click', (e)=>{
+      e.preventDefault();
+      // simpan posisi scroll saat ini agar tidak geser ketika re-render
+      const keep = byId('courtsToolbar').scrollLeft;
+      activeCourt = idx;
+      renderAll();
+      byId('courtsToolbar').scrollLeft = keep;
+    });
+
+    const wrap = document.createElement('span');
+    wrap.className = 'court-close-wrap inline-flex items-center';
+    if (idx > 0) {
+      const del = document.createElement('button');
+      del.className = 'court-close text-xs px-1';
+      del.title = 'Hapus Lapangan';
+      del.textContent = '🗑️';
+      del.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        const keep = byId('courtsToolbar').scrollLeft;
+        if (!confirm('Hapus Lapangan '+(idx+1)+'? Data ronde di lapangan ini akan hilang.')) return;
+        roundsByCourt.splice(idx,1);
+        if (activeCourt >= roundsByCourt.length) activeCourt = roundsByCourt.length-1;
+        markDirty();
+        renderAll();
+        byId('courtsToolbar').scrollLeft = keep;
+      });
+      wrap.appendChild(del);
+    } else {
+      const ph = document.createElement('span'); ph.style.width='0.5rem'; wrap.appendChild(ph);
+    }
+
+    const holder = document.createElement('span');
+    holder.className = 'court-holder inline-flex items-center gap-1';
+    holder.appendChild(btn);
+    holder.appendChild(wrap);
+
+    bar.insertBefore(holder, addBtn);
+  });
+
+  // kembalikan posisi scroll setelah rebuild
+  bar.scrollLeft = prevScroll;
+}
+
+
 
 // Validasi: pasangan boleh sama; duplikat lawan dicek PER lapangan; double-booking tetap dicek
-function validateAll() {
-  const R = parseInt(byId("roundCount").value || "10", 10);
+function validateAll(){
+  const R = parseInt(byId('roundCount').value || '10', 10);
   const problems = [];
 
-  // Double booking per ronde
-  for (let i = 0; i < R; i++) {
-    const names = [
-      rounds1[i]?.a1,
-      rounds1[i]?.a2,
-      rounds1[i]?.b1,
-      rounds1[i]?.b2,
-      rounds2[i]?.a1,
-      rounds2[i]?.a2,
-      rounds2[i]?.b1,
-      rounds2[i]?.b2,
-    ].filter(Boolean);
-    const set = new Set(names);
-    if (set.size !== names.length)
-      problems.push(
-        "Bentrok jadwal: R" + (i + 1) + " ada pemain di dua lapangan."
-      );
-  }
-
-  const teamKey = (p, q) => [p || "", q || ""].sort().join(" & ");
-  const matchKey = (r) => {
-    if (!(r && r.a1 && r.a2 && r.b1 && r.b2)) return "";
-    const tA = teamKey(r.a1, r.a2),
-      tB = teamKey(r.b1, r.b2);
-    return [tA, tB].sort().join(" vs ");
-  };
-
-  function scanCourt(arr, label) {
-    const seenMatch = new Map(); // reset per lapangan
-    for (let i = 0; i < R; i++) {
-      const r = arr[i];
-      if (!(r && r.a1 && r.a2 && r.b1 && r.b2)) continue;
-      const key = matchKey(r);
-      if (seenMatch.has(key))
-        problems.push(
-          "Duplikat lawan (dalam " +
-            label +
-            "): " +
-            key +
-            " muncul lagi di R" +
-            (i + 1) +
-            " (sebelumnya " +
-            seenMatch.get(key) +
-            ")."
-        );
-      else seenMatch.set(key, "R" + (i + 1));
+  // 1) Double-booking per ronde lintas semua lapangan
+  for(let i=0;i<R;i++){
+    const names = [];
+    roundsByCourt.forEach(courtArr=>{
+      const r=courtArr[i];
+      if(r){ names.push(r.a1, r.a2, r.b1, r.b2); }
+    });
+    const filtered = names.filter(Boolean);
+    const set = new Set(filtered);
+    if(set.size !== filtered.length){
+      problems.push('Bentrok jadwal: R'+(i+1)+' ada pemain di dua lapangan.');
     }
   }
-  scanCourt(rounds1, "Lap 1");
-  scanCourt(rounds2, "Lap 2");
 
-  const box = byId("errors");
-  const okHTML = `<div class="p-3 rounded-xl bg-green-50 text-green-700 border border-green-200 text-sm">Tidak ada masalah penjadwalan.</div>`;
-  const errHTML = `<div class="p-3 rounded-xl bg-red-50 text-red-700 border border-red-200 text-sm">
-      <div class="font-semibold mb-1">Validasi:</div>
-      <ul class="list-disc pl-5 space-y-1">${problems
-        .map((p) => `<li>${p}</li>`)
-        .join("")}</ul>
-    </div>`;
-  box.innerHTML = problems.length ? errHTML : okHTML;
-  return problems.length === 0;
+  // 2) Duplikat lawan PER lapangan (partners boleh sama)
+  const teamKey = (p,q)=>[p||'',q||''].sort().join(' & ');
+  const matchKey = (r)=>{ if(!(r&&r.a1&&r.a2&&r.b1&&r.b2)) return ''; const tA=teamKey(r.a1,r.a2), tB=teamKey(r.b1,r.b2); return [tA,tB].sort().join(' vs '); };
+
+  roundsByCourt.forEach((courtArr, ci)=>{
+    const seen = new Map();
+    for(let i=0;i<R;i++){
+      const r=courtArr[i];
+      if(!(r&&r.a1&&r.a2&&r.b1&&r.b2)) continue;
+      const key = matchKey(r);
+      if(seen.has(key)){
+        problems.push('Duplikat lawan (Lap '+(ci+1)+'): '+key+' muncul lagi di R'+(i+1)+' (sebelumnya '+seen.get(key)+').');
+      } else {
+        seen.set(key, 'R'+(i+1));
+      }
+    }
+  });
+
+  const box = byId('errors');
+  box.innerHTML = problems.length
+    ? `<div class="p-3 rounded-xl bg-red-50 text-red-700 border border-red-200 text-sm">
+         <div class="font-semibold mb-1">Validasi:</div>
+         <ul class="list-disc pl-5 space-y-1">${problems.map(p=>`<li>${p}</li>`).join('')}</ul>
+       </div>`
+    : `<div class="p-3 rounded-xl bg-green-50 text-green-700 border border-green-200 text-sm">Tidak ada masalah penjadwalan.</div>`;
+  return problems.length===0;
 }
 
-function computeStandings() {
-  const data = {};
-  players.forEach(
-    (p) => (data[p] = { total: 0, diff: 0, win: 0, lose: 0, draw: 0 })
-  );
-  const apply = (arr) =>
-    arr.forEach((r) => {
-      const a = Number(r?.scoreA || 0),
-        b = Number(r?.scoreB || 0);
-      if (!(r?.a1 && r?.a2 && r?.b1 && r?.b2)) return;
-      [r.a1, r.a2].forEach((p) => {
-        if (data[p]) {
-          data[p].total += a;
-          data[p].diff += a - b;
-        }
-      });
-      [r.b1, r.b2].forEach((p) => {
-        if (data[p]) {
-          data[p].total += b;
-          data[p].diff += b - a;
-        }
-      });
-      if (a > 0 || b > 0) {
-        if (a > b) {
-          [r.a1, r.a2].forEach((p) => data[p] && data[p].win++);
-          [r.b1, r.b2].forEach((p) => data[p] && data[p].lose++);
-        } else if (a < b) {
-          [r.b1, r.b2].forEach((p) => data[p] && data[p].win++);
-          [r.a1, r.a2].forEach((p) => data[p] && data[p].lose++);
-        } else {
-          [r.a1, r.a2, r.b1, r.b2].forEach((p) => {
-            if (data[p]) data[p].draw++;
-          });
-        }
-      }
-    });
-  apply(rounds1);
-  apply(rounds2);
 
-  let arr = Object.entries(data).map(([player, v]) => {
-    const gp = v.win + v.lose + v.draw;
-    return { player, ...v, winRate: gp ? v.win / gp : 0 };
-  });
-  arr.sort(
-    (p, q) =>
-      q.total - p.total ||
-      q.diff - p.diff ||
-      q.win - p.win ||
-      p.player.localeCompare(q.player)
-  );
-  let rank = 1;
-  arr.forEach((s, i) => {
-    if (i > 0) {
-      const pv = arr[i - 1];
-      const tie =
-        s.total === pv.total && s.diff === pv.diff && s.win === pv.win;
-      rank = tie ? rank : i + 1;
+function computeStandings(){
+  const data={}; players.forEach(p=>data[p]={total:0,diff:0,win:0,lose:0,draw:0});
+  const applyRound = (r)=>{
+    const a=Number(r?.scoreA||0), b=Number(r?.scoreB||0);
+    if(!(r?.a1&&r?.a2&&r?.b1&&r?.b2)) return;
+    [r.a1,r.a2].forEach(p=>{ if(data[p]){ data[p].total+=a; data[p].diff+=(a-b); }});
+    [r.b1,r.b2].forEach(p=>{ if(data[p]){ data[p].total+=b; data[p].diff+=(b-a); }});
+    if(a>0||b>0){
+      if(a>b){ [r.a1,r.a2].forEach(p=>data[p]&&data[p].win++); [r.b1,r.b2].forEach(p=>data[p]&&data[p].lose++); }
+      else if(a<b){ [r.b1,r.b2].forEach(p=>data[p]&&data[p].win++); [r.a1,r.a2].forEach(p=>data[p]&&data[p].lose++); }
+      else { [r.a1,r.a2,r.b1,r.b2].forEach(p=>{ if(data[p]) data[p].draw++; }); }
     }
-    s.rank = rank;
-  });
+  };
+  roundsByCourt.forEach(arr => arr.forEach(applyRound));
 
-  const tbody = byId("standings").querySelector("tbody");
-  tbody.innerHTML = "";
-  arr.forEach((s) => {
-    const tr = document.createElement("tr");
-    tr.className =
-      s.rank === 1
-        ? "rank-1"
-        : s.rank === 2
-        ? "rank-2"
-        : s.rank === 3
-        ? "rank-3"
-        : "";
+  let arr=Object.entries(data).map(([player,v])=>{
+    const gp=v.win+v.lose+v.draw;
+    return {player,...v,winRate:gp? v.win/gp:0};
+  });
+  arr.sort((p,q)=>(q.total-p.total)||(q.diff-p.diff)||(q.win-p.win)||p.player.localeCompare(q.player));
+  let rank=1; arr.forEach((s,i)=>{ if(i>0){ const pv=arr[i-1]; const tie=(s.total===pv.total&&s.diff===pv.diff&&s.win===pv.win); rank=tie?rank:(i+1);} s.rank=rank; });
+
+  const tbody=byId('standings').querySelector('tbody'); tbody.innerHTML='';
+  arr.forEach(s=>{
+    const tr=document.createElement('tr');
+    tr.className = s.rank===1?'rank-1': s.rank===2?'rank-2': s.rank===3?'rank-3':'';
     tr.innerHTML = `<td class="py-2 pr-4 font-semibold">${s.rank}</td>
                     <td class="py-2 pr-4 font-medium">${s.player}</td>
                     <td class="py-2 pr-4">${s.total}</td>
@@ -577,12 +590,117 @@ function computeStandings() {
                     <td class="py-2 pr-4">${s.win}</td>
                     <td class="py-2 pr-4">${s.lose}</td>
                     <td class="py-2 pr-4">${s.draw}</td>
-                    <td class="py-2 pr-4">${(s.winRate * 100).toFixed(
-                      1
-                    )}%</td>`;
+                    <td class="py-2 pr-4">${(s.winRate*100).toFixed(1)}%</td>`;
     tbody.appendChild(tr);
   });
 }
+
+
+// --- util: normalisasi tanggal "YYYY-MM-DD" ---
+function fmtDate(d){ return d; } // sessions.json sudah simpan "YYYY-MM-DD"
+
+// --- hitung stats dari 1 sesi (pakai aturan yang sama) ---
+function statsFromSession(session, whichCourt='both'){
+  const data = {}; // {player:{total,diff,win,lose,draw,games}}
+  function ensure(p){ if(!data[p]) data[p]={total:0,diff:0,win:0,lose:0,draw:0,games:0}; }
+  function applyRound(r){
+    const a=Number(r?.scoreA||0), b=Number(r?.scoreB||0);
+    if(!(r?.a1&&r?.a2&&r?.b1&&r?.b2)) return;
+    [r.a1,r.a2,r.b1,r.b2].forEach(ensure);
+    // total & selisih
+    [r.a1,r.a2].forEach(p=>{ data[p].total+=a; data[p].diff+=(a-b); data[p].games++; });
+    [r.b1,r.b2].forEach(p=>{ data[p].total+=b; data[p].diff+=(b-a); data[p].games++; });
+    // W/L/D
+    if(a>b){ [r.a1,r.a2].forEach(p=>data[p].win++); [r.b1,r.b2].forEach(p=>data[p].lose++); }
+    else if(a<b){ [r.b1,r.b2].forEach(p=>data[p].win++); [r.a1,r.a2].forEach(p=>data[p].lose++); }
+    else { [r.a1,r.a2,r.b1,r.b2].forEach(p=>data[p].draw++); }
+  }
+  if(whichCourt==='both' || whichCourt==='1') (session.rounds1||[]).forEach(applyRound);
+  if(whichCourt==='both' || whichCourt==='2') (session.rounds2||[]).forEach(applyRound);
+  return data;
+}
+
+// --- gabung beberapa sesi ---
+function aggregateStats(sessionsArr, whichCourt='both'){
+  const agg={}; // player -> totals
+  sessionsArr.forEach(s=>{
+    const one=statsFromSession(s, whichCourt);
+    Object.entries(one).forEach(([p,v])=>{
+      if(!agg[p]) agg[p]={total:0,diff:0,win:0,lose:0,draw:0,games:0};
+      agg[p].total+=v.total; agg[p].diff+=v.diff;
+      agg[p].win+=v.win; agg[p].lose+=v.lose; agg[p].draw+=v.draw; agg[p].games+=v.games;
+    });
+  });
+  // urutkan
+  let arr=Object.entries(agg).map(([player,v])=>{
+    const gp=v.win+v.lose+v.draw; // atau v.games/2 tergantung definisi
+    return {player,...v,winRate: gp ? v.win/gp : 0};
+  });
+  arr.sort((a,b)=>(b.total-a.total)||(b.diff-a.diff)||(b.win-a.win)||a.player.localeCompare(b.player));
+  // ranking
+  let rank=1; arr.forEach((s,i)=>{ if(i>0){ const pv=arr[i-1]; const tie=(s.total===pv.total&&s.diff===pv.diff&&s.win===pv.win); rank=tie?rank:(i+1);} s.rank=rank; });
+  return arr;
+}
+
+// --- tampilkan report ---
+function openReportModal(){ byId('reportModal').classList.remove('hidden'); }
+function closeReportModal(){ byId('reportModal').classList.add('hidden'); }
+
+function runReport(){
+  const from = byId('repFrom').value || '0000-01-01';
+  const to   = byId('repTo').value   || '9999-12-31';
+  const court= byId('repCourt').value; // 'both' | '1' | '2'
+
+  const sessionsArr = Object.values(store.sessions || {}).filter(s=>{
+    const d = s.date || '';
+    return d >= from && d <= to;
+  });
+
+  const arr = aggregateStats(sessionsArr, court);
+
+  // summary
+  const totalDates = new Set(sessionsArr.map(s=>s.date)).size;
+  const totalGames = sessionsArr.reduce((sum,s)=>{
+    const r1 = (court==='both'||court==='1') ? (s.rounds1||[]).filter(r=>r.a1&&r.a2&&r.b1&&r.b2).length : 0;
+    const r2 = (court==='both'||court==='2') ? (s.rounds2||[]).filter(r=>r.a1&&r.a2&&r.b1&&r.b2).length : 0;
+    return sum + r1 + r2;
+  },0);
+  const uniquePlayers = new Set(arr.map(x=>x.player)).size;
+  byId('reportSummary').textContent =
+    `Rentang: ${from} → ${to} • Tanggal: ${totalDates} • Game: ${totalGames} • Pemain: ${uniquePlayers}`;
+
+  // table
+  const tbody = byId('reportTable').querySelector('tbody');
+  tbody.innerHTML='';
+  arr.forEach(s=>{
+    const tr=document.createElement('tr');
+    tr.className = s.rank===1?'rank-1': s.rank===2?'rank-2': s.rank===3?'rank-3':'';
+    tr.innerHTML = `
+      <td class="py-2 pr-4 font-semibold">${s.rank}</td>
+      <td class="py-2 pr-4 font-medium">${s.player}</td>
+      <td class="py-2 pr-4">${s.games}</td>
+      <td class="py-2 pr-4">${s.total}</td>
+      <td class="py-2 pr-4">${s.diff}</td>
+      <td class="py-2 pr-4">${s.win}</td>
+      <td class="py-2 pr-4">${s.lose}</td>
+      <td class="py-2 pr-4">${s.draw}</td>
+      <td class="py-2 pr-4">${(s.winRate*100).toFixed(1)}%</td>`;
+    tbody.appendChild(tr);
+  });
+
+  // export CSV
+  byId('btnExportReportCSV').onclick = ()=>{
+    const header=['Player','Games','Total','Selisih','Menang','Kalah','Seri','WinRate'];
+    const rows=[header, ...arr.map(s=>[
+      s.player, s.games, s.total, s.diff, s.win, s.lose, s.draw, (s.winRate*100).toFixed(1)+'%'
+    ])];
+    const csv=rows.map(r=>r.map(csvEscape).join(',')).join('\n');
+    const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download=`report_${from}_to_${to}.csv`; a.click(); URL.revokeObjectURL(url);
+  };
+}
+
 
 // AUTO FILL (tab aktif)
 function autoFillActiveTab() {
@@ -632,6 +750,88 @@ function autoFillActiveTab() {
   else rounds2 = target;
 }
 
+function autoFillActiveCourt(){
+  const R = parseInt(byId('roundCount').value || '10', 10);
+  players = Array.from(byId('playersList').querySelectorAll('.player-name'))
+            .map(el => el.textContent.trim()).filter(Boolean);
+  if (players.length < 4) return;
+
+  // --- helper untuk kunci lawan unik (partners boleh sama) ---
+  const teamKey = (a,b) => [a,b].sort().join(' & ');
+  const matchKey = (a1,a2,b1,b2) => {
+    const tA = teamKey(a1,a2), tB = teamKey(b1,b2);
+    return [tA,tB].sort().join(' vs ');
+  };
+
+  // --- siapkan target baru & tracker fairness/duplikat lawan ---
+  const target = [];
+  const appear = Object.fromEntries(players.map(p => [p, 0]));
+  const seenMatch = new Set(); // hanya untuk lapangan AKTIF (sesuai aturan)
+
+  // ambil daftar lapangan lain untuk hindari double-booking per ronde
+  const otherCourts = roundsByCourt.filter((_, idx) => idx !== activeCourt);
+
+  // fungsi ambil 4 pemain yang tidak bentrok jamnya & paling sedikit main
+  function chooseFour(roundIdx){
+    // kumpulkan pemain yang sudah main di ronde yang sama di lapangan lain
+    const busy = new Set();
+    otherCourts.forEach(courtArr => {
+      const r = courtArr[roundIdx];
+      if (r) [r.a1, r.a2, r.b1, r.b2].forEach(x => x && busy.add(x));
+    });
+    // juga hindari duplikasi orang dalam 1 ronde lapangan aktif saat ini (jaga-jaga)
+    if (target[roundIdx]) {
+      [target[roundIdx].a1, target[roundIdx].a2, target[roundIdx].b1, target[roundIdx].b2]
+        .forEach(x => x && busy.add(x));
+    }
+
+    const cand = players.filter(p => !busy.has(p));
+    // adil: yang paling sedikit kemunculannya diprioritaskan
+    cand.sort((a,b) => (appear[a]-appear[b]) || a.localeCompare(b));
+    if (cand.length < 4) return null;
+    return [cand[0], cand[1], cand[2], cand[3]];
+  }
+
+  for (let i = 0; i < R; i++) {
+    let four = chooseFour(i);
+    if (!four) {
+      // fallback minimal: ambil sisa pemain yang tidak busy; jika <4, kosongkan ronde
+      const busy = new Set();
+      otherCourts.forEach(courtArr => {
+        const r = courtArr[i];
+        if (r) [r.a1, r.a2, r.b1, r.b2].forEach(x => x && busy.add(x));
+      });
+      const remain = players.filter(p => !busy.has(p)).slice(0,4);
+      if (remain.length < 4) { target.push({}); continue; }
+      four = remain;
+    }
+
+    const [A,B,C,D] = four;
+
+    // Coba 3 pasangan yang mungkin, pilih yang TIDAK bikin duplikat lawan di lapangan aktif
+    const options = [
+      {a1:A, a2:B, b1:C, b2:D},
+      {a1:A, a2:C, b1:B, b2:D},
+      {a1:A, a2:D, b1:B, b2:C},
+    ];
+
+    let picked = null;
+    for (const opt of options) {
+      const key = matchKey(opt.a1, opt.a2, opt.b1, opt.b2);
+      if (!seenMatch.has(key)) { picked = opt; break; }
+    }
+
+    // Jika semua opsi bentrok, ambil opsi pertama (jarang terjadi; bisa karena pemain & ronde terbatas)
+    if (!picked) picked = options[0];
+
+    target.push({...picked, scoreA:'', scoreB:''});
+    // update fairness & seen matches
+    [picked.a1, picked.a2, picked.b1, picked.b2].forEach(p => appear[p]++);
+    seenMatch.add(matchKey(picked.a1, picked.a2, picked.b1, picked.b2));
+  }
+
+  roundsByCourt[activeCourt] = target;
+}
 // EXPORTS
 function exportRoundsCSV() {
   const header = [
@@ -802,34 +1002,21 @@ if (btnFilter) {
 byId("btnCollapsePlayers").addEventListener("click", () =>
   byId("playersPanel").classList.toggle("hidden")
 );
-byId("btnApplyPlayersActive").addEventListener("click", () => {
-  const arr = activeTab === 1 ? rounds1 : rounds2;
-  const has = arr.some(
-    (r) => r && (r.a1 || r.a2 || r.b1 || r.b2 || r.scoreA || r.scoreB)
-  );
-  if (
-    has &&
-    !confirm(
-      "Menerapkan pemain akan menghapus pairing+skor pada tab aktif. Lanjutkan?"
-    )
-  )
-    return;
-  autoFillActiveTab();
-  markDirty();
-  renderAll();
-  computeStandings();
+byId('btnApplyPlayersActive').addEventListener('click', ()=>{
+  const arr = roundsByCourt[activeCourt] || [];
+  const has = arr.some(r=>r&&(r.a1||r.a2||r.b1||r.b2||r.scoreA||r.scoreB));
+  if(has && !confirm('Menerapkan pemain akan menghapus pairing+skor pada lapangan aktif. Lanjutkan?')) return;
+  autoFillActiveCourt(); markDirty(); renderAll(); computeStandings();
 });
-byId("btnResetActive").addEventListener("click", () => {
-  const arr = activeTab === 1 ? rounds1 : rounds2;
-  const has = arr.some(
-    (r) => r && (r.a1 || r.a2 || r.b1 || r.b2 || r.scoreA || r.scoreB)
-  );
-  if (has && !confirm("Data pada tab aktif akan dihapus. Lanjutkan?")) return;
-  if (activeTab === 1) rounds1 = [];
-  else rounds2 = [];
-  markDirty();
-  renderAll();
+
+byId('btnResetActive').addEventListener('click', ()=>{
+  const arr = roundsByCourt[activeCourt] || [];
+  const has = arr.some(r=>r&&(r.a1||r.a2||r.b1||r.b2||r.scoreA||r.scoreB));
+  if(has && !confirm('Data pada lapangan aktif akan dihapus. Lanjutkan?')) return;
+  roundsByCourt[activeCourt] = [];
+  markDirty(); renderAll();
 });
+
 byId("btnClearScores").addEventListener("click", () => {
   rounds1.forEach((r) => {
     r.scoreA = "";
@@ -867,14 +1054,14 @@ byId("roundCount").addEventListener("input", () => {
   renderAll();
 });
 
-byId("tab1").addEventListener("click", () => {
-  activeTab = 1;
-  renderAll();
-});
-byId("tab2").addEventListener("click", () => {
-  activeTab = 2;
-  renderAll();
-});
+// byId("tab1").addEventListener("click", () => {
+//   activeTab = 1;
+//   renderAll();
+// });
+// byId("tab2").addEventListener("click", () => {
+//   activeTab = 2;
+//   renderAll();
+// });
 
 byId("btnAddPlayer").addEventListener("click", () => {
   const v = byId("newPlayer").value;
@@ -933,3 +1120,24 @@ byId("btnCancelText").addEventListener("click", hideTextModal);
   validateNames();
   startAutoSave();
 })();
+
+// Report events
+byId('btnReport').addEventListener('click', ()=>{
+  const keys = Object.keys(store.sessions||{}).sort();
+  byId('repFrom').value = keys[0] || byId('sessionDate').value;
+  byId('repTo').value   = keys[keys.length-1] || byId('sessionDate').value;
+  openReportModal();
+  runReport();
+});
+byId('btnReportClose').addEventListener('click', closeReportModal);
+byId('btnRunReport').addEventListener('click', runReport);
+
+byId('btnAddCourt').addEventListener('click', ()=>{
+  const R = parseInt(byId('roundCount').value || '10', 10);
+  const arr = Array.from({length:R}, ()=>({a1:'',a2:'',b1:'',b2:'',scoreA:'',scoreB:''}));
+  roundsByCourt.push(arr);
+  activeCourt = roundsByCourt.length - 1;
+  markDirty();
+  renderAll();
+});
+
