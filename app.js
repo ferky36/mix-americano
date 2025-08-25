@@ -240,6 +240,7 @@ function renderPlayersList() {
       gSel.onchange = () => {
         playerMeta[name] = { ...playerMeta[name], gender: gSel.value };
         markDirty();
+        validateNames();    // << tambah ini
       };
 
       // level select
@@ -251,6 +252,7 @@ function renderPlayersList() {
       lSel.onchange = () => {
         playerMeta[name] = { ...playerMeta[name], level: lSel.value };
         markDirty();
+        validateNames();    // << tambah ini
       };
 
       // sisipkan di antara nama & tombol hapus
@@ -322,40 +324,81 @@ function levenshtein(a, b) {
   }
   return dp[b.length][a.length];
 }
-function validateNames() {
-  const warn = byId("playersWarnings");
-  warn.innerHTML = "";
+function validateNames(){
+  const warn = byId('playersWarnings');
+  const items = [];
+  warn.innerHTML = '';
+
+  // --- existing: cek duplikat nama ---
   const map = new Map();
   const dups = [];
-  players.forEach((p, i) => {
+  players.forEach((p,i)=>{
     const k = p.trim().toLowerCase();
-    if (map.has(k)) dups.push([map.get(k), i]);
+    if(map.has(k)) dups.push([map.get(k), i]);
     else map.set(k, i);
   });
-  const items = [];
-  if (dups.length) {
+  if (dups.length){
     items.push(
-      "<div class='text-amber-600'>Duplikat: " +
-        dups.map(([a, b]) => players[a] + " ↔ " + players[b]).join(", ") +
-        "</div>"
+      "<div class='text-amber-600'>Duplikat nama: " +
+      dups.map(([a,b])=> players[a] + " ↔ " + players[b]).join(', ') +
+      "</div>"
     );
   }
-  const sugg = [];
-  for (let i = 0; i < players.length; i++) {
-    for (let j = i + 1; j < players.length; j++) {
-      const d = levenshtein(players[i], players[j]);
-      if (d > 0 && d <= 2) sugg.push([players[i], players[j], d]);
+
+  // --- existing: saran typo (Levenshtein <= 2) ---
+  const sugg=[];
+  for(let i=0;i<players.length;i++){
+    for(let j=i+1;j<players.length;j++){
+      const d=levenshtein(players[i],players[j]);
+      if(d>0 && d<=2) sugg.push([players[i],players[j],d]);
     }
   }
-  if (sugg.length) {
+  if (sugg.length){
     items.push(
       "<div class='text-blue-600'>Mirip (cek typo): " +
-        sugg.map((s) => s[0] + " ~ " + s[1]).join(", ") +
-        "</div>"
+      sugg.map(([a,b])=> a + " ~ " + b).join(', ') +
+      "</div>"
     );
   }
-  warn.innerHTML = items.join("");
+
+  // --- NEW: pairing meta check sesuai mode ---
+  const pm = byId('pairMode') ? byId('pairMode').value : 'free';
+  if (pm !== 'free'){
+    const missingGender = [];
+    const missingLevel  = [];
+
+    players.forEach(p=>{
+      const m = (typeof playerMeta === 'object' && playerMeta[p]) ? playerMeta[p] : {};
+      if (pm === 'mixed'){
+        if (!m.gender) missingGender.push(p);
+      } else if (pm === 'lvl_bal' || pm === 'lvl_same'){
+        if (!m.level)  missingLevel.push(p);
+      }
+    });
+
+    if (pm === 'mixed' && missingGender.length){
+      items.push(
+        "<div class='text-rose-600'>Mode Mixed: " +
+        "Lengkapi <b>Gender</b> untuk: " + missingGender.join(', ') + ".</div>"
+      );
+    }
+    if ((pm === 'lvl_bal' || pm === 'lvl_same') && missingLevel.length){
+      items.push(
+        "<div class='text-rose-600'>Mode Level: " +
+        "Lengkapi <b>Level</b> (beg/pro) untuk: " + missingLevel.join(', ') + ".</div>"
+      );
+    }
+
+    // Hint kecil untuk mengarahkan user
+    if ((pm==='mixed' && missingGender.length) || ((pm==='lvl_bal'||pm==='lvl_same') && missingLevel.length)){
+      items.push("<div class='text-xs text-gray-500 mt-1'>Atur di list pemain (dropdown kecil di tiap nama).</div>");
+    }
+  }
+
+  warn.innerHTML = items.join('');
+  return items.length === 0; // opsional kalau mau dipakai sebagai boolean
 }
+
 
 // COURT
 function initRoundsLength() {
@@ -1211,6 +1254,8 @@ byId("btnCancelText").addEventListener("click", hideTextModal);
     "Ichsan",
     "Marchel",
     "Altundri",
+    "Ferdi",
+    "Tyas",
   ];
   renderPlayersList();
   renderAll();
@@ -1236,5 +1281,21 @@ byId('btnAddCourt').addEventListener('click', ()=>{
   activeCourt = roundsByCourt.length - 1;
   markDirty();
   renderAll();
+});
+byId('pairMode').addEventListener('change', ()=>{
+  markDirty();
+  validateNames();
+});
+byId('btnApplyPlayersActive').addEventListener('click', ()=>{
+  const ok = validateNames(); // jalankan dulu
+  const pm = byId('pairMode') ? byId('pairMode').value : 'free';
+  if (!ok && pm !== 'free'){
+    const proceed = confirm('Beberapa pemain belum melengkapi data sesuai mode pairing. Tetap lanjutkan?');
+    if (!proceed) return;
+  }
+  const arr = roundsByCourt[activeCourt] || [];
+  const has = arr.some(r=>r&&(r.a1||r.a2||r.b1||r.b2||r.scoreA||r.scoreB));
+  if(has && !confirm('Menerapkan pemain akan menghapus pairing+skor pada lapangan aktif. Lanjutkan?')) return;
+  autoFillActiveCourt(); markDirty(); renderAll(); computeStandings();
 });
 
