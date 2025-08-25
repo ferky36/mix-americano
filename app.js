@@ -92,18 +92,22 @@ function saveToStore() {
   byId("datePicker").value = d;
   return true;
 }
-function saveToJSONFile() {
-  if (!saveToStore()) return;
-  const blob = new Blob([JSON.stringify(store, null, 2)], {
-    type: "application/json",
-  });
+function saveToJSONFile(){
+  if(!saveToStore()) return;
+
+  const date = byId('sessionDate').value || new Date().toISOString().slice(0,10);
+  const safeDate = date.replace(/\//g,'-'); // kalau formatnya dd/mm/yyyy → diganti strip
+
+  const blob = new Blob([JSON.stringify(store,null,2)],{type:'application/json'});
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "sessions.json";
+
+  const a=document.createElement('a');
+  a.href=url;
+  a.download = `session_${safeDate}.json`;   // 🔹 nama file = session_YYYY-MM-DD.json
   a.click();
   URL.revokeObjectURL(url);
 }
+
 function loadJSONFromFile(file){
   const r = new FileReader();
   r.onload = (ev)=>{
