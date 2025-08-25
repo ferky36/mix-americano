@@ -143,87 +143,18 @@ function renderAll(){
   if(activeTab===1){ byId('court1').classList.remove('hidden'); byId('court2').classList.add('hidden'); byId('tab1').classList.add('tab-active'); byId('tab2').classList.remove('tab-active'); byId('tab2').classList.add('text-gray-500','border-transparent'); byId('tab1').classList.remove('text-gray-500','border-transparent'); } else { byId('court2').classList.remove('hidden'); byId('court1').classList.add('hidden'); byId('tab2').classList.add('tab-active'); byId('tab1').classList.remove('tab-active'); byId('tab1').classList.add('text-gray-500','border-transparent'); byId('tab2').classList.remove('text-gray-500','border-transparent'); }
 }
 
-
-
 function validateAll(){
-  const R=parseInt(byId('roundCount').value||'10',10);
-  const problems=[];
-
-  // 1) Tetap cek double-booking antar lapangan pada ronde yang sama
-  for(let i=0;i<R;i++){
-    const names=[rounds1[i]?.a1,rounds1[i]?.a2,rounds1[i]?.b1,rounds1[i]?.b2,rounds2[i]?.a1,rounds2[i]?.a2,rounds2[i]?.b1,rounds2[i]?.b2].filter(Boolean);
-    const set=new Set(names);
-    if(set.size!==names.length) problems.push('Bentrok jadwal: R'+(i+1)+' ada pemain di dua lapangan.');
-  }
-
-  // 2) Duplikat LAWAN dilarang (di SEMUA lapangan)
-  //    Pasangan yang sama diperbolehkan (tidak dicek)
+  const R=parseInt(byId('roundCount').value||'10',10); const problems=[];
+  for(let i=0;i<R;i++){ const names=[rounds1[i]?.a1,rounds1[i]?.a2,rounds1[i]?.b1,rounds1[i]?.b2,rounds2[i]?.a1,rounds2[i]?.a2,rounds2[i]?.b1,rounds2[i]?.b2].filter(Boolean); const set=new Set(names); if(set.size!==names.length) problems.push('Bentrok jadwal: R'+(i+1)+' ada pemain di dua lapangan.'); }
   const teamKey=(p,q)=>[p||'',q||''].sort().join(' & ');
-  const matchKeyFromRound=(r)=>{
-    if(!(r&&r.a1&&r.a2&&r.b1&&r.b2)) return '';
-    const tA=teamKey(r.a1,r.a2), tB=teamKey(r.b1,r.b2);
-    return [tA,tB].sort().join(' vs ');
-  };
-  const seenMatch=new Map();
-  function scan(arr,label){
-    for(let i=0;i<R;i++){
-      const r=arr[i];
-      if(!(r&&r.a1&&r.a2&&r.b1&&r.b2)) continue;
-      const key=matchKeyFromRound(r);
-      if(seenMatch.has(key)){
-        problems.push('Duplikat lawan: '+key+' muncul lagi di '+label+' R'+(i+1)+' (sebelumnya '+seenMatch.get(key)+').');
-      } else {
-        seenMatch.set(key, label+' R'+(i+1));
-      }
-    }
-  }
-  scan(rounds1,'Lap 1');
-  scan(rounds2,'Lap 2');
-
+  const matchKeyFromRound=(r)=>{ if(!(r&&r.a1&&r.a2&&r.b1&&r.b2)) return ''; const tA=teamKey(r.a1,r.a2), tB=teamKey(r.b1,r.b2); return [tA,tB].sort().join(' vs '); };
+  const seenMatch=new Map(), seenTeam=new Map();
+  function scan(arr,label){ for(let i=0;i<R;i++){ const r=arr[i]; if(!(r&&r.a1&&r.a2&&r.b1&&r.b2)) continue; const key=matchKeyFromRound(r); if(seenMatch.has(key)) problems.push('Duplikat lawan: '+key+' muncul lagi di '+label+' R'+(i+1)+' (sebelumnya '+seenMatch.get(key)+').'); else seenMatch.set(key,label+' R'+(i+1)); const tA=teamKey(r.a1,r.a2), tB=teamKey(r.b1,r.b2); [tA,tB].forEach(t=>{ if(seenTeam.has(t)) problems.push('Duplikat pasangan: '+t+' dimainkan lagi di '+label+' R'+(i+1)+' (sebelumnya '+seenTeam.get(t)+').'); else seenTeam.set(t,label+' R'+(i+1)); }); } }
+  scan(rounds1,'Lap 1'); scan(rounds2,'Lap 2');
   const box=byId('errors');
-  box.innerHTML = problems.length
-    ? "<div class='p-3 rounded-xl bg-red-50 text-red-700 border border-red-200 text-sm'><div class='font-semibold mb-1'>Validasi:</div><ul class='list-disc pl-5 space-y-1'>"+problems.map(p=>"<li>"+p+"</li>").join("")+"</ul></div>"
-    : "<div class='p-3 rounded-xl bg-green-50 text-green-700 border border-green-200 text-sm'>Tidak ada masalah penjadwalan.</div>";
+  box.innerHTML = problems.length? "<div class='p-3 rounded-xl bg-red-50 text-red-700 border border-red-200 text-sm'><div class='font-semibold mb-1'>Validasi:</div><ul class='list-disc pl-5 space-y-1'>"+problems.map(p=>'<li>'+p+'</li>').join('')+"</ul></div>" : "<div class='p-3 rounded-xl bg-green-50 text-green-700 border border-green-200 text-sm'>Tidak ada masalah penjadwalan.</div>";
   return problems.length===0;
 }
-
-
-  // 2) Cek duplikat pasangan/lawan HANYA di tab/lapangan aktif
-  const teamKey=(p,q)=>[p||'',q||''].sort().join(' & ');
-  const matchKeyFromRound=(r)=>{
-    if(!(r&&r.a1&&r.a2&&r.b1&&r.b2)) return '';
-    const tA=teamKey(r.a1,r.a2), tB=teamKey(r.b1,r.b2);
-    return [tA,tB].sort().join(' vs ');
-  };
-  const seenMatch=new Map(), seenTeam=new Map();
-  const arr = (activeTab===1 ? rounds1 : rounds2);
-  const label = (activeTab===1 ? 'Lap 1' : 'Lap 2');
-  for(let i=0;i<R;i++){
-    const r=arr[i];
-    if(!(r&&r.a1&&r.a2&&r.b1&&r.b2)) continue;
-    const key=matchKeyFromRound(r);
-    if(seenMatch.has(key)){
-      problems.push('Duplikat lawan (dalam '+label+'): '+key+' muncul lagi di R'+(i+1)+' (sebelumnya '+seenMatch.get(key)+').');
-    } else {
-      seenMatch.set(key,'R'+(i+1));
-    }
-    const tA=teamKey(r.a1,r.a2), tB=teamKey(r.b1,r.b2);
-    [tA,tB].forEach(t=>{
-      if(seenTeam.has(t)){
-        problems.push('Duplikat pasangan (dalam '+label+'): '+t+' dimainkan lagi di R'+(i+1)+' (sebelumnya '+seenTeam.get(t)+').');
-      } else {
-        seenTeam.set(t,'R'+(i+1));
-      }
-    });
-  }
-
-  const box=byId('errors');
-  box.innerHTML = problems.length
-    ? "<div class='p-3 rounded-xl bg-red-50 text-red-700 border border-red-200 text-sm'><div class='font-semibold mb-1'>Validasi:</div><ul class='list-disc pl-5 space-y-1'>"+problems.map(p=>"<li>"+p+"</li>").join("")+"</ul></div>"
-    : "<div class='p-3 rounded-xl bg-green-50 text-green-700 border border-green-200 text-sm'>Tidak ada masalah penjadwalan.</div>";
-  return problems.length===0;
-
-
 
 function computeStandings(){
   const data={}; players.forEach(p=>data[p]={total:0,diff:0,win:0,lose:0,draw:0});
