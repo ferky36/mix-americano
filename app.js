@@ -221,4 +221,4 @@ byId('btnCancelText').addEventListener('click', hideTextModal);
   if(!byId('sessionDate').value){ const d=new Date(); const s=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); byId('sessionDate').value=s; }
   players=['Della','Rangga','Fai','Gizla','Abdi','Diana','Kris','Ichsan','Marchel','Altundri'];
   renderPlayersList(); renderAll(); validateNames(); startAutoSave();
-})();
+})(); 
