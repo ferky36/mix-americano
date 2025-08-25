@@ -22,8 +22,20 @@ let dirty=false, autosaveTimer=null;
 let store = { sessions:{}, lastTs:null };
 const THEME_KEY='mix-americano-theme';
 let playerMeta = {}; // { "Nama": { gender:"M"|"F"|"", level:"beg"|"pro"|"" }, ... }
+const SCORE_MAXLEN = 2; // ubah ke 3 kalau perlu
 
 
+
+function onlyDigits(str){ return String(str||'').replace(/[^\d]/g,''); }
+function allowKey(e){
+  // izinkan kontrol umum
+  if (['Backspace','Delete','ArrowLeft','ArrowRight','Tab','Home','End'].includes(e.key)) return true;
+  // izinkan Cmd/Ctrl + (A/C/V/X/Z/Y)
+  if ((e.ctrlKey||e.metaKey) && /^[acvxyz]$/i.test(e.key)) return true;
+  // izinkan angka 0-9
+  if (/^\d$/.test(e.key)) return true;
+  return false;
+}
 
 // Theme
 function applyThemeFromStorage() {
@@ -513,25 +525,55 @@ function renderCourt(container, arr) {
       td.appendChild(sel);
       return td;
     }
-    function scCell(k) {
-      const td = document.createElement("td");
-      const inp = document.createElement("input");
-      inp.className =
-        "border rounded-lg px-2 py-1 w-[3.5rem] sm:w-[4.5rem] bg-white dark:bg-gray-900 dark:border-gray-700";
-      inp.inputMode = "numeric";
-      inp.value = r[k] || "";
-      inp.addEventListener("input", (e) => {
-        arr[i] = {
-          ...arr[i],
-          [k]: String(e.target.value).replace(/[^0-9]/g, ""),
-        };
-        markDirty();
-        validateAll();
-        computeStandings();
+    function scCell(k){
+      const td = document.createElement('td');
+      const inp = document.createElement('input');
+
+      // pakai text + inputmode numeric (lebih aman daripada type=number yang bisa terima 'e', '+', '-')
+      inp.type = 'text';
+      inp.inputMode = 'numeric';
+      inp.autocomplete = 'off';
+      inp.pattern = '[0-9]*';
+      inp.maxLength = (typeof SCORE_MAXLEN!=='undefined' ? SCORE_MAXLEN : 3); // fallback 3 digit
+      inp.className = 'border rounded-lg px-2 py-1 w-[3.5rem] sm:w-[4.5rem] bg-white dark:bg-gray-900 dark:border-gray-700';
+
+      // set nilai awal (dipastikan angka saja)
+      inp.value = onlyDigits(r[k] || '');
+
+      // blokir pengetikan non-angka
+      inp.addEventListener('keydown', (e)=>{
+        if (!allowKey(e)) e.preventDefault();
       });
+
+      // bersihkan saat input (termasuk paste via context menu di beberapa browser)
+      inp.addEventListener('input', (e)=>{
+        const clean = onlyDigits(e.target.value).slice(0, inp.maxLength);
+        if (e.target.value !== clean) e.target.value = clean;
+        arr[i] = { ...arr[i], [k]: clean };
+        markDirty(); validateAll(); computeStandings();
+      });
+
+      // sanitasi khusus paste (beberapa browser masih meloloskan sebelum 'input' terpicu)
+      inp.addEventListener('paste', (e)=>{
+        e.preventDefault();
+        const text = (e.clipboardData || window.clipboardData).getData('text');
+        const clean = onlyDigits(text).slice(0, inp.maxLength);
+        document.execCommand('insertText', false, clean);
+      });
+
+      // cegah drop teks non-angka ke input
+      inp.addEventListener('drop', (e)=> e.preventDefault());
+
+      inp.addEventListener('blur', ()=>{
+        if (inp.value === '') inp.value = '0';
+        arr[i] = { ...arr[i], [k]: inp.value };
+        markDirty(); validateAll(); computeStandings();
+      });
+
       td.appendChild(inp);
       return td;
     }
+
     tr.appendChild(selCell("a1"));
     tr.appendChild(selCell("a2"));
     tr.appendChild(selCell("b1"));
