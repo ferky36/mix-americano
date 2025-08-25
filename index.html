@@ -118,12 +118,28 @@
           <option value="lvl_same">Level Sama (beg vs beg, pro vs pro)</option>
         </select>
 
-        <button id="btnApplyPlayersActive" class="px-4 py-2 rounded-xl bg-indigo-600 text-white shadow hover:bg-indigo-700">Terapkan (Tab Aktif) & Auto Pasangan</button>
-        <button id="btnResetActive" class="px-4 py-2 rounded-xl border shadow hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-700">♻️ Reset Tab Aktif</button>
-        <button id="btnClearScores" class="px-4 py-2 rounded-xl border shadow hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-700">Clear Skor (Kedua Tab)</button>
-        <button id="btnExportRounds" class="px-4 py-2 rounded-xl border shadow hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-700">Export Rounds CSV</button>
-        <button id="btnExportStandings" class="px-4 py-2 rounded-xl border shadow hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-700">Export Standings CSV</button>
+        <button id="btnApplyPlayersActive"
+                class="px-4 py-2 rounded-xl bg-indigo-600 text-white shadow hover:bg-indigo-700">
+          Terapkan (Lapangan Aktif) & Auto Pasangan
+        </button>
+
+        <button id="btnResetActive"
+                class="px-4 py-2 rounded-xl border shadow hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-700">
+          ♻️ Reset Lapangan Aktif
+        </button>
+
+        <!-- ⬇️ dua tombol clear baru -->
+        <button id="btnClearScoresActive"
+                class="px-4 py-2 rounded-xl border shadow hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-700">
+          Clear Skor (Lapangan Aktif)
+        </button>
+
+        <button id="btnClearScoresAll"
+                class="px-4 py-2 rounded-xl border shadow hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-700">
+          Clear Skor (Semua Lapangan)
+        </button>
       </div>
+
       <div id="globalInfo" class="text-sm text-gray-600 dark:text-gray-300 mt-3"></div>
       <div class="flex items-center gap-2"><span id="unsavedDot" class="hidden inline-block w-2 h-2 rounded-full bg-amber-500"></span><span id="lastSaved" class="text-xs text-gray-500 dark:text-gray-400"></span></div>
     </section>

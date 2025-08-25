@@ -563,6 +563,27 @@ function renderAll(){
   computeStandings();
 }
 
+function clearScoresActive(){
+  const arr = roundsByCourt[activeCourt] || [];
+  if (arr.length && arr.some(r => r && (r.scoreA || r.scoreB))) {
+    if (!confirm('Hapus skor di lapangan aktif?')) return;
+  }
+  arr.forEach(r => { if (r) { r.scoreA = ''; r.scoreB = ''; } });
+  markDirty(); renderAll(); computeStandings();
+}
+
+function clearScoresAll(){
+  const hasAny = roundsByCourt.some(c => (c||[]).some(r => r && (r.scoreA || r.scoreB)));
+  if (hasAny) {
+    if (!confirm('Hapus skor di SEMUA lapangan?')) return;
+  }
+  roundsByCourt.forEach(courtArr => {
+    courtArr.forEach(r => { if (r) { r.scoreA = ''; r.scoreB = ''; } });
+  });
+  markDirty(); renderAll(); computeStandings();
+}
+
+
 function renderCourtsToolbar(){
   const bar = byId('courtsToolbar');
   const addBtn = byId('btnAddCourt');
@@ -1142,12 +1163,6 @@ if (btnFilter) {
 byId("btnCollapsePlayers").addEventListener("click", () =>
   byId("playersPanel").classList.toggle("hidden")
 );
-byId('btnApplyPlayersActive').addEventListener('click', ()=>{
-  const arr = roundsByCourt[activeCourt] || [];
-  const has = arr.some(r=>r&&(r.a1||r.a2||r.b1||r.b2||r.scoreA||r.scoreB));
-  if(has && !confirm('Menerapkan pemain akan menghapus pairing+skor pada lapangan aktif. Lanjutkan?')) return;
-  autoFillActiveCourt(); markDirty(); renderAll(); computeStandings();
-});
 
 byId('btnResetActive').addEventListener('click', ()=>{
   const arr = roundsByCourt[activeCourt] || [];
@@ -1157,20 +1172,8 @@ byId('btnResetActive').addEventListener('click', ()=>{
   markDirty(); renderAll();
 });
 
-byId("btnClearScores").addEventListener("click", () => {
-  rounds1.forEach((r) => {
-    r.scoreA = "";
-    r.scoreB = "";
-  });
-  rounds2.forEach((r) => {
-    r.scoreA = "";
-    r.scoreB = "";
-  });
-  markDirty();
-  renderAll();
-});
-byId("btnExportRounds").addEventListener("click", exportRoundsCSV);
-byId("btnExportStandings").addEventListener("click", exportStandingsCSV);
+byId('btnClearScoresActive').addEventListener('click', clearScoresActive);
+byId('btnClearScoresAll').addEventListener('click', clearScoresAll);
 byId("btnSave").addEventListener("click", saveToJSONFile);
 byId("btnLoadByDate").addEventListener("click", loadSessionByDate);
 byId("btnImportJSON").addEventListener("click", () =>
