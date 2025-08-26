@@ -23,6 +23,8 @@ let store = { sessions:{}, lastTs:null };
 const THEME_KEY='mix-americano-theme';
 let playerMeta = {}; // { "Nama": { gender:"M"|"F"|"", level:"beg"|"pro"|"" }, ... }
 const SCORE_MAXLEN = 2; // ubah ke 3 kalau perlu
+let scoreCtx = { court: 0, round: 0, a: 0, b: 0 };
+
 
 
 
@@ -448,6 +450,7 @@ function renderCourt(container, arr) {
         <th class="py-2 pr-4">Player2B</th>
         <th class="py-2 pr-4">Skor A</th>
         <th class="py-2 pr-4">Skor B</th>
+        <th class="py-2 pr-4">Hitung</th>
       </tr>
     </thead>
     <tbody></tbody>`;
@@ -580,6 +583,16 @@ function renderCourt(container, arr) {
     tr.appendChild(selCell("b2"));
     tr.appendChild(scCell("scoreA"));
     tr.appendChild(scCell("scoreB"));
+      // tombol hitung
+    const tdCalc = document.createElement('td');
+    const btnCalc = document.createElement('button');
+    btnCalc.className = 'px-3 py-1.5 rounded-lg border dark:border-gray-700 text-sm';
+    btnCalc.textContent = '🧮 Hitung';
+    btnCalc.addEventListener('click', ()=>{
+      openScoreModal(activeCourt, i); // <- buka modal untuk court & ronde ini
+    });
+    tdCalc.appendChild(btnCalc);
+    tr.appendChild(tdCalc);
     tbody.appendChild(tr);
   }
 
@@ -1026,7 +1039,6 @@ function autoFillActiveCourt(){
     const [A,B,C,D] = four;
     let picked = pickNonDuplicate(A,B,C,D);
     if(!picked) picked = {a1:A,a2:B,b1:C,b2:D}; // fallback, validasi bisa warning
-
     target.push({...picked, scoreA:'', scoreB:''});
     [picked.a1,picked.a2,picked.b1,picked.b2].forEach(p=>appear[p]++);
     seenMatch.add(matchKey(picked.a1,picked.a2,picked.b1,picked.b2));
@@ -1163,6 +1175,45 @@ function exportStandingsCSV() {
   a.download = "standings_2lapangan.csv";
   a.click();
   URL.revokeObjectURL(url);
+}
+
+function openScoreModal(courtIdx, roundIdx){
+  scoreCtx.court = courtIdx;
+  scoreCtx.round = roundIdx;
+
+  const r = (roundsByCourt[courtIdx] || [])[roundIdx] || {};
+  // ambil skor existing jika ada, biar bisa lanjutkan
+  scoreCtx.a = Number(r.scoreA || 0);
+  scoreCtx.b = Number(r.scoreB || 0);
+
+  // tampilkan info tim
+  const teamA = [r.a1||'-', r.a2||'-'].join(' & ');
+  const teamB = [r.b1||'-', r.b2||'-'].join(' & ');
+  byId('scoreTeamA').textContent = teamA;
+  byId('scoreTeamB').textContent = teamB;
+  byId('scoreRoundTitle').textContent = `Lap ${courtIdx+1} • R${roundIdx+1}`;
+
+  // update angka
+  byId('scoreAVal').textContent = scoreCtx.a;
+  byId('scoreBVal').textContent = scoreCtx.b;
+
+  // cek pemain lengkap?
+  const ready = r.a1 && r.a2 && r.b1 && r.b2;
+  if(!ready){
+    alert('Pemain di ronde ini belum lengkap. Lengkapi dulu ya.');
+    return;
+  }
+
+  byId('scoreModal').classList.remove('hidden');
+}
+
+function closeScoreModal(){
+  byId('scoreModal').classList.add('hidden');
+}
+
+function updateScoreDisplay(){
+  byId('scoreAVal').textContent = scoreCtx.a;
+  byId('scoreBVal').textContent = scoreCtx.b;
 }
 
 // EVENTS
@@ -1342,5 +1393,46 @@ byId('btnApplyPlayersActive').addEventListener('click', ()=>{
   const has = arr.some(r=>r&&(r.a1||r.a2||r.b1||r.b2||r.scoreA||r.scoreB));
   if(has && !confirm('Menerapkan pemain akan menghapus pairing+skor pada lapangan aktif. Lanjutkan?')) return;
   autoFillActiveCourt(); markDirty(); renderAll(); computeStandings();
+});
+// Modal Hitung Skor
+byId('btnCloseScore').addEventListener('click', closeScoreModal);
+
+byId('btnAPlus').addEventListener('click', ()=>{ scoreCtx.a = Math.min(999, scoreCtx.a + 1); updateScoreDisplay(); });
+byId('btnAMinus').addEventListener('click', ()=>{ scoreCtx.a = Math.max(0,   scoreCtx.a - 1); updateScoreDisplay(); });
+byId('btnBPlus').addEventListener('click', ()=>{ scoreCtx.b = Math.min(999, scoreCtx.b + 1); updateScoreDisplay(); });
+byId('btnBMinus').addEventListener('click', ()=>{ scoreCtx.b = Math.max(0,   scoreCtx.b - 1); updateScoreDisplay(); });
+
+byId('btnTie').addEventListener('click', ()=>{
+  const avg = Math.max(scoreCtx.a, scoreCtx.b);
+  scoreCtx.a = avg; scoreCtx.b = avg;
+  updateScoreDisplay();
+});
+
+byId('btnResetScore').addEventListener('click', ()=>{
+  scoreCtx.a = 0; scoreCtx.b = 0;
+  updateScoreDisplay();
+});
+
+byId('btnFinishScore').addEventListener('click', ()=>{
+  const r = (roundsByCourt[scoreCtx.court] || [])[scoreCtx.round];
+  if(!r){ alert('Ronde tidak ditemukan.'); return; }
+
+  const msg = `Simpan skor untuk Lap ${scoreCtx.court+1} • R${scoreCtx.round+1}\n`+
+              `A (${r.a1} & ${r.a2}) : ${scoreCtx.a}\n`+
+              `B (${r.b1} & ${r.b2}) : ${scoreCtx.b}`;
+  if(!confirm(msg)) return;
+
+  r.scoreA = String(scoreCtx.a);
+  r.scoreB = String(scoreCtx.b);
+
+  markDirty();
+  renderAll();           // refresh tabel & standings
+  computeStandings();
+  closeScoreModal();
+});
+
+// tutup modal jika klik backdrop
+byId('scoreModal').addEventListener('click', (e)=>{
+  if(e.target.id === 'scoreModal') closeScoreModal();
 });
 

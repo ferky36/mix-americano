@@ -252,6 +252,60 @@
       </div>
     </div>
   </div>
+  <!-- Modal Hitung Skor -->
+  <div id="scoreModal" class="fixed inset-0 z-50 hidden">
+    <!-- backdrop -->
+    <div class="absolute inset-0 bg-black/40"></div>
+    <!-- dialog -->
+    <div class="relative mx-auto mt-16 w-[92%] max-w-xl rounded-2xl bg-white dark:bg-gray-800 shadow-lg p-4 md:p-6">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-lg md:text-xl font-semibold">Hitung Skor – <span id="scoreRoundTitle"></span></h3>
+        <button id="btnCloseScore" class="px-3 py-1 rounded-lg border dark:border-gray-700">Tutup</button>
+      </div>
+
+      <!-- Players info -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+        <div class="rounded-xl border dark:border-gray-700 p-3">
+          <div class="text-xs uppercase text-gray-500 dark:text-gray-300 mb-1">Tim A</div>
+          <div id="scoreTeamA" class="font-medium">-</div>
+        </div>
+        <div class="rounded-xl border dark:border-gray-700 p-3">
+          <div class="text-xs uppercase text-gray-500 dark:text-gray-300 mb-1">Tim B</div>
+          <div id="scoreTeamB" class="font-medium">-</div>
+        </div>
+      </div>
+
+      <!-- Counter -->
+      <div class="grid grid-cols-2 gap-3">
+        <div class="rounded-2xl border dark:border-gray-700 p-3 text-center">
+          <div class="text-sm mb-2">Skor Tim A</div>
+          <div class="text-3xl font-bold mb-3"><span id="scoreAVal">0</span></div>
+          <div class="flex justify-center gap-2">
+            <button id="btnAMinus" class="px-3 py-2 rounded-lg border dark:border-gray-700">−</button>
+            <button id="btnAPlus"  class="px-3 py-2 rounded-lg bg-indigo-600 text-white">+</button>
+          </div>
+        </div>
+        <div class="rounded-2xl border dark:border-gray-700 p-3 text-center">
+          <div class="text-sm mb-2">Skor Tim B</div>
+          <div class="text-3xl font-bold mb-3"><span id="scoreBVal">0</span></div>
+          <div class="flex justify-center gap-2">
+            <button id="btnBMinus" class="px-3 py-2 rounded-lg border dark:border-gray-700">−</button>
+            <button id="btnBPlus"  class="px-3 py-2 rounded-lg bg-indigo-600 text-white">+</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-4 flex flex-wrap gap-2 justify-between">
+        <div class="flex gap-2">
+          <button id="btnTie" class="px-3 py-2 rounded-lg border dark:border-gray-700">Set Seri</button>
+          <button id="btnResetScore" class="px-3 py-2 rounded-lg border dark:border-gray-700">Reset</button>
+        </div>
+        <button id="btnFinishScore" class="px-4 py-2 rounded-lg bg-emerald-600 text-white font-semibold">
+          Finish & Isi Ke Ronde
+        </button>
+      </div>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>
