@@ -13,6 +13,14 @@ const parsePlayersText = (t) =>
     .split(/\r?\n/)
     .map((s) => s.trim())
     .filter(Boolean);
+function fmtMMSS(ms){
+  const total = Math.max(0, Math.floor(ms/1000));
+  const mm = String(Math.floor(total/60)).padStart(2,'0');
+  const ss = String(total%60).padStart(2,'0');
+  return `${mm}:${ss}`;
+}
+
+
 
 // State
 let activeCourt = 0;                      // index lapangan aktif
@@ -23,7 +31,16 @@ let store = { sessions:{}, lastTs:null };
 const THEME_KEY='mix-americano-theme';
 let playerMeta = {}; // { "Nama": { gender:"M"|"F"|"", level:"beg"|"pro"|"" }, ... }
 const SCORE_MAXLEN = 2; // ubah ke 3 kalau perlu
-let scoreCtx = { court: 0, round: 0, a: 0, b: 0 };
+let scoreCtx = {
+  court: 0,
+  round: 0,
+  a: 0,
+  b: 0,
+  timerId: null,      // ⬅️ baru
+  remainMs: 0,        // ⬅️ baru (millisecond)
+  running: false      // ⬅️ baru
+};
+
 
 
 
@@ -1197,6 +1214,17 @@ function openScoreModal(courtIdx, roundIdx){
   byId('scoreAVal').textContent = scoreCtx.a;
   byId('scoreBVal').textContent = scoreCtx.b;
 
+  // ⬇️ inisialisasi timer dari input Menit/Ronde
+  const minutes = parseInt(byId('minutesPerRound').value || '12', 10);
+  scoreCtx.remainMs = minutes * 60 * 1000;   // menit → ms
+  scoreCtx.running = false;
+  if (scoreCtx.timerId){ clearInterval(scoreCtx.timerId); scoreCtx.timerId=null; }
+  byId('scoreTimer').textContent = fmtMMSS(scoreCtx.remainMs);
+
+  // reset tombol Start (aktif)
+  const startBtn = byId('btnStartTimer');
+  if (startBtn){ startBtn.disabled = false; }
+
   // cek pemain lengkap?
   const ready = r.a1 && r.a2 && r.b1 && r.b2;
   if(!ready){
@@ -1208,8 +1236,63 @@ function openScoreModal(courtIdx, roundIdx){
 }
 
 function closeScoreModal(){
+  if (scoreCtx.timerId){ clearInterval(scoreCtx.timerId); scoreCtx.timerId=null; }
+  scoreCtx.running = false;
   byId('scoreModal').classList.add('hidden');
 }
+
+function startScoreTimer(){
+  if (scoreCtx.running) return;
+  // jika sudah 0: reset ke durasi default lagi
+  if (scoreCtx.remainMs <= 0){
+    const minutes = parseInt(byId('minutesPerRound').value || '12', 10);
+    scoreCtx.remainMs = minutes * 60 * 1000;
+  }
+  scoreCtx.running = true;
+  const btn = byId('btnStartTimer'); if (btn) btn.disabled = true;
+
+  const startedAt = Date.now();
+  let last = startedAt;
+
+  scoreCtx.timerId = setInterval(()=>{
+    const now = Date.now();
+    const delta = now - last;
+    last = now;
+
+    scoreCtx.remainMs -= delta;
+    if (scoreCtx.remainMs < 0) scoreCtx.remainMs = 0;
+
+    byId('scoreTimer').textContent = fmtMMSS(scoreCtx.remainMs);
+
+    if (scoreCtx.remainMs <= 0){
+      clearInterval(scoreCtx.timerId); scoreCtx.timerId=null; scoreCtx.running=false;
+      const msg = 'Waktu habis untuk ronde ini.\nKlik OK untuk menyimpan skor saat ini.';
+      alert(msg);
+      // auto commit skor → sama seperti Finish tapi TANPA konfirmasi tambahan
+      commitScoreToRound(/*auto*/true);
+      closeScoreModal();
+    }
+  }, 250);
+}
+
+function commitScoreToRound(auto=false){
+  const r = (roundsByCourt[scoreCtx.court] || [])[scoreCtx.round];
+  if(!r){ alert('Ronde tidak ditemukan.'); return; }
+
+  if (!auto){
+    const msg = `Simpan skor untuk Lap ${scoreCtx.court+1} • R${scoreCtx.round+1}\n`+
+                `A (${r.a1} & ${r.a2}) : ${scoreCtx.a}\n`+
+                `B (${r.b1} & ${r.b2}) : ${scoreCtx.b}`;
+    if(!confirm(msg)) return;
+  }
+  r.scoreA = String(scoreCtx.a);
+  r.scoreB = String(scoreCtx.b);
+
+  markDirty();
+  renderAll();
+  computeStandings();
+}
+
 
 function updateScoreDisplay(){
   byId('scoreAVal').textContent = scoreCtx.a;
@@ -1434,5 +1517,23 @@ byId('btnFinishScore').addEventListener('click', ()=>{
 // tutup modal jika klik backdrop
 byId('scoreModal').addEventListener('click', (e)=>{
   if(e.target.id === 'scoreModal') closeScoreModal();
+});
+// Start timer
+byId('btnStartTimer').addEventListener('click', startScoreTimer);
+
+// Finish manual (tetap dengan konfirmasi)
+byId('btnFinishScore').addEventListener('click', ()=>{
+  commitScoreToRound(/*auto*/false);
+  closeScoreModal();
+});
+byId('btnResetScore').addEventListener('click', ()=>{
+  scoreCtx.a = 0; scoreCtx.b = 0;
+  updateScoreDisplay();
+  // opsional: reset timer tampilan juga
+  const minutes = parseInt(byId('minutesPerRound').value || '12', 10);
+  scoreCtx.remainMs = minutes * 60 * 1000;
+  byId('scoreTimer').textContent = fmtMMSS(scoreCtx.remainMs);
+  // re-enable start
+  const btn = byId('btnStartTimer'); if (btn) btn.disabled = false;
 });
 
