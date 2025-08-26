@@ -247,8 +247,11 @@
       </div>
 
       <div class="mt-4 flex justify-end">
-        <button id="btnExportReportCSV"
-          class="px-3 py-2 rounded-xl border dark:border-gray-700">Export CSV</button>
+        <button id="btnExportReportExcel"
+          class="px-3 py-2 rounded-xl border dark:border-gray-700">
+          Export Excel
+        </button>
+
       </div>
     </div>
   </div>
@@ -265,41 +268,43 @@
 
       <!-- Players info -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-        <div class="rounded-xl border dark:border-gray-700 p-3">
-          <div class="text-xs uppercase text-gray-500 dark:text-gray-300 mb-1">Tim A</div>
+        <div class="rounded-xl border dark:border-gray-700 p-3 text-center">
+          <div class="text-xs uppercase text-gray-500 dark:text-gray-300 mb-1">Skor Tim A</div>
           <div id="scoreTeamA" class="font-medium">-</div>
-        </div>
-        <div class="rounded-xl border dark:border-gray-700 p-3">
-          <div class="text-xs uppercase text-gray-500 dark:text-gray-300 mb-1">Tim B</div>
-          <div id="scoreTeamB" class="font-medium">-</div>
-        </div>
-      </div>
-
-      <!-- Counter -->
-      <div class="grid grid-cols-2 gap-3">
-        <div class="rounded-2xl border dark:border-gray-700 p-3 text-center">
-          <div class="text-sm mb-2">Skor Tim A</div>
           <div class="text-3xl font-bold mb-3"><span id="scoreAVal">0</span></div>
-          <div class="flex justify-center gap-2">
+          <div class="flex justify-center gap-2" id="scoreButtonsA">
             <button id="btnAMinus" class="px-3 py-2 rounded-lg border dark:border-gray-700">−</button>
             <button id="btnAPlus"  class="px-3 py-2 rounded-lg bg-indigo-600 text-white">+</button>
           </div>
         </div>
-        <div class="rounded-2xl border dark:border-gray-700 p-3 text-center">
-          <div class="text-sm mb-2">Skor Tim B</div>
+        <div class="rounded-xl border dark:border-gray-700 p-3 text-center">
+          <div class="text-xs uppercase text-gray-500 dark:text-gray-300 mb-1">Skor Tim B</div>
+          <div id="scoreTeamB" class="font-medium">-</div>
           <div class="text-3xl font-bold mb-3"><span id="scoreBVal">0</span></div>
-          <div class="flex justify-center gap-2">
+          <div class="flex justify-center gap-2" id="scoreButtonsB">
             <button id="btnBMinus" class="px-3 py-2 rounded-lg border dark:border-gray-700">−</button>
             <button id="btnBPlus"  class="px-3 py-2 rounded-lg bg-indigo-600 text-white">+</button>
           </div>
         </div>
       </div>
+
+      <!-- Counter -->
+      <!-- <div class="grid grid-cols-2 gap-3">
+        <div class="rounded-2xl border dark:border-gray-700 p-3 text-center">
+          <div class="text-sm mb-2">Skor Tim A</div>
+          
+        </div>
+        <div class="rounded-2xl border dark:border-gray-700 p-3 text-center">
+          <div class="text-sm mb-2">Skor Tim B</div>
+          
+        </div>
+      </div> -->
       <div class="mt-3 flex items-center justify-center gap-3">
           <div class="text-sm text-gray-600 dark:text-gray-300">Waktu tersisa:</div>
           <div id="scoreTimer" class="text-2xl font-mono font-bold">--:--</div>
         </div>
       <div class="mt-4 flex flex-wrap gap-2 justify-between">
-        <div class="flex gap-2">
+        <div class="flex gap-2" id="scoreControlsLeft">
           <button id="btnStartTimer" class="px-3 py-2 rounded-lg bg-indigo-600 text-white">Start</button>
           <button id="btnTie" class="px-3 py-2 rounded-lg border dark:border-gray-700">Set Seri</button>
           <button id="btnResetScore" class="px-3 py-2 rounded-lg border dark:border-gray-700">Reset</button>
@@ -307,10 +312,15 @@
         <button id="btnFinishScore" class="px-4 py-2 rounded-lg bg-emerald-600 text-white font-semibold">
           Finish & Isi Ke Ronde
         </button>
+        <button id="btnRecalc"
+                class="hidden px-4 py-2 rounded-lg bg-indigo-600 text-white font-semibold">
+          Hitung Ulang
+        </button>
       </div>
     </div>
   </div>
 
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
