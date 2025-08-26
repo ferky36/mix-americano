@@ -1,5 +1,5 @@
 "use strict";
-// Helpers
+// ================== Helpers ================== //
 const pad = (n) => String(n).padStart(2, "0");
 const toHM = (d) => pad(d.getHours()) + ":" + pad(d.getMinutes());
 const csvEscape = (v) => {
@@ -19,14 +19,6 @@ function fmtMMSS(ms){
   const ss = String(total%60).padStart(2,'0');
   return `${mm}:${ss}`;
 }
-function shuffleInPlace(a){
-  for(let i=a.length-1;i>0;i--){
-    const j = Math.floor(Math.random()*(i+1));
-    [a[i],a[j]] = [a[j],a[i]];
-  }
-  return a;
-}
-function randBias(){ return Math.random(); } // untuk tie-break fairness
 function setScoreModalLocked(locked){
   const scoreButtonsA   = byId('scoreButtonsA');  
   const scoreButtonsB   = byId('scoreButtonsB');  
@@ -44,15 +36,44 @@ function setScoreModalLocked(locked){
   // Start aktif hanya ketika BELUM ada skor (mode unlocked saat fresh open)
   if (start) start.disabled = locked;
 }
+function shuffleInPlace(a){
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+const teamKey=(a,b)=>[a,b].sort().join(' & ');
+const vsKey  =(a,b)=>[a,b].sort().join(' vs ');
+
+// hitung kemunculan pemain di SEMUA lapangan, dengan opsi exclude court tertentu
+function countAppearAll(excludeCourt=-1){
+  const cnt=Object.fromEntries(players.map(p=>[p,0]));
+  roundsByCourt.forEach((court,ci)=>{
+    if(!court || (excludeCourt===ci)) return;
+    court.forEach(r=>{
+      if(!r) return;
+      [r.a1,r.a2,r.b1,r.b2].forEach(x=>{ if(x) cnt[x]=(cnt[x]||0)+1; });
+    });
+  });
+  return cnt;
+}
+
+function debounce(fn, wait = 120){
+  let t; 
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
+}
+function debounce(fn, wait = 120){
+  let t; 
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
+}
+// panggilan ringan untuk refresh fairness
+const refreshFairness = debounce(() => renderFairnessInfo(), 120);
 
 
 
 
-
-
-
-
-// State
+// ================== State ================== //
 let activeCourt = 0;                      // index lapangan aktif
 let roundsByCourt = [ [] ];               // array of courts, masing2 array rounds
 let players = [];
@@ -72,9 +93,6 @@ let scoreCtx = {
 };
 
 
-
-
-
 function onlyDigits(str){ return String(str||'').replace(/[^\d]/g,''); }
 function allowKey(e){
   // izinkan kontrol umum
@@ -86,7 +104,7 @@ function allowKey(e){
   return false;
 }
 
-// Theme
+// ================== Thene ================== //
 function applyThemeFromStorage() {
   const t = localStorage.getItem(THEME_KEY) || "light";
   document.documentElement.classList.toggle("dark", t === "dark");
@@ -96,7 +114,7 @@ function toggleTheme() {
   localStorage.setItem(THEME_KEY, dark ? "dark" : "light");
 }
 
-// Sessions
+// ================== Sessions ================== //
 function populateDatePicker() {
   const sel = byId("datePicker");
   const cur = sel.value;
@@ -269,7 +287,7 @@ function startAutoSave() {
 }
 
 
-// PLAYERS UI
+// ================== PLAYERS UI ================== //
 function escapeHtml(s) {
   return s.replace(
     /[&<>'"]/g,
@@ -350,14 +368,15 @@ function addPlayer(name) {
   validateNames();
 }
 function removePlayerFromRounds(name) {
-  [rounds1, rounds2].forEach((arr) =>
-    arr.forEach((r) =>
-      ["a1", "a2", "b1", "b2"].forEach((k) => {
+  roundsByCourt.forEach(arr => {
+    arr.forEach(r => {
+      ["a1", "a2", "b1", "b2"].forEach(k => {
         if (r && r[k] === name) r[k] = "";
-      })
-    )
-  );
+      });
+    });
+  });
 }
+
 function showTextModal() {
   byId("playersText").value = players.join("\n");
   byId("textModal").classList.remove("hidden");
@@ -461,7 +480,7 @@ function validateNames(){
 }
 
 
-// COURT
+// ================== COURT ================== //
 function initRoundsLength() {
   const R = parseInt(byId("roundCount").value || "10", 10);
   while (rounds1.length < R)
@@ -571,6 +590,7 @@ function renderCourt(container, arr) {
         markDirty();
         validateAll();
         computeStandings();
+        refreshFairness();  
       });
       td.appendChild(sel);
       return td;
@@ -656,7 +676,7 @@ function renderCourtActive(){
 }
 
 
-// RENDER + VALIDATION + STANDINGS
+// ===============  RENDER + VALIDATION + STANDINGS ================ //
 function renderAll(){
   ensureRoundsLengthForAllCourts();
   renderCourtsToolbar();
@@ -664,6 +684,45 @@ function renderAll(){
   validateAll();
   computeStandings();
 }
+
+function renderFairnessInfo(){
+  // buat container kalau belum ada
+  let box = byId('fairnessInfo');
+  if(!box){
+    box = document.createElement('div');
+    box.id='fairnessInfo';
+    box.className='mt-3 text-xs bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 rounded-lg p-2';
+    const toolbar = byId('courtsToolbar') || document.body;
+    toolbar.parentNode.insertBefore(box, toolbar.nextSibling);
+  }
+
+  // hitung total setelah penjadwalan (SEMUA lapangan, termasuk court aktif)
+  const cnt = countAppearAll(-1); // tidak exclude apa pun
+  const list = players.slice().sort((a,b)=>{
+    const da=(cnt[a]||0), db=(cnt[b]||0);
+    if(da!==db) return db-da; // desc biar kelihatan ekstrem
+    return a.localeCompare(b);
+  });
+  const min = Math.min(...list.map(p=>cnt[p]||0));
+  const max = Math.max(...list.map(p=>cnt[p]||0));
+  const spread = max-min;
+
+  const rows = list.map(p=>{
+    const n = cnt[p]||0;
+    const mark = (n===min?'⬇️':(n===max?'⬆️':'•'));
+    return `<span class="inline-block mr-3">${mark} <b>${p}</b>: ${n}</span>`;
+  }).join('');
+
+  box.innerHTML = `
+    <div class="font-semibold mb-1">Fairness Info (semua lapangan): min=${min}, max=${max}, selisih=${spread}</div>
+    <div class="leading-6">${rows}</div>
+    <div class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+      Tips: jika ada ⬆️ dan ⬇️ berjauhan, klik "Terapkan" lagi untuk mengacak ulang; 
+      sistem mengutamakan pemain yang masih kurang main.
+    </div>
+  `;
+}
+
 
 function clearScoresActive(){
   const arr = roundsByCourt[activeCourt] || [];
@@ -898,7 +957,7 @@ function runReport(){
 
   const arr = aggregateStats(sessionsArr, court);
 
-  // summary
+  // ================ SUMMARY ================ //
   const totalDates = new Set(sessionsArr.map(s=>s.date)).size;
   const totalGames = sessionsArr.reduce((sum,s)=>{
     const r1 = (court==='both'||court==='1') ? (s.rounds1||[]).filter(r=>r.a1&&r.a2&&r.b1&&r.b2).length : 0;
@@ -928,7 +987,7 @@ function runReport(){
     tbody.appendChild(tr);
   });
 
-  // export Excel
+  // ======================= export Excel ======================= //
   byId('btnExportReportExcel').onclick = ()=>{
     // Data yang sudah dihitung sebelumnya
     // arr: hasil aggregateStats(...) berisi {player,games,total,diff,win,lose,draw,winRate,rank}
@@ -993,7 +1052,7 @@ function runReport(){
 }
 
 
-// AUTO FILL (tab aktif)
+// ================== AUTO FILL (tab aktif) ================== //
 function autoFillActiveTab() {
   const R = parseInt(byId("roundCount").value || "10", 10);
   players = Array.from(byId("playersList").querySelectorAll(".player-name"))
@@ -1045,269 +1104,169 @@ function autoFillActiveCourt(){
   const R = parseInt(byId('roundCount').value || '10', 10);
   const pairMode = byId('pairMode') ? byId('pairMode').value : 'free';
 
-  // ambil daftar nama TERKINI dari UI
+  // ambil nama terbaru
   players = Array.from(byId('playersList').querySelectorAll('.player-name'))
             .map(el=>el.textContent.trim()).filter(Boolean);
-  if (players.length < 4) return;
+  if(players.length<4) return;
 
-  const metaOf = (p)=> (typeof playerMeta==='object' && playerMeta[p]) ? playerMeta[p] : {};
-  const teamKey = (a,b)=>[a,b].sort().join(' & ');
-  const matchKey = (a1,a2,b1,b2)=>[teamKey(a1,a2), teamKey(b1,b2)].sort().join(' vs ');
-
-  // aturan pasangan (partner boleh sama; yang dicegah adalah lawan yang sama berulang)
-  const fitsTeamRule = (x,y)=>{
+  const metaOf = p => (playerMeta && playerMeta[p]) ? playerMeta[p] : {};
+  const fitsTeamRule=(x,y)=>{
     if (pairMode==='free') return true;
     const mx=metaOf(x), my=metaOf(y);
     if (pairMode==='mixed'){
       if(!mx.gender || !my.gender) return false;
-      return mx.gender !== my.gender;
+      return mx.gender!==my.gender;
     }
     if (pairMode==='lvl_same'){
       return mx.level && my.level && mx.level===my.level;
     }
-    if (pairMode==='lvl_bal'){
-      // validasi AB/CD (beg+pro) dicek di akhir ketika pasangan terbentuk
-      return true;
-    }
+    if (pairMode==='lvl_bal'){ return true; } // cek di akhir per-tim
     return true;
   };
 
-  // fairness: kita lacak kemunculan di lapangan AKTIF + beri bias random
-  const appear = Object.fromEntries(players.map(p=>[p,0]));
+  // --- 1) target fairness ----------------------------------------------------
+  // base = kemunculan di lapangan lain (karena lapangan aktif akan di-overwrite)
+  const base = countAppearAll(activeCourt);
+  const totalBase = players.reduce((s,p)=>s+(base[p]||0),0);
+  const S = R*4;                                   // slot yang harus diisi di court aktif
+  const totalAfter = totalBase + S;
+  const minAppear = Math.floor(totalAfter / players.length);
+  const remainder = totalAfter % players.length;
 
-  // siapkan indeks ronde dalam urutan ACAK agar penempatan terlihat random
-  const roundOrder = shuffleInPlace([...Array(R).keys()]);
+  const order = players.slice().sort((a,b)=>{
+    const da=(base[a]||0), db=(base[b]||0);
+    if(da!==db) return da-db;
+    return Math.random()-0.5;                      // tie break acak
+  });
 
+  const targetTotal = {};
+  order.forEach((p,i)=> targetTotal[p] = minAppear + (i<remainder?1:0));
+  const need = Object.fromEntries(players.map(p=>[p,Math.max(0,(targetTotal[p]||0)-(base[p]||0))]));
+  // jumlah need dijamin = S
+
+  // --- 2) persiapan jadwal ---------------------------------------------------
   const otherCourts = roundsByCourt.filter((_,i)=>i!==activeCourt);
   const target = new Array(R).fill(null);
-  const seenMatch = new Set(); // cegah duplikat lawan di lapangan aktif
+  const seenOpp  = new Set(); // hindari lawan sama di court aktif
+  const seenMatch= new Set();
 
-  // pilih 4 pemain untuk ronde i (hindari pemain busy di lapangan lain pada ronde i)
-  function chooseFour(i){
+  // daftar ronde akan diisi dalam urutan acak
+  const roundOrder = shuffleInPlace([...Array(R).keys()]);
+
+  // helper: cari 4 pemain utk ronde i (utamakan yang need besar & tidak bentrok)
+  function pickFourForRound(i){
     const busy = new Set();
-    otherCourts.forEach(c=>{
-      const r=c[i]; if(r) [r.a1,r.a2,r.b1,r.b2].forEach(z=>z&&busy.add(z));
+    otherCourts.forEach(c=>{ const r=c[i]; if(r) [r.a1,r.a2,r.b1,r.b2].forEach(x=>x&&busy.add(x)); });
+
+    const freeAll = players.filter(p=>!busy.has(p));
+    if (freeAll.length<4) return null;
+
+    // buat pool dengan bobot "need" agar yang butuh lebih sering terambil
+    let pool=[];
+    freeAll.forEach(p=>{
+      const w=Math.max(1,need[p]);
+      for(let k=0;k<w;k++) pool.push(p);
     });
+    // sampling beberapa kombinasi unik berbobot need
+    const tried=new Set();
+    for(let t=0;t<120;t++){
+      shuffleInPlace(pool);
+      const combo=[];
+      for(const x of pool){ if(!combo.includes(x)) combo.push(x); if(combo.length===4) break; }
+      if(combo.length<4) break;
+      const key=combo.slice().sort().join('|');
+      if(tried.has(key)) continue;
+      tried.add(key);
 
-    // kandidat = tidak busy
-    const cand = players.filter(p=>!busy.has(p));
-
-    // urutkan dengan fairness + sedikit random agar selalu beda setiap klik
-    // skor = (kemunculan, lalu random)
-    cand.sort((a,b)=>{
-      const da = appear[a], db = appear[b];
-      if (da!==db) return da-db;
-      return randBias()-randBias();
-    });
-
-    // coba cari kombinasi 4 dengan sampling acak
-    if (cand.length < 4) return null;
-    // ambil 10 sample kombinasi acak maksimum
-    const picks = [];
-    const cloned = cand.slice();
-    for(let t=0;t<10 && picks.length<10;t++){
-      shuffleInPlace(cloned);
-      const four = cloned.slice(0,4);
-      picks.push(four);
+      // minimal 3 dari 4 harus "need>0" agar fairness kuat
+      const needCount = combo.filter(p=>need[p]>0).length;
+      if(needCount>=3) return combo;
     }
-    // fallback deterministic terakhir
-    if (!picks.length) picks.push(cand.slice(0,4));
+    // fallback deterministik: urut by need desc lalu random kecil
+    const cand=freeAll.slice().sort((a,b)=>{
+      const dv=need[b]-need[a];
+      if(dv!==0) return dv;
+      return Math.random()-0.5;
+    });
+    return cand.slice(0,4);
+  }
 
-    // pilih first feasible
-    for (const four of picks){
-      if (four.length<4) continue;
-      // untuk lvl_bal, cek set 4 minimal punya 2 beg & 2 pro
-      if (pairMode==='lvl_bal'){
-        const lv = four.map(p=>metaOf(p).level||'');
-        const beg = lv.filter(x=>x==='beg').length;
-        const pro = lv.filter(x=>x==='pro').length;
-        if (!(beg>=2 && pro>=2)) continue;
+  // helper: bentuk 2 tim dari 4 pemain
+  function makeMatch(four){
+    const opts = shuffleInPlace([
+      {a1:four[0], a2:four[1], b1:four[2], b2:four[3]},
+      {a1:four[0], a2:four[2], b1:four[1], b2:four[3]},
+      {a1:four[0], a2:four[3], b1:four[1], b2:four[2]},
+    ]);
+
+    // 2-phase: (A) strict anti-rematch, (B) longgar anti-rematch jika buntu
+    for (const phase of [ 'strict', 'loose' ]){
+      for(const o of opts){
+        if(!fitsTeamRule(o.a1,o.a2)) continue;
+        if(!fitsTeamRule(o.b1,o.b2)) continue;
+
+        if (pairMode==='lvl_bal'){
+          const AB=[metaOf(o.a1).level, metaOf(o.a2).level];
+          const CD=[metaOf(o.b1).level, metaOf(o.b2).level];
+          const okAB = AB.includes('beg') && AB.includes('pro');
+          const okCD = CD.includes('beg') && CD.includes('pro');
+          if(!(okAB && okCD)) continue;
+        }
+
+        const mKey = vsKey(teamKey(o.a1,o.a2), teamKey(o.b1,o.b2));
+        if (seenMatch.has(mKey)) continue;
+
+        const oppPairs=[vsKey(o.a1,o.b1),vsKey(o.a1,o.b2),vsKey(o.a2,o.b1),vsKey(o.a2,o.b2)];
+        const hasOppRematch = oppPairs.some(k=>seenOpp.has(k));
+        if (phase==='strict' && hasOppRematch) continue;
+
+        return o;
       }
-      return four;
     }
     return null;
   }
 
-  function pickNonDuplicate(A,B,C,D){
-    // buat 3 opsi partner lalu acak urutannya agar bervariasi
-    const opts = shuffleInPlace([
-      {a1:A,a2:B,b1:C,b2:D},
-      {a1:A,a2:C,b1:B,b2:D},
-      {a1:A,a2:D,b1:B,b2:C},
-    ]).filter(o=>{
-      if(!fitsTeamRule(o.a1,o.a2)) return false;
-      if(!fitsTeamRule(o.b1,o.b2)) return false;
-      if (pairMode==='lvl_bal'){
-        const AB=[metaOf(o.a1).level, metaOf(o.a2).level];
-        const CD=[metaOf(o.b1).level, metaOf(o.b2).level];
-        const okAB = AB.includes('beg') && AB.includes('pro');
-        const okCD = CD.includes('beg') && CD.includes('pro');
-        if (!(okAB && okCD)) return false;
-      }
-      return !seenMatch.has(matchKey(o.a1,o.a2,o.b1,o.b2));
-    });
-    return opts[0] || null;
-  }
+  for(const i of roundOrder){
+    let four = pickFourForRound(i);
+    if(!four){ target[i]={}; continue; }
 
-  // proses ronde dalam urutan acak, tapi menulis ke index i yang sesuai
-  for (const i of roundOrder){
-    let four = chooseFour(i);
-    if (!four){ target[i] = {}; continue; }
-
-    // sedikit randomisasi urutan empat pemain juga
-    shuffleInPlace(four);
-    const [A,B,C,D] = four;
-
-    // coba beberapa kali mencari pasangan yang tidak duplikat lawan
-    let picked = null;
-    for(let attempt=0; attempt<5 && !picked; attempt++){
-      picked = pickNonDuplicate(A,B,C,D);
-      // kalau belum dapat, acak lagi urutan empat pemain & ulangi
+    // coba beberapa kali agar lolos rule pairing + anti-duplikat lawan
+    let picked=null;
+    for(let t=0;t<10 && !picked; t++){
       shuffleInPlace(four);
+      picked = makeMatch(four);
     }
-    if (!picked) picked = {a1:four[0], a2:four[1], b1:four[2], b2:four[3]}; // fallback terakhir
+    if(!picked){
+      // fallback terakhir: hormati partner rule saja
+      const fallback = shuffleInPlace([
+        {a1:four[0], a2:four[1], b1:four[2], b2:four[3]},
+        {a1:four[0], a2:four[2], b1:four[1], b2:four[3]},
+        {a1:four[0], a2:four[3], b1:four[1], b2:four[2]},
+      ]).find(o=>fitsTeamRule(o.a1,o.a2)&&fitsTeamRule(o.b1,o.b2)) || 
+        {a1:four[0], a2:four[1], b1:four[2], b2:four[3]};
+      picked=fallback;
+    }
 
     target[i] = { ...picked, scoreA:'', scoreB:'' };
 
-    // update fairness & seen
-    [picked.a1,picked.a2,picked.b1,picked.b2].forEach(p=>appear[p]++);
-    seenMatch.add(matchKey(picked.a1,picked.a2,picked.b1,picked.b2));
+    // update fairness tracker
+    [picked.a1,picked.a2,picked.b1,picked.b2].forEach(p=>{ if(need[p]>0) need[p]--; });
+
+    // update catatan lawan (hindari rematch selanjutnya)
+    [ [picked.a1,picked.b1],[picked.a1,picked.b2],[picked.a2,picked.b1],[picked.a2,picked.b2] ]
+      .forEach(([x,y])=>seenOpp.add(vsKey(x,y)));
+    seenMatch.add(vsKey(teamKey(picked.a1,picked.a2), teamKey(picked.b1,picked.b2)));
   }
 
-  roundsByCourt[activeCourt] = target;
+  roundsByCourt[activeCourt]=target;
+
+  markDirty(); renderAll(); computeStandings();
+  validateAll();
+  renderFairnessInfo(); // panel kecil (opsional)
 }
 
 
-// EXPORTS
-function exportRoundsCSV() {
-  const header = [
-    "Tanggal",
-    "Lapangan",
-    "Time",
-    "Player1A",
-    "Player2A",
-    "Player1B",
-    "Player2B",
-    "SkorA",
-    "SkorB",
-  ];
-  const start = byId("startTime").value || "19:00";
-  const minutes = parseInt(byId("minutesPerRound").value || "12", 10);
-  const R = parseInt(byId("roundCount").value || "10", 10);
-  const date = byId("sessionDate").value || "";
-  const [h, m] = start.split(":").map(Number);
-  const base = new Date();
-  base.setHours(h || 19, m || 0, 0, 0);
-  const rowsFor = (label, arr) => {
-    const rows = [];
-    for (let i = 0; i < R; i++) {
-      const t0 = new Date(base.getTime() + i * minutes * 60000);
-      const t1 = new Date(t0.getTime() + minutes * 60000);
-      const r = arr[i] || {};
-      rows.push([
-        date,
-        label,
-        toHM(t0) + "–" + toHM(t1),
-        r.a1 || "",
-        r.a2 || "",
-        r.b1 || "",
-        r.b2 || "",
-        r.scoreA || "",
-        r.scoreB || "",
-      ]);
-    }
-    return rows;
-  };
-  const rows = [
-    header,
-    ...rowsFor("Lap 1", rounds1),
-    ...rowsFor("Lap 2", rounds2),
-  ];
-  const csv = rows.map((r) => r.map(csvEscape).join(",")).join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "rounds_2lapangan.csv";
-  a.click();
-  URL.revokeObjectURL(url);
-}
-function exportStandingsCSV() {
-  const data = {};
-  players.forEach(
-    (p) => (data[p] = { total: 0, diff: 0, win: 0, lose: 0, draw: 0 })
-  );
-  const apply = (arr) =>
-    arr.forEach((r) => {
-      const a = Number(r?.scoreA || 0),
-        b = Number(r?.scoreB || 0);
-      if (!(r?.a1 && r?.a2 && r?.b1 && r?.b2)) return;
-      [r.a1, r.a2].forEach((p) => {
-        if (data[p]) {
-          data[p].total += a;
-          data[p].diff += a - b;
-        }
-      });
-      [r.b1, r.b2].forEach((p) => {
-        if (data[p]) {
-          data[p].total += b;
-          data[p].diff += b - a;
-        }
-      });
-      if (a > 0 || b > 0) {
-        if (a > b) {
-          [r.a1, r.a2].forEach((p) => data[p] && data[p].win++);
-          [r.b1, r.b2].forEach((p) => data[p] && data[p].lose++);
-        } else if (a < b) {
-          [r.b1, r.b2].forEach((p) => data[p] && data[p].win++);
-          [r.a1, r.a2].forEach((p) => data[p] && data[p].lose++);
-        } else {
-          [r.a1, r.a2, r.b1, r.b2].forEach((p) => {
-            if (data[p]) data[p].draw++;
-          });
-        }
-      }
-    });
-  apply(rounds1);
-  apply(rounds2);
-  let arr = Object.entries(data).map(([player, v]) => {
-    const gp = v.win + v.lose + v.draw;
-    return [
-      player,
-      v.total,
-      v.diff,
-      v.win,
-      v.lose,
-      v.draw,
-      (gp ? (v.win / gp) * 100 : 0).toFixed(1) + "%",
-    ];
-  });
-  arr.sort(
-    (a, b) =>
-      b[1] - a[1] || b[2] - a[2] || b[3] - a[3] || a[0].localeCompare(b[0])
-  );
-  const header = [
-    "Tanggal",
-    "Player",
-    "Total",
-    "Selisih",
-    "Menang",
-    "Kalah",
-    "Seri",
-    "WinRate",
-  ];
-  const date = byId("sessionDate").value || "";
-  const rows = [header, ...arr.map((r) => [date, ...r])];
-  const csv = rows.map((r) => r.map(csvEscape).join(",")).join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "standings_2lapangan.csv";
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
+// ================== SCORE MODAL ================== //
 function openScoreModal(courtIdx, roundIdx){
   scoreCtx.court = courtIdx;
   scoreCtx.round = roundIdx;
@@ -1592,7 +1551,7 @@ byId('btnApplyPlayersActive').addEventListener('click', ()=>{
   const arr = roundsByCourt[activeCourt] || [];
   const has = arr.some(r=>r&&(r.a1||r.a2||r.b1||r.b2||r.scoreA||r.scoreB));
   if(has && !confirm('Menerapkan pemain akan menghapus pairing+skor pada lapangan aktif. Lanjutkan?')) return;
-  autoFillActiveCourt(); markDirty(); renderAll(); computeStandings();
+  autoFillActiveCourt(); markDirty(); renderAll(); computeStandings();refreshFairness();
 });
 // Modal Hitung Skor
 byId('btnCloseScore').addEventListener('click', closeScoreModal);
@@ -1601,35 +1560,12 @@ byId('btnAPlus').addEventListener('click', ()=>{ scoreCtx.a = Math.min(999, scor
 byId('btnAMinus').addEventListener('click', ()=>{ scoreCtx.a = Math.max(0,   scoreCtx.a - 1); updateScoreDisplay(); });
 byId('btnBPlus').addEventListener('click', ()=>{ scoreCtx.b = Math.min(999, scoreCtx.b + 1); updateScoreDisplay(); });
 byId('btnBMinus').addEventListener('click', ()=>{ scoreCtx.b = Math.max(0,   scoreCtx.b - 1); updateScoreDisplay(); });
-
+// Set skor seri (rata-rata, dibulatkan ke bawah)
 byId('btnTie').addEventListener('click', ()=>{
   const avg = Math.max(scoreCtx.a, scoreCtx.b);
   scoreCtx.a = avg; scoreCtx.b = avg;
   updateScoreDisplay();
 });
-
-byId('btnResetScore').addEventListener('click', ()=>{
-  scoreCtx.a = 0; scoreCtx.b = 0;
-  updateScoreDisplay();
-});
-
-// byId('btnFinishScore').addEventListener('click', ()=>{
-//   const r = (roundsByCourt[scoreCtx.court] || [])[scoreCtx.round];
-//   if(!r){ alert('Ronde tidak ditemukan.'); return; }
-
-//   const msg = `Simpan skor untuk Lap ${scoreCtx.court+1} • R${scoreCtx.round+1}\n`+
-//               `A (${r.a1} & ${r.a2}) : ${scoreCtx.a}\n`+
-//               `B (${r.b1} & ${r.b2}) : ${scoreCtx.b}`;
-//   if(!confirm(msg)) return;
-
-//   r.scoreA = String(scoreCtx.a);
-//   r.scoreB = String(scoreCtx.b);
-
-//   markDirty();
-//   renderAll();           // refresh tabel & standings
-//   computeStandings();
-//   closeScoreModal();
-// });
 
 // tutup modal jika klik backdrop
 byId('scoreModal').addEventListener('click', (e)=>{
@@ -1650,8 +1586,7 @@ byId('btnRecalc').addEventListener('click', ()=>{
   const t = byId('scoreTimer');     if (t)     t.textContent = 'Permainan Selesai';
 });
 
-
-
+// Reset skor & timer (tapi tidak menghapus skor di ronde)
 byId('btnResetScore').addEventListener('click', ()=>{
   scoreCtx.a = 0; scoreCtx.b = 0;
   updateScoreDisplay();
