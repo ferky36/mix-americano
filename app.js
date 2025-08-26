@@ -1496,23 +1496,23 @@ byId('btnResetScore').addEventListener('click', ()=>{
   updateScoreDisplay();
 });
 
-byId('btnFinishScore').addEventListener('click', ()=>{
-  const r = (roundsByCourt[scoreCtx.court] || [])[scoreCtx.round];
-  if(!r){ alert('Ronde tidak ditemukan.'); return; }
+// byId('btnFinishScore').addEventListener('click', ()=>{
+//   const r = (roundsByCourt[scoreCtx.court] || [])[scoreCtx.round];
+//   if(!r){ alert('Ronde tidak ditemukan.'); return; }
 
-  const msg = `Simpan skor untuk Lap ${scoreCtx.court+1} • R${scoreCtx.round+1}\n`+
-              `A (${r.a1} & ${r.a2}) : ${scoreCtx.a}\n`+
-              `B (${r.b1} & ${r.b2}) : ${scoreCtx.b}`;
-  if(!confirm(msg)) return;
+//   const msg = `Simpan skor untuk Lap ${scoreCtx.court+1} • R${scoreCtx.round+1}\n`+
+//               `A (${r.a1} & ${r.a2}) : ${scoreCtx.a}\n`+
+//               `B (${r.b1} & ${r.b2}) : ${scoreCtx.b}`;
+//   if(!confirm(msg)) return;
 
-  r.scoreA = String(scoreCtx.a);
-  r.scoreB = String(scoreCtx.b);
+//   r.scoreA = String(scoreCtx.a);
+//   r.scoreB = String(scoreCtx.b);
 
-  markDirty();
-  renderAll();           // refresh tabel & standings
-  computeStandings();
-  closeScoreModal();
-});
+//   markDirty();
+//   renderAll();           // refresh tabel & standings
+//   computeStandings();
+//   closeScoreModal();
+// });
 
 // tutup modal jika klik backdrop
 byId('scoreModal').addEventListener('click', (e)=>{
