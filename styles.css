@@ -61,3 +61,180 @@ body { font-size: clamp(14px, calc(14px * var(--ui-zoom) / 100), 20px); }
 
 #scoreModal { display:none; }
 #scoreModal:not(.hidden){ display:block; }
+
+
+/* ===========================
+   Compact Header - HP Landscape
+   =========================== */
+@media (orientation: landscape) and (max-height: 480px) {
+
+  /* Header padding dipendekkan */
+  header .bg-gradient-to-r > .mx-auto {
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+    gap: 8px !important;
+  }
+
+  /* Judul diperkecil, subjudul disembunyikan */
+  header .bg-gradient-to-r h1 {
+    font-size: 1.1rem !important;
+    line-height: 1.2 !important;
+  }
+  /* Subjudul di header (baris "• Simulasi…" dan "• Ranking…") */
+  header .bg-gradient-to-r p.text-xs {
+    display: none !important;
+  }
+
+  /* Baris kontrol di header: jadi 1 baris scrollable */
+  #hdrControls {
+    gap: 6px !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  #hdrControls > * {
+    white-space: nowrap;     /* tombol/select tidak pecah baris */
+  }
+  /* Sedikit kecilkan tombol/elemen di header */
+  #hdrControls button,
+  #hdrControls select {
+    padding: 6px 10px !important;
+    font-size: 12px !important;
+  }
+
+  /* Tombol menu HP biar ramping */
+  #btnHdrMenu,
+  #btnFilter {
+    padding-top: 6px !important;
+    padding-bottom: 6px !important;
+  }
+
+  /* Panel filter: input/select/button lebih pendek */
+  #filterPanel input,
+  #filterPanel select,
+  #filterPanel button {
+    height: 34px;
+    padding-top: 6px !important;
+    padding-bottom: 6px !important;
+    font-size: 12px !important;
+  }
+}
+
+/* Ekstra ketat untuk device yang sangat pendek */
+@media (orientation: landscape) and (max-height: 380px) {
+  header .bg-gradient-to-r h1 {
+    font-size: 1rem !important;
+  }
+  #hdrControls button,
+  #hdrControls select {
+    padding: 5px 8px !important;
+    font-size: 11px !important;
+  }
+}
+
+/* Collapsible panel animasi height */
+.collapsible {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height .28s ease, opacity .18s ease;
+  opacity: 0;
+}
+.collapsible.open {
+  max-height: 1200px;          /* cukup besar untuk isi panel */
+  opacity: 1;
+}
+
+/* Saat HP landscape: panel default collapsed agar hemat ruang */
+@media (orientation: landscape) and (max-height: 480px) {
+  .collapsible.default-collapsed:not(.open) { max-height: 0; opacity: 0; }
+}
+
+/* ===== Grid daftar pemain: responsif ===== */
+#playersList {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+@media (min-width: 640px){ /* sm */
+  #playersList { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (min-width: 768px){ /* md */
+  #playersList { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+/* ===== Kartu pemain ===== */
+#playersList li {
+  display: flex;
+  flex-wrap: wrap;                 /* bisa turun baris */
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--tw-prose-border, rgba(107,114,128,.25));
+  border-radius: 12px;
+  background: var(--tw-card-bg, #fff);
+}
+.dark #playersList li{
+  background: #101827;             /* dark */
+  border-color: #334155;           /* slate-700 */
+}
+
+/* Nama pemain: baris atas, ellipsis */
+#playersList li .player-name{
+  flex: 1 1 140px;
+  min-width: 0;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Bungkus meta (dua select) dan tombol hapus */
+#playersList li .player-meta{
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex: 1 1 100%;                  /* default: turun baris bawah nama */
+}
+
+/* Select meta ukuran konsisten */
+#playersList li .player-meta select{
+  min-width: 56px;                 /* kecil tapi terbaca */
+  height: 34px;
+}
+#playersList li .player-meta .remove-btn{
+  margin-left: auto;               /* tombol hapus mepet kanan */
+}
+
+/* ===== Mode compact: HP landscape / tinggi kecil ===== */
+@media (orientation: landscape) and (max-height: 480px){
+  #playersList { gap: 8px; }
+  #playersList li{
+    padding: 8px 10px;
+    gap: 6px;
+  }
+  #playersList li .player-name{
+    font-size: 0.95rem;
+  }
+  #playersList li .player-meta{
+    flex: 0 0 auto;                /* cenderung tetap satu baris */
+  }
+  #playersList li .player-meta select{
+    height: 30px;
+    min-width: 50px;
+    font-size: 12px;
+  }
+}
+
+/* Jika ruang sempit banget (≤360px), paksa meta di bawah */
+@media (max-width: 360px){
+  #playersList li .player-meta{ flex-basis: 100%; }
+}
+
+/* Tombol "Tambah" di atas list: full width di layar kecil */
+#btnAddPlayer{
+  white-space: nowrap;
+}
+@media (max-width: 420px){
+  #newPlayer { font-size: 14px; }
+  #btnAddPlayer{ padding: 8px 12px; font-size: 14px; }
+}

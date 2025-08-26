@@ -1,0 +1,300 @@
+{
+  "sessions": {
+    "2025-08-26": {
+      "date": "2025-08-26",
+      "startTime": "19:00",
+      "minutesPerRound": "7",
+      "roundCount": "15",
+      "players": "Della\nRangga\nFai\nGizla\nAbdi\nDiana\nKris\nIchsan\nMarchel\nAltundri\nFerdi\nTyas",
+      "playerMeta": {
+        "Della": {
+          "level": "beg"
+        },
+        "Abdi": {
+          "level": "pro"
+        },
+        "Marchel": {
+          "level": "pro"
+        },
+        "Rangga": {
+          "level": "pro"
+        },
+        "Diana": {
+          "level": "beg"
+        },
+        "Altundri": {
+          "level": "pro"
+        },
+        "Fai": {
+          "level": "beg"
+        },
+        "Kris": {
+          "level": "pro"
+        },
+        "Ferdi": {
+          "level": "pro"
+        },
+        "Gizla": {
+          "level": "beg"
+        },
+        "Ichsan": {
+          "level": "beg"
+        },
+        "Tyas": {
+          "level": "beg"
+        }
+      },
+      "roundsByCourt": [
+        [
+          {
+            "a1": "Ferdi",
+            "a2": "Rangga",
+            "b1": "Tyas",
+            "b2": "Kris",
+            "scoreA": "",
+            "scoreB": ""
+          },
+          {
+            "a1": "Ichsan",
+            "a2": "Abdi",
+            "b1": "Fai",
+            "b2": "Gizla",
+            "scoreA": "",
+            "scoreB": ""
+          },
+          {
+            "a1": "Altundri",
+            "a2": "Abdi",
+            "b1": "Marchel",
+            "b2": "Ferdi",
+            "scoreA": "",
+            "scoreB": ""
+          },
+          {
+            "a1": "Gizla",
+            "a2": "Altundri",
+            "b1": "Diana",
+            "b2": "Fai",
+            "scoreA": "",
+            "scoreB": ""
+          },
+          {
+            "a1": "Kris",
+            "a2": "Abdi",
+            "b1": "Ichsan",
+            "b2": "Marchel",
+            "scoreA": "",
+            "scoreB": ""
+          },
+          {
+            "a1": "Diana",
+            "a2": "Kris",
+            "b1": "Della",
+            "b2": "Gizla",
+            "scoreA": "",
+            "scoreB": ""
+          },
+          {
+            "a1": "Fai",
+            "a2": "Ferdi",
+            "b1": "Rangga",
+            "b2": "Diana",
+            "scoreA": "",
+            "scoreB": ""
+          },
+          {
+            "a1": "Rangga",
+            "a2": "Della",
+            "b1": "Altundri",
+            "b2": "Ichsan",
+            "scoreA": "",
+            "scoreB": ""
+          },
+          {
+            "a1": "Gizla",
+            "a2": "Ferdi",
+            "b1": "Tyas",
+            "b2": "Marchel",
+            "scoreA": "",
+            "scoreB": ""
+          },
+          {
+            "a1": "Kris",
+            "a2": "Rangga",
+            "b1": "Tyas",
+            "b2": "Marchel",
+            "scoreA": "",
+            "scoreB": ""
+          },
+          {
+            "a1": "Rangga",
+            "a2": "Altundri",
+            "b1": "Diana",
+            "b2": "Ichsan",
+            "scoreA": "",
+            "scoreB": ""
+          },
+          {
+            "a1": "Della",
+            "a2": "Abdi",
+            "b1": "Tyas",
+            "b2": "Ichsan",
+            "scoreA": "",
+            "scoreB": ""
+          },
+          {
+            "a1": "Tyas",
+            "a2": "Della",
+            "b1": "Marchel",
+            "b2": "Fai",
+            "scoreA": "",
+            "scoreB": ""
+          },
+          {
+            "a1": "Della",
+            "a2": "Kris",
+            "b1": "Diana",
+            "b2": "Abdi",
+            "scoreA": "",
+            "scoreB": ""
+          },
+          {
+            "a1": "Gizla",
+            "a2": "Fai",
+            "b1": "Altundri",
+            "b2": "Ferdi",
+            "scoreA": "",
+            "scoreB": ""
+          }
+        ]
+      ],
+      "rounds1": [
+        {
+          "a1": "Ferdi",
+          "a2": "Rangga",
+          "b1": "Tyas",
+          "b2": "Kris",
+          "scoreA": "",
+          "scoreB": ""
+        },
+        {
+          "a1": "Ichsan",
+          "a2": "Abdi",
+          "b1": "Fai",
+          "b2": "Gizla",
+          "scoreA": "",
+          "scoreB": ""
+        },
+        {
+          "a1": "Altundri",
+          "a2": "Abdi",
+          "b1": "Marchel",
+          "b2": "Ferdi",
+          "scoreA": "",
+          "scoreB": ""
+        },
+        {
+          "a1": "Gizla",
+          "a2": "Altundri",
+          "b1": "Diana",
+          "b2": "Fai",
+          "scoreA": "",
+          "scoreB": ""
+        },
+        {
+          "a1": "Kris",
+          "a2": "Abdi",
+          "b1": "Ichsan",
+          "b2": "Marchel",
+          "scoreA": "",
+          "scoreB": ""
+        },
+        {
+          "a1": "Diana",
+          "a2": "Kris",
+          "b1": "Della",
+          "b2": "Gizla",
+          "scoreA": "",
+          "scoreB": ""
+        },
+        {
+          "a1": "Fai",
+          "a2": "Ferdi",
+          "b1": "Rangga",
+          "b2": "Diana",
+          "scoreA": "",
+          "scoreB": ""
+        },
+        {
+          "a1": "Rangga",
+          "a2": "Della",
+          "b1": "Altundri",
+          "b2": "Ichsan",
+          "scoreA": "",
+          "scoreB": ""
+        },
+        {
+          "a1": "Gizla",
+          "a2": "Ferdi",
+          "b1": "Tyas",
+          "b2": "Marchel",
+          "scoreA": "",
+          "scoreB": ""
+        },
+        {
+          "a1": "Kris",
+          "a2": "Rangga",
+          "b1": "Tyas",
+          "b2": "Marchel",
+          "scoreA": "",
+          "scoreB": ""
+        },
+        {
+          "a1": "Rangga",
+          "a2": "Altundri",
+          "b1": "Diana",
+          "b2": "Ichsan",
+          "scoreA": "",
+          "scoreB": ""
+        },
+        {
+          "a1": "Della",
+          "a2": "Abdi",
+          "b1": "Tyas",
+          "b2": "Ichsan",
+          "scoreA": "",
+          "scoreB": ""
+        },
+        {
+          "a1": "Tyas",
+          "a2": "Della",
+          "b1": "Marchel",
+          "b2": "Fai",
+          "scoreA": "",
+          "scoreB": ""
+        },
+        {
+          "a1": "Della",
+          "a2": "Kris",
+          "b1": "Diana",
+          "b2": "Abdi",
+          "scoreA": "",
+          "scoreB": ""
+        },
+        {
+          "a1": "Gizla",
+          "a2": "Fai",
+          "b1": "Altundri",
+          "b2": "Ferdi",
+          "scoreA": "",
+          "scoreB": ""
+        }
+      ],
+      "rounds2": [],
+      "breakPerRound": "1",
+      "showBreakRows": true,
+      "ts": "2025-08-26T10:44:36.783Z"
+    }
+  },
+  "lastTs": "2025-08-26T10:44:36.783Z"
+}

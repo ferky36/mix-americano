@@ -69,6 +69,34 @@ function debounce(fn, wait = 120){
 }
 // panggilan ringan untuk refresh fairness
 const refreshFairness = debounce(() => renderFairnessInfo(), 120);
+function parseHM(str){ // "19:00" -> minutes since midnight
+  const [h,m] = (str||'00:00').split(':').map(n=>parseInt(n||'0',10));
+  return (h*60 + m) % (24*60);
+}
+function fmtHM(mins){ // 1140 -> "19:00"
+  mins = ((mins % (24*60)) + (24*60)) % (24*60);
+  const h = Math.floor(mins/60), m = mins%60;
+  return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+}
+// minutes sejak 00:00 untuk start ronde ke-i (termasuk jeda antarronde)
+function roundStartMinutes(i){
+  const start = parseHM(byId('startTime').value || '19:00');
+  const main  = parseInt(byId('minutesPerRound').value || '10', 10);
+  const brk   = parseInt(byId('breakPerRound').value   || '0', 10);
+  return start + i * (main + brk);
+}
+
+// string "HH:MM" untuk start
+function roundStartTime(i){
+  return fmtHM(roundStartMinutes(i));
+}
+
+// string "HH:MM" untuk end = start + durasi MAIN (tanpa jeda)
+function roundEndTime(i){
+  const main = parseInt(byId('minutesPerRound').value || '10', 10);
+  return fmtHM(roundStartMinutes(i) + main);
+}
+
 
 
 
@@ -144,6 +172,9 @@ function currentPayload(){
     // 🔹 kompat: tetap tulis 2 lapangan pertama agar JSON lama tetap kebaca
     rounds1: roundsByCourt[0] || [],
     rounds2: roundsByCourt[1] || [],
+    breakPerRound: byId('breakPerRound').value,
+    showBreakRows: !!byId('showBreakRows').checked,
+
 
     ts: new Date().toISOString()
   };
@@ -228,6 +259,9 @@ function loadSessionByDate(){
 
   let data = store.sessions[d];
   if(!data){ alert('Tidak ada data untuk tanggal tsb.'); return; }
+  if (byId('breakPerRound'))  byId('breakPerRound').value  = data.breakPerRound ?? '1';
+  if (byId('showBreakRows'))  byId('showBreakRows').checked = !!data.showBreakRows;
+
 
   // 🔹 normalisasi jika yang masuk masih format lama
   data = normalizeLoadedSession(data);
@@ -252,6 +286,7 @@ function loadSessionByDate(){
   renderPlayersList();
   renderAll();
   markSaved(data.ts);
+  refreshFairness();
 }
 
 // Pastikan panjang tiap lapangan sesuai 'roundCount'
@@ -481,15 +516,6 @@ function validateNames(){
 
 
 // ================== COURT ================== //
-function initRoundsLength() {
-  const R = parseInt(byId("roundCount").value || "10", 10);
-  while (rounds1.length < R)
-    rounds1.push({ a1: "", a2: "", b1: "", b2: "", scoreA: "", scoreB: "" });
-  while (rounds2.length < R)
-    rounds2.push({ a1: "", a2: "", b1: "", b2: "", scoreA: "", scoreB: "" });
-  if (rounds1.length > R) rounds1 = rounds1.slice(0, R);
-  if (rounds2.length > R) rounds2 = rounds2.slice(0, R);
-}
 function renderCourt(container, arr) {
   const start = byId("startTime").value || "19:00";
   const minutes = parseInt(byId("minutesPerRound").value || "12", 10);
@@ -573,7 +599,9 @@ function renderCourt(container, arr) {
     tdIdx.className = "py-2 pr-4 font-medium";
     tr.appendChild(tdIdx);
     const tdTime = document.createElement("td");
-    tdTime.textContent = toHM(t0) + "–" + toHM(t1);
+    // tdTime.textContent = toHM(t0) + "–" + toHM(t1);
+    // tdTime.textContent = roundStartTime(i);
+    tdTime.textContent = `${roundStartTime(i)}–${roundEndTime(i)}`;
     tdTime.className = "py-2 pr-4";
     tr.appendChild(tdTime);
 
@@ -661,6 +689,23 @@ function renderCourt(container, arr) {
     tdCalc.appendChild(btnCalc);
     tr.appendChild(tdCalc);
     tbody.appendChild(tr);
+    const showBreak = byId('showBreakRows')?.checked;
+    const brkMin = parseInt(byId('breakPerRound').value || '0', 10);
+    if (showBreak && brkMin > 0 && i < R-1) {
+      const trBreak = document.createElement('tr');
+      trBreak.className = 'text-xs text-gray-500 dark:text-gray-400';
+      const tdBreak = document.createElement('td');
+
+      // colSpan sesuai jumlah kolom tabel
+      const fullCols = table.querySelector('thead tr').children.length;
+      tdBreak.colSpan = fullCols;
+      tdBreak.className = 'py-1 text-center opacity-80';
+      // tdBreak.textContent = `🕒 Jeda ${brkMin}:00`;
+      tdBreak.textContent = `🕒 Jeda ${brkMin}:00 • Next ${roundStartTime(i+1)}`;
+
+      trBreak.appendChild(tdBreak);
+      tbody.appendChild(trBreak);
+    }
   }
 
   wrapper.appendChild(table);
@@ -1421,7 +1466,7 @@ byId('btnResetActive').addEventListener('click', ()=>{
   const has = arr.some(r=>r&&(r.a1||r.a2||r.b1||r.b2||r.scoreA||r.scoreB));
   if(has && !confirm('Data pada lapangan aktif akan dihapus. Lanjutkan?')) return;
   roundsByCourt[activeCourt] = [];
-  markDirty(); renderAll();
+  markDirty(); renderAll();refreshFairness();
 });
 
 byId('btnClearScoresActive').addEventListener('click', clearScoresActive);
@@ -1550,7 +1595,7 @@ byId('btnApplyPlayersActive').addEventListener('click', ()=>{
   }
   const arr = roundsByCourt[activeCourt] || [];
   const has = arr.some(r=>r&&(r.a1||r.a2||r.b1||r.b2||r.scoreA||r.scoreB));
-  if(has && !confirm('Menerapkan pemain akan menghapus pairing+skor pada lapangan aktif. Lanjutkan?')) return;
+  if(has && !confirm('Menerapkan pemain akan reset pairing+skor pada lapangan aktif. Lanjutkan?')) return;
   autoFillActiveCourt(); markDirty(); renderAll(); computeStandings();refreshFairness();
 });
 // Modal Hitung Skor
@@ -1561,11 +1606,11 @@ byId('btnAMinus').addEventListener('click', ()=>{ scoreCtx.a = Math.max(0,   sco
 byId('btnBPlus').addEventListener('click', ()=>{ scoreCtx.b = Math.min(999, scoreCtx.b + 1); updateScoreDisplay(); });
 byId('btnBMinus').addEventListener('click', ()=>{ scoreCtx.b = Math.max(0,   scoreCtx.b - 1); updateScoreDisplay(); });
 // Set skor seri (rata-rata, dibulatkan ke bawah)
-byId('btnTie').addEventListener('click', ()=>{
-  const avg = Math.max(scoreCtx.a, scoreCtx.b);
-  scoreCtx.a = avg; scoreCtx.b = avg;
-  updateScoreDisplay();
-});
+// byId('btnTie').addEventListener('click', ()=>{
+//   const avg = Math.max(scoreCtx.a, scoreCtx.b);
+//   scoreCtx.a = avg; scoreCtx.b = avg;
+//   updateScoreDisplay();
+// });
 
 // tutup modal jika klik backdrop
 byId('scoreModal').addEventListener('click', (e)=>{
@@ -1597,4 +1642,40 @@ byId('btnResetScore').addEventListener('click', ()=>{
   // re-enable start
   const btn = byId('btnStartTimer'); if (btn) btn.disabled = false;
 });
+['minutesPerRound','breakPerRound','showBreakRows','startTime'].forEach(id=>{
+  const el = byId(id);
+  if(!el) return;
+  el.addEventListener('change', ()=>{
+    markDirty();
+    renderAll();          // waktu & baris jeda ikut update
+    validateAll();
+  });
+});
+// ===== Expand/Collapse "Filter / Jadwal" =====
+(function(){
+  const KEY = 'ui.filter.expanded';
+  const btn = document.getElementById('btnFilterToggle');
+  const chevron = document.getElementById('filterChevron');
+  const panel = document.getElementById('filterPanel');
+
+  if(!btn || !panel) return;
+
+  // state awal: dari localStorage (default: expanded)
+  let open = localStorage.getItem(KEY);
+  if (open === null) {
+    // kalau device pendek-lanskap -> start collapsed
+    const isShortLandscape = window.matchMedia('(orientation: landscape) and (max-height: 480px)').matches;
+    open = isShortLandscape ? '0' : '1';
+  }
+  open = open === '1';
+  if (open) panel.classList.add('open'); else panel.classList.remove('open');
+  chevron.textContent = open ? '▴' : '▾';
+
+  btn.addEventListener('click', ()=>{
+    panel.classList.toggle('open');
+    const nowOpen = panel.classList.contains('open');
+    chevron.textContent = nowOpen ? '▴' : '▾';
+    localStorage.setItem(KEY, nowOpen ? '1' : '0');
+  });
+})();
 
