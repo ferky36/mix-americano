@@ -109,7 +109,9 @@
                 <input id="newPlayer" placeholder="Nama pemain…" class="flex-1 border rounded-lg px-3 py-2 bg-white dark:bg-gray-900 dark:border-gray-700">
                 <button id="btnAddPlayer" class="px-3 py-2 rounded-lg bg-indigo-600 text-white">Tambah</button>
               </div>
-              <ul id="playersList" class="min-h-[44px] grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2"></ul>
+              <div id="playerListContainer">
+                <ul id="playersList" class="min-h-[44px] grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2"></ul>
+              </div>
               <div id="playersWarnings" class="text-xs mt-2"></div>
               <div id="textModal" class="hidden mt-2">
                 <textarea id="playersText" rows="6" class="w-full border rounded-xl px-3 py-2 bg-white dark:bg-gray-900 dark:border-gray-700" placeholder="Satu nama per baris"></textarea>
@@ -340,5 +342,6 @@
 
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
   <script src="app.js"></script>
+  <script src="app-responsive-addon.js"></script>
 </body>
 </html>

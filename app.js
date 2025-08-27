@@ -349,7 +349,7 @@ function renderPlayersList() {
       // gender select
       const gSel = document.createElement('select');
       gSel.className = 'player-meta border rounded px-1 py-0.5 text-xs dark:bg-gray-900 dark:border-gray-700';
-      ['','M','F'].forEach(v => gSel.appendChild(new Option(v || '–', v)));
+      ['','M','F'].forEach(v => gSel.appendChild(new Option(v || '-Pilih Gender-', v)));
       gSel.value = meta.gender || '';
       gSel.onchange = () => {
         playerMeta[name] = { ...playerMeta[name], gender: gSel.value };
@@ -360,7 +360,7 @@ function renderPlayersList() {
       // level select
       const lSel = document.createElement('select');
       lSel.className = 'player-meta border rounded px-1 py-0.5 text-xs dark:bg-gray-900 dark:border-gray-700';
-      [['','–'], ['beg','Beginner'], ['pro','Pro']]
+      [['','-Pilih Level-'], ['beg','Beginner'], ['pro','Pro']]
         .forEach(([v,t]) => lSel.add(new Option(t, v)));
       lSel.value = meta.level || '';
       lSel.onchange = () => {
@@ -415,9 +415,11 @@ function removePlayerFromRounds(name) {
 function showTextModal() {
   byId("playersText").value = players.join("\n");
   byId("textModal").classList.remove("hidden");
+  byId("playerListContainer").classList.add("hidden");
 }
 function hideTextModal() {
   byId("textModal").classList.add("hidden");
+  byId("playerListContainer").classList.remove("hidden");
 }
 function levenshtein(a, b) {
   a = a.toLowerCase();
@@ -530,18 +532,19 @@ function renderCourt(container, arr) {
 
   const table = document.createElement("table");
   table.className = "min-w-full text-sm dark-table";
+  table.classList.add("rnd-table"); // ⬅️ aktifkan card-mode di HP
   table.innerHTML = `
     <thead>
       <tr class="text-left border-b border-gray-200 dark:border-gray-700">
-        <th class="py-2 pr-4">≡</th>
-        <th class="py-2 pr-4">#</th>
+        <th class="py-2 pr-4"></th>
+        <th class="py-2 pr-4">Ronde</th>
         <th class="py-2 pr-4">Waktu</th>
         <th class="py-2 pr-4">Player1A</th>
         <th class="py-2 pr-4">Player2A</th>
         <th class="py-2 pr-4">Player1B</th>
         <th class="py-2 pr-4">Player2B</th>
-        <th class="py-2 pr-4">Skor A</th>
-        <th class="py-2 pr-4">Skor B</th>
+        <th class="py-2 pr-4">Skor Tim A</th>
+        <th class="py-2 pr-4">Skor Tim B</th>
         <th class="py-2 pr-4">Hitung</th>
       </tr>
     </thead>
@@ -550,12 +553,7 @@ function renderCourt(container, arr) {
 
   for (let i = 0; i < R; i++) {
     const r = arr[i] || {
-      a1: "",
-      a2: "",
-      b1: "",
-      b2: "",
-      scoreA: "",
-      scoreB: "",
+      a1: "", a2: "", b1: "", b2: "", scoreA: "", scoreB: ""
     };
     const t0 = new Date(base.getTime() + i * minutes * 60000);
     const t1 = new Date(t0.getTime() + minutes * 60000);
@@ -589,24 +587,32 @@ function renderCourt(container, arr) {
       renderAll();
     });
 
+    // === handle / index
     const tdHandle = document.createElement("td");
     tdHandle.textContent = "≡";
-    tdHandle.className = "py-2 pr-4 text-gray-400";
+    tdHandle.className = "py-2 pr-4 text-gray-400 rnd-col-drag";
     tdHandle.style.cursor = "grab";
     tr.appendChild(tdHandle);
+
     const tdIdx = document.createElement("td");
-    tdIdx.textContent = "R" + (i + 1);
-    tdIdx.className = "py-2 pr-4 font-medium";
+    tdIdx.textContent = "Ronde " + (i + 1);
+    tdIdx.className = "py-2 pr-4 font-medium rnd-col-round"; 
+    tdIdx.dataset.label = "Ronde";
     tr.appendChild(tdIdx);
+
+    // === Waktu (Start–End)
     const tdTime = document.createElement("td");
-    // tdTime.textContent = toHM(t0) + "–" + toHM(t1);
-    // tdTime.textContent = roundStartTime(i);
     tdTime.textContent = `${roundStartTime(i)}–${roundEndTime(i)}`;
-    tdTime.className = "py-2 pr-4";
+    tdTime.className = "py-2 pr-4 rnd-col-time";
+    tdTime.dataset.label = "Waktu";
     tr.appendChild(tdTime);
 
-    function selCell(k) {
+    // helper: select pemain
+    function selCell(k, label, extraClass) {
       const td = document.createElement("td");
+      td.dataset.label = label;
+      if (extraClass) td.classList.add(extraClass);
+
       const sel = document.createElement("select");
       sel.className =
         "border rounded-lg px-2 py-1 min-w-[6rem] max-w-[7rem] sm:max-w-[10rem] bg-white dark:bg-gray-900 dark:border-gray-700";
@@ -618,50 +624,42 @@ function renderCourt(container, arr) {
         markDirty();
         validateAll();
         computeStandings();
-        refreshFairness();  
+        refreshFairness();
       });
       td.appendChild(sel);
       return td;
     }
-    function scCell(k){
-      const td = document.createElement('td');
-      const inp = document.createElement('input');
 
-      // pakai text + inputmode numeric (lebih aman daripada type=number yang bisa terima 'e', '+', '-')
+    // helper: input skor (tetap dikunci; isi dari modal hitung)
+    function scCell(k, label, cls){
+      const td = document.createElement('td');
+      td.dataset.label = label;
+      if (cls) td.classList.add(cls);
+
+      const inp = document.createElement('input');
       inp.type = 'text';
       inp.inputMode = 'numeric';
       inp.autocomplete = 'off';
       inp.pattern = '[0-9]*';
-      inp.maxLength = (typeof SCORE_MAXLEN!=='undefined' ? SCORE_MAXLEN : 3); // fallback 3 digit
+      inp.maxLength = (typeof SCORE_MAXLEN!=='undefined' ? SCORE_MAXLEN : 3);
       inp.className = 'border rounded-lg px-2 py-1 w-[3.5rem] sm:w-[4.5rem] bg-white dark:bg-gray-900 dark:border-gray-700';
-      inp.disabled = true;    // ⬅️ KUNCI: tidak bisa diketik
-      // set nilai awal (dipastikan angka saja)
+      inp.disabled = true;                       // ⬅️ hanya dari modal
       inp.value = onlyDigits(r[k] || '');
 
-      // blokir pengetikan non-angka
-      inp.addEventListener('keydown', (e)=>{
-        if (!allowKey(e)) e.preventDefault();
-      });
-
-      // bersihkan saat input (termasuk paste via context menu di beberapa browser)
+      inp.addEventListener('keydown', (e)=>{ if (!allowKey(e)) e.preventDefault(); });
       inp.addEventListener('input', (e)=>{
         const clean = onlyDigits(e.target.value).slice(0, inp.maxLength);
         if (e.target.value !== clean) e.target.value = clean;
         arr[i] = { ...arr[i], [k]: clean };
         markDirty(); validateAll(); computeStandings();
       });
-
-      // sanitasi khusus paste (beberapa browser masih meloloskan sebelum 'input' terpicu)
       inp.addEventListener('paste', (e)=>{
         e.preventDefault();
         const text = (e.clipboardData || window.clipboardData).getData('text');
         const clean = onlyDigits(text).slice(0, inp.maxLength);
         document.execCommand('insertText', false, clean);
       });
-
-      // cegah drop teks non-angka ke input
       inp.addEventListener('drop', (e)=> e.preventDefault());
-
       inp.addEventListener('blur', ()=>{
         if (inp.value === '') inp.value = '0';
         arr[i] = { ...arr[i], [k]: inp.value };
@@ -672,37 +670,48 @@ function renderCourt(container, arr) {
       return td;
     }
 
-    tr.appendChild(selCell("a1"));
-    tr.appendChild(selCell("a2"));
-    tr.appendChild(selCell("b1"));
-    tr.appendChild(selCell("b2"));
-    tr.appendChild(scCell("scoreA"));
-    tr.appendChild(scCell("scoreB"));
-      // tombol hitung
+    // === Tim A | Tim B (urut: A1 | B1, A2 | B2)
+    const tdA1 = selCell("a1", "Player1A", "rnd-teamA-1");
+    const tdB1 = selCell("b1", "Player1B", "rnd-teamB-1");
+    const tdA2 = selCell("a2", "Player2A", "rnd-teamA-2");
+    const tdB2 = selCell("b2", "Player2B", "rnd-teamB-2");
+
+    tr.appendChild(tdA1);
+    tr.appendChild(tdB1);
+    tr.appendChild(tdA2);
+    tr.appendChild(tdB2);
+
+    // === Skor Tim A | Tim B
+    const tdSA = scCell("scoreA","Skor Tim A"); tdSA.classList.add("rnd-scoreA");
+    const tdSB = scCell("scoreB","Skor Tim B"); tdSB.classList.add("rnd-scoreB");
+
+    tr.appendChild(tdSA);
+    tr.appendChild(tdSB);
+
+    // === tombol Hitung (aksi)
     const tdCalc = document.createElement('td');
+    tdCalc.dataset.label = 'Aksi';
+    tdCalc.className = 'rnd-col-actions';
     const btnCalc = document.createElement('button');
-    btnCalc.className = 'px-3 py-1.5 rounded-lg border dark:border-gray-700 text-sm';
+    btnCalc.className = 'px-3 py-1.5 rounded-lg border dark:border-gray-700 text-sm w-full sm:w-auto';
     btnCalc.textContent = '🧮 Hitung';
-    btnCalc.addEventListener('click', ()=>{
-      openScoreModal(activeCourt, i); // <- buka modal untuk court & ronde ini
-    });
+    btnCalc.addEventListener('click', ()=> openScoreModal(activeCourt, i));
     tdCalc.appendChild(btnCalc);
     tr.appendChild(tdCalc);
+
     tbody.appendChild(tr);
+
+    // === Baris jeda (opsional)
     const showBreak = byId('showBreakRows')?.checked;
     const brkMin = parseInt(byId('breakPerRound').value || '0', 10);
     if (showBreak && brkMin > 0 && i < R-1) {
       const trBreak = document.createElement('tr');
-      trBreak.className = 'text-xs text-gray-500 dark:text-gray-400';
+      trBreak.className = 'text-xs text-gray-500 dark:text-gray-400 rnd-break-row';
       const tdBreak = document.createElement('td');
-
-      // colSpan sesuai jumlah kolom tabel
       const fullCols = table.querySelector('thead tr').children.length;
       tdBreak.colSpan = fullCols;
       tdBreak.className = 'py-1 text-center opacity-80';
-      // tdBreak.textContent = `🕒 Jeda ${brkMin}:00`;
       tdBreak.textContent = `🕒 Jeda ${brkMin}:00 • Next ${roundStartTime(i+1)}`;
-
       trBreak.appendChild(tdBreak);
       tbody.appendChild(trBreak);
     }
@@ -711,6 +720,7 @@ function renderCourt(container, arr) {
   wrapper.appendChild(table);
   container.appendChild(wrapper);
 }
+
 
 function renderCourtActive(){
   ensureRoundsLengthForAllCourts();
@@ -868,7 +878,7 @@ function validateAll(){
     const filtered = names.filter(Boolean);
     const set = new Set(filtered);
     if(set.size !== filtered.length){
-      problems.push('Bentrok jadwal: R'+(i+1)+' ada pemain di dua lapangan.');
+      problems.push('Bentrok jadwal: Ronde '+(i+1)+' ada pemain di dua lapangan.');
     }
   }
 
@@ -883,9 +893,9 @@ function validateAll(){
       if(!(r&&r.a1&&r.a2&&r.b1&&r.b2)) continue;
       const key = matchKey(r);
       if(seen.has(key)){
-        problems.push('Duplikat lawan (Lap '+(ci+1)+'): '+key+' muncul lagi di R'+(i+1)+' (sebelumnya '+seen.get(key)+').');
+        problems.push('Duplikat lawan (Lap '+(ci+1)+'): '+key+' muncul lagi di Ronde '+(i+1)+' (sebelumnya '+seen.get(key)+').');
       } else {
-        seen.set(key, 'R'+(i+1));
+        seen.set(key, 'Ronde '+(i+1));
       }
     }
   });
@@ -1322,7 +1332,7 @@ function openScoreModal(courtIdx, roundIdx){
 
   byId('scoreTeamA').textContent = [r.a1||'-', r.a2||'-'].join(' & ');
   byId('scoreTeamB').textContent = [r.b1||'-', r.b2||'-'].join(' & ');
-  byId('scoreRoundTitle').textContent = `Lap ${courtIdx+1} • R${roundIdx+1}`;
+  byId('scoreRoundTitle').textContent = `Lap ${courtIdx+1} • Ronde ${roundIdx+1}`;
   byId('scoreAVal').textContent = scoreCtx.a;
   byId('scoreBVal').textContent = scoreCtx.b;
 
@@ -1401,7 +1411,7 @@ function commitScoreToRound(auto=false){
   if(!r){ alert('Ronde tidak ditemukan.'); return; }
 
   if (!auto){
-    const msg = `Simpan skor untuk Lap ${scoreCtx.court+1} • R${scoreCtx.round+1}\n`+
+    const msg = `Simpan skor untuk Lap ${scoreCtx.court+1} • Ronde ${scoreCtx.round+1}\n`+
                 `A (${r.a1} & ${r.a2}) : ${scoreCtx.a}\n`+
                 `B (${r.b1} & ${r.b2}) : ${scoreCtx.b}`;
     if(!confirm(msg)) return;

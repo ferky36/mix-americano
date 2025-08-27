@@ -1,5 +1,8 @@
+
 :root { --ui-zoom: 100%; }
 body { font-size: clamp(14px, calc(14px * var(--ui-zoom) / 100), 20px); }
+
+/* Tabs */
 .tab-active { border-color:#111827; color:#111827; }
 .dark .tab-active { border-color:#e5e7eb; color:#e5e7eb; }
 
@@ -13,7 +16,7 @@ body { font-size: clamp(14px, calc(14px * var(--ui-zoom) / 100), 20px); }
 .dark .dark-table thead th,
 .dark .dark-table tbody td { color:#e5e7eb; }
 
-/* Court responsive wrapper */
+/* Court table wrapper (desktop default) */
 .court-wrapper { overflow-x:auto; -webkit-overflow-scrolling:touch; }
 .court-wrapper table { min-width:640px; width:100%; }
 .court-wrapper td, .court-wrapper th { white-space:nowrap; }
@@ -31,34 +34,23 @@ body { font-size: clamp(14px, calc(14px * var(--ui-zoom) / 100), 20px); }
 #reportModal { display:none; }
 #reportModal:not(.hidden) { display:block; }
 
+/* Courts toolbar */
 .court-tab {
   border-bottom-width: 2px;
   border-color: transparent;
   padding: .4rem .75rem;
   border-radius: .5rem .5rem 0 0;
 }
-.court-tab.active {
-  border-color: #111827;
-  color: #111827;
-}
-.dark .court-tab.active {
-  border-color: #e5e7eb;
-  color: #e5e7eb;
-}
-.court-close {
-  opacity: .7;
-  margin-left: .35rem;
-}
-.court-close:hover { opacity: 1; }
-
-#courtsToolbar { scroll-behavior: auto; } /* cegah smooth scroll ngesot */
+.court-tab.active { border-color: #111827; color: #111827; }
+.dark .court-tab.active { border-color: #e5e7eb; color: #e5e7eb; }
+.court-close { opacity:.7; margin-left:.35rem; }
+.court-close:hover { opacity:1; }
+#courtsToolbar { scroll-behavior:auto; } /* cegah smooth scroll ngesot */
 
 /* mini dropdown gender/level pada item pemain */
-.player-meta select{
-  font-size: 11px;
-  padding: 2px 6px;
-}
+.player-meta select{ font-size:11px; padding:2px 6px; }
 
+/* Score modal display helper */
 #scoreModal { display:none; }
 #scoreModal:not(.hidden){ display:block; }
 
@@ -67,174 +59,147 @@ body { font-size: clamp(14px, calc(14px * var(--ui-zoom) / 100), 20px); }
    Compact Header - HP Landscape
    =========================== */
 @media (orientation: landscape) and (max-height: 480px) {
-
-  /* Header padding dipendekkan */
-  header .bg-gradient-to-r > .mx-auto {
-    padding-top: 8px !important;
-    padding-bottom: 8px !important;
-    gap: 8px !important;
-  }
-
-  /* Judul diperkecil, subjudul disembunyikan */
-  header .bg-gradient-to-r h1 {
-    font-size: 1.1rem !important;
-    line-height: 1.2 !important;
-  }
-  /* Subjudul di header (baris "• Simulasi…" dan "• Ranking…") */
-  header .bg-gradient-to-r p.text-xs {
-    display: none !important;
-  }
-
-  /* Baris kontrol di header: jadi 1 baris scrollable */
-  #hdrControls {
-    gap: 6px !important;
-    flex-wrap: nowrap !important;
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch;
-  }
-  #hdrControls > * {
-    white-space: nowrap;     /* tombol/select tidak pecah baris */
-  }
-  /* Sedikit kecilkan tombol/elemen di header */
-  #hdrControls button,
-  #hdrControls select {
-    padding: 6px 10px !important;
-    font-size: 12px !important;
-  }
-
-  /* Tombol menu HP biar ramping */
-  #btnHdrMenu,
-  #btnFilter {
-    padding-top: 6px !important;
-    padding-bottom: 6px !important;
-  }
-
-  /* Panel filter: input/select/button lebih pendek */
-  #filterPanel input,
-  #filterPanel select,
-  #filterPanel button {
-    height: 34px;
-    padding-top: 6px !important;
-    padding-bottom: 6px !important;
-    font-size: 12px !important;
+  header .bg-gradient-to-r > .mx-auto { padding-top:8px!important; padding-bottom:8px!important; gap:8px!important; }
+  header .bg-gradient-to-r h1 { font-size:1.1rem!important; line-height:1.2!important; }
+  header .bg-gradient-to-r p.text-xs { display:none!important; }
+  #hdrControls { gap:6px!important; flex-wrap:nowrap!important; overflow-x:auto!important; -webkit-overflow-scrolling:touch; }
+  #hdrControls>* { white-space:nowrap; }
+  #hdrControls button, #hdrControls select { padding:6px 10px!important; font-size:12px!important; }
+  #btnHdrMenu, #btnFilter { padding-top:6px!important; padding-bottom:6px!important; }
+  #filterPanel input, #filterPanel select, #filterPanel button {
+    height:34px; padding-top:6px!important; padding-bottom:6px!important; font-size:12px!important;
   }
 }
-
-/* Ekstra ketat untuk device yang sangat pendek */
 @media (orientation: landscape) and (max-height: 380px) {
-  header .bg-gradient-to-r h1 {
-    font-size: 1rem !important;
-  }
-  #hdrControls button,
-  #hdrControls select {
-    padding: 5px 8px !important;
-    font-size: 11px !important;
-  }
+  header .bg-gradient-to-r h1 { font-size:1rem!important; }
+  #hdrControls button, #hdrControls select { padding:5px 8px!important; font-size:11px!important; }
 }
 
-/* Collapsible panel animasi height */
-.collapsible {
-  overflow: hidden;
-  max-height: 0;
-  transition: max-height .28s ease, opacity .18s ease;
-  opacity: 0;
-}
-.collapsible.open {
-  max-height: 1200px;          /* cukup besar untuk isi panel */
-  opacity: 1;
-}
-
-/* Saat HP landscape: panel default collapsed agar hemat ruang */
+/* Collapsible */
+.collapsible { overflow:hidden; max-height:0; transition:max-height .28s ease, opacity .18s ease; opacity:0; }
+.collapsible.open { max-height:1200px; opacity:1; }
 @media (orientation: landscape) and (max-height: 480px) {
-  .collapsible.default-collapsed:not(.open) { max-height: 0; opacity: 0; }
+  .collapsible.default-collapsed:not(.open) { max-height:0; opacity:0; }
 }
 
-/* ===== Grid daftar pemain: responsif ===== */
+/* ===== Players list ===== */
 #playersList {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
 }
-@media (min-width: 640px){ /* sm */
-  #playersList { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-}
-@media (min-width: 768px){ /* md */
-  #playersList { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-}
+@media (min-width:640px){ #playersList{ grid-template-columns:repeat(3,minmax(0,1fr)); } }
+@media (min-width:768px){ #playersList{ grid-template-columns:repeat(4,minmax(0,1fr)); } }
 
-/* ===== Kartu pemain ===== */
-#playersList li {
-  display: flex;
-  flex-wrap: wrap;                 /* bisa turun baris */
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  border: 1px solid var(--tw-prose-border, rgba(107,114,128,.25));
-  border-radius: 12px;
-  background: var(--tw-card-bg, #fff);
+#playersList li{
+  display:flex; flex-wrap:wrap; align-items:center; gap:8px;
+  padding:10px 12px;
+  border:1px solid var(--tw-prose-border, rgba(107,114,128,.25));
+  border-radius:12px; background:var(--tw-card-bg,#fff);
 }
-.dark #playersList li{
-  background: #101827;             /* dark */
-  border-color: #334155;           /* slate-700 */
-}
+.dark #playersList li{ background:#101827; border-color:#334155; }
 
-/* Nama pemain: baris atas, ellipsis */
 #playersList li .player-name{
-  flex: 1 1 140px;
-  min-width: 0;
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  flex:1 1 140px; min-width:0; font-weight:600;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
+#playersList li .player-meta{ display:flex; gap:6px; align-items:center; flex:1 1 100%; }
+#playersList li .player-meta select{ min-width:56px; height:34px; }
+#playersList li .player-meta .remove-btn{ margin-left:auto; }
 
-/* Bungkus meta (dua select) dan tombol hapus */
-#playersList li .player-meta{
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  flex: 1 1 100%;                  /* default: turun baris bawah nama */
-}
-
-/* Select meta ukuran konsisten */
-#playersList li .player-meta select{
-  min-width: 56px;                 /* kecil tapi terbaca */
-  height: 34px;
-}
-#playersList li .player-meta .remove-btn{
-  margin-left: auto;               /* tombol hapus mepet kanan */
-}
-
-/* ===== Mode compact: HP landscape / tinggi kecil ===== */
 @media (orientation: landscape) and (max-height: 480px){
-  #playersList { gap: 8px; }
-  #playersList li{
-    padding: 8px 10px;
-    gap: 6px;
-  }
-  #playersList li .player-name{
-    font-size: 0.95rem;
-  }
-  #playersList li .player-meta{
-    flex: 0 0 auto;                /* cenderung tetap satu baris */
-  }
-  #playersList li .player-meta select{
-    height: 30px;
-    min-width: 50px;
-    font-size: 12px;
-  }
+  #playersList{ gap:8px; }
+  #playersList li{ padding:8px 10px; gap:6px; }
+  #playersList li .player-name{ font-size:.95rem; }
+  #playersList li .player-meta{ flex:0 0 auto; }
+  #playersList li .player-meta select{ height:30px; min-width:50px; font-size:12px; }
+}
+@media (max-width:360px){ #playersList li .player-meta{ flex-basis:100%; } }
+#btnAddPlayer{ white-space:nowrap; }
+@media (max-width:420px){
+  #newPlayer{ font-size:14px; }
+  #btnAddPlayer{ padding:8px 12px; font-size:14px; }
 }
 
-/* Jika ruang sempit banget (≤360px), paksa meta di bawah */
-@media (max-width: 360px){
-  #playersList li .player-meta{ flex-basis: 100%; }
+/* ===============================
+   Court table fixes for mobile
+   =============================== */
+@media (max-width:640px){
+  .court-wrapper table { min-width:0!important; width:100%!important; }
+  .court-wrapper td, .court-wrapper th { white-space:normal!important; }
 }
 
-/* Tombol "Tambah" di atas list: full width di layar kecil */
-#btnAddPlayer{
-  white-space: nowrap;
+/* ===============================
+   Round table header (sticky)
+   =============================== */
+.rnd-table thead th{
+  position:sticky; top:0; z-index:5;
+  background-color:#f9fafb; color:#374151;
+  font-size:11px; text-transform:uppercase; letter-spacing:.05em; font-weight:600;
+  padding:8px 6px;
 }
-@media (max-width: 420px){
-  #newPlayer { font-size: 14px; }
-  #btnAddPlayer{ padding: 8px 12px; font-size: 14px; }
+.dark .rnd-table thead th{ background-color:rgba(26,33,44,.9); color:#d1d5db; }
+
+/* ===============================
+   Round card layout (≤ 640px)
+   =============================== */
+@media (max-width:640px){
+  .rnd-table{ width:100%; border-collapse:separate; border-spacing:0 10px; }
+  .rnd-table thead{ display:none; }
+
+  .rnd-table tbody tr{
+    display:grid; grid-template-columns:1fr 1fr;
+    gap:10px 14px; padding:12px; border-radius:14px;
+    background:#ffffff; border:1px solid #e5e7eb; position:relative;
+  }
+  .dark .rnd-table tbody tr{ background:#0f172a; border-color:#334155; }
+
+  .rnd-table tbody td{ display:block; padding:0; }
+  .rnd-table tbody td::before{
+    content:attr(data-label); display:block; margin-bottom:4px;
+    font-size:10.5px; text-transform:uppercase; letter-spacing:.03em; color:#6b7280;
+  }
+  .dark .rnd-table tbody td::before{ color:#9ca3af; }
+
+  .rnd-col-drag, .rnd-col-index{ display:none!important; }
+
+  /* Ronde (opsional) & Waktu full width */
+  .rnd-col-round, .rnd-col-time{ grid-column:1 / -1; }
+  .rnd-col-time::before{ content:"Waktu"; }
+
+  /* Tim A | Tim B */
+  .rnd-teamA-1::before, .rnd-teamB-1::before{
+    display:block; margin-bottom:6px; font-weight:700; font-size:12px; letter-spacing:.04em; text-transform:uppercase; opacity:.9;
+  }
+  .rnd-teamA-1::before{ content:"Tim A"; }
+  .rnd-teamB-1::before{ content:"Tim B"; }
+
+  .rnd-teamA-1{ grid-column:1; }  .rnd-teamB-1{ grid-column:2; }
+  .rnd-teamA-2{ grid-column:1; }  .rnd-teamB-2{ grid-column:2; }
+
+  .rnd-scoreA::before, .rnd-scoreB::before{
+    display:block; margin:6px 0 4px; font-size:11px; letter-spacing:.04em; text-transform:uppercase; opacity:.8;
+  }
+  .rnd-scoreA::before{ content:"Skor Tim A"; }
+  .rnd-scoreB::before{ content:"Skor Tim B"; }
+  .rnd-scoreA{ grid-column:1; } .rnd-scoreB{ grid-column:2; }
+
+  .rnd-col-actions{ grid-column:1 / -1; }
+  .rnd-col-actions .btn, .rnd-col-actions button{ width:100%; }
+
+  /* VS badge yang halus */
+  .rnd-table tbody tr::after{
+    content:"VS"; position:absolute; top:50%; left:50%; transform:translate(-150%,110%);
+    font-size:10px; padding:2px 6px; border-radius:999px; pointer-events:none;
+    background:rgba(148,163,184,.12); color:#94a3b8;
+  }
+  .rnd-table tbody tr{
+    background-image:linear-gradient(to bottom, rgba(148,163,184,.12), rgba(148,163,184,.12));
+    background-size:1px 78%; background-repeat:no-repeat; background-position:calc(50% - .5px) 12%;
+  }
+
+  /* Break row */
+  .rnd-break-row{ background:transparent!important; border:0!important; }
+  .rnd-break-row td{ text-align:center; font-size:12px; opacity:.75; padding:6px 0; }
 }
+
