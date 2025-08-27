@@ -1,5 +1,10 @@
 "use strict";
 // ================== Helpers ================== //
+// bisa disesuaikan urutannya
+const DEFAULT_PLAYERS_12 = [
+  'Della','Rangga','Fai','Gizla','Abdi','Diana',
+  'Kris','Ichsan','Marchel','Altundri','Ferdi','Tyas'
+];
 const pad = (n) => String(n).padStart(2, "0");
 const toHM = (d) => pad(d.getHours()) + ":" + pad(d.getMinutes());
 const csvEscape = (v) => {
@@ -486,13 +491,14 @@ function renderPlayersList() {
     (byId("minutesPerRound").value || 12);
 }
 function addPlayer(name) {
-  name = (name || "").trim();
-  if (!name) return;
+  name = (name || '').trim();
+  if (!name || players.includes(name)) return; // tolak kosong/duplikat
   players.push(name);
-  markDirty();
-  renderPlayersList();
-  validateNames();
+  renderPlayersList?.();
+  renderAll?.();                // kalau tabel ronde ikut tergantung daftar pemain
+  markDirty();                  // ← simpan otomatis
 }
+
 function removePlayerFromRounds(name) {
   roundsByCourt.forEach(arr => {
     arr.forEach(r => {
@@ -502,6 +508,24 @@ function removePlayerFromRounds(name) {
     });
   });
 }
+
+function upsertPlayerMeta(name, key, value) {
+  if (!playerMeta[name]) playerMeta[name] = {};
+  playerMeta[name][key] = value || '';
+  markDirty();                 // ← penting: trigger autosave
+}
+
+// di dalam pembuatan elemen list pemain:
+const selGender = document.createElement('select');
+selGender.addEventListener('change', (e) => {
+  upsertPlayerMeta(name, 'gender', e.target.value);
+});
+
+const selLevel = document.createElement('select');
+selLevel.addEventListener('change', (e) => {
+  upsertPlayerMeta(name, 'level', e.target.value);
+});
+
 
 function showTextModal() {
   byId("playersText").value = players.join("\n");
@@ -1001,6 +1025,25 @@ function validateAll(){
   return problems.length===0;
 }
 
+function applyDefaultPlayersTemplate() {
+  players.splice(0, players.length, ...DEFAULT_PLAYERS_12);
+
+  // reset meta yang tidak ada di template
+  Object.keys(playerMeta).forEach(n => { if (!DEFAULT_PLAYERS_12.includes(n)) delete playerMeta[n]; });
+
+  // bersihkan ronde dari nama yang tak ada di template
+  const set = new Set(DEFAULT_PLAYERS_12);
+  (roundsByCourt || []).forEach(court =>
+    (court || []).forEach(r =>
+      ['a1','a2','b1','b2'].forEach(k => { if (r && r[k] && !set.has(r[k])) r[k] = ''; })
+    )
+  );
+
+  renderPlayersList?.();
+  renderAll?.();
+  computeStandings?.();
+  markDirty();                 // ← simpan otomatis
+}
 
 function computeStandings(){
   const data={}; players.forEach(p=>data[p]={total:0,diff:0,win:0,lose:0,draw:0});
@@ -1790,6 +1833,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const d = normalizeDateKey(byId('sessionDate')?.value || '');
   const all = readAllSessionsLS();
   if (all[d]) applyPayload(all[d]);
+  renderPlayersList();
 });
 
 // Ketika ganti tanggal → simpan dulu yang lama, lalu load tanggal baru
@@ -1805,3 +1849,8 @@ byId('sessionDate')?.addEventListener('change', () => {
   }
 });
 
+byId('btnApplyPlayerTemplate')?.addEventListener('click', () => {
+  if (confirm('Terapkan template pemain 12 orang? Daftar sekarang akan diganti.')) {
+    applyDefaultPlayersTemplate();
+  }
+});
