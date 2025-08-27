@@ -97,6 +97,22 @@ function roundEndTime(i){
   return fmtHM(roundStartMinutes(i) + main);
 }
 
+// ===== Local storage helpers =====
+const STORAGE_KEY = 'mixam_sessions_v1';
+
+function normalizeDateKey(raw) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  const m = (raw || '').match(/^(\d{2})\s*\/\s*(\d{2})\s*\/\s*(\d{4})$/);
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : new Date().toISOString().slice(0,10);
+}
+function readAllSessionsLS() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); }
+  catch { return {}; }
+}
+function writeAllSessionsLS(obj) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
+}
+
 
 
 
@@ -181,10 +197,28 @@ function currentPayload(){
 }
 
 
+let _autoSaveTimer = null;
+
 function markDirty() {
   dirty = true;
   byId("unsavedDot").classList.remove("hidden");
+
+  // autosave debounce → benar-benar menulis ke localStorage
+  clearTimeout(_autoSaveTimer);
+  _autoSaveTimer = setTimeout(saveToLocalSilent, 600);
 }
+function saveToLocalSilent() {
+  const raw = byId("sessionDate").value || "";
+  const d = normalizeDateKey(raw);
+  if (!d) return;
+
+  const payload = currentPayload();  // <- sudah ada di kode kamu
+  const all = readAllSessionsLS();
+  all[d] = payload;
+  all.__lastTs = new Date().toISOString();
+  writeAllSessionsLS(all);
+}
+
 function markSaved(ts) {
   dirty = false;
   byId("unsavedDot").classList.add("hidden");
@@ -193,18 +227,75 @@ function markSaved(ts) {
       "Saved " + new Date(ts).toLocaleTimeString();
 }
 function saveToStore() {
-  const d = byId("sessionDate").value || "";
-  if (!d) {
-    alert("Isi tanggal dulu ya.");
-    return false;
-  }
-  store.sessions[d] = currentPayload();
+  const raw = byId("sessionDate").value || "";
+  if (!raw) { alert("Isi tanggal dulu ya."); return false; }
+
+  const d = normalizeDateKey(raw);
+  const payload = currentPayload();
+
+  // simpan ke objek store lama (jika kamu masih pakai)
+  store.sessions[d] = payload;
   store.lastTs = new Date().toISOString();
+
+  // simpan ke localStorage (persist)
+  const all = readAllSessionsLS();
+  all[d] = payload;
+  all.__lastTs = store.lastTs;
+  writeAllSessionsLS(all);
+
   markSaved(store.lastTs);
-  populateDatePicker();
-  byId("datePicker").value = d;
+  populateDatePicker?.();
+  byId("datePicker") && (byId("datePicker").value = d);
   return true;
 }
+
+function applyPayload(payload) {
+  if (!payload) return;
+
+  // 1) Inputs dasar
+  if (byId('sessionDate'))      byId('sessionDate').value      = payload.date || '';
+  if (byId('startTime'))        byId('startTime').value        = payload.startTime || '19:00';
+  if (byId('minutesPerRound'))  byId('minutesPerRound').value  = payload.minutesPerRound ?? 12;
+  if (byId('roundCount'))       byId('roundCount').value       = payload.roundCount ?? 10;
+  if (byId('breakPerRound'))    byId('breakPerRound').value    = payload.breakPerRound ?? 0;
+  if (byId('showBreakRows'))    byId('showBreakRows').checked  = !!payload.showBreakRows;
+
+  // 2) Pemain & meta
+  const list = (payload.players || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+  players.splice(0, players.length, ...list);   // overwrite players array
+  // asumsi playerMeta adalah object { [nama]: {gender,level,...} }
+  if (payload.playerMeta && typeof payload.playerMeta === 'object') {
+    // copy aman
+    Object.keys(playerMeta).forEach(k => delete playerMeta[k]);
+    Object.assign(playerMeta, payload.playerMeta);
+  }
+
+  // 3) Rounds per court (format baru)
+  let restored = [];
+  if (Array.isArray(payload.roundsByCourt) && payload.roundsByCourt.length) {
+    restored = payload.roundsByCourt.map(c => (c || []).map(r => ({ ...r })));
+  } else {
+    // Fallback dari JSON lama
+    const r1 = Array.isArray(payload.rounds1) ? payload.rounds1.map(r=>({...r})) : [];
+    const r2 = Array.isArray(payload.rounds2) ? payload.rounds2.map(r=>({...r})) : [];
+    restored = [r1, r2];
+  }
+
+  // 4) Terapkan ke roundsByCourt global milik app
+  roundsByCourt.splice(0, roundsByCourt.length, ...restored);
+
+  // 5) Render & hitung
+  renderAll?.();
+  validateAll?.();
+  computeStandings?.();
+  refreshFairness?.();
+
+  // 6) Tandai saved
+  if (payload.ts) markSaved(payload.ts);
+  else byId("unsavedDot")?.classList.add("hidden");
+}
+
+
 function saveToJSONFile(){
   if(!saveToStore()) return;
 
@@ -1607,6 +1698,8 @@ byId('btnApplyPlayersActive').addEventListener('click', ()=>{
   const has = arr.some(r=>r&&(r.a1||r.a2||r.b1||r.b2||r.scoreA||r.scoreB));
   if(has && !confirm('Menerapkan pemain akan reset pairing+skor pada lapangan aktif. Lanjutkan?')) return;
   autoFillActiveCourt(); markDirty(); renderAll(); computeStandings();refreshFairness();
+  markDirty();
+  renderPlayersList();
 });
 // Modal Hitung Skor
 byId('btnCloseScore').addEventListener('click', closeScoreModal);
@@ -1688,4 +1781,27 @@ byId('btnResetScore').addEventListener('click', ()=>{
     localStorage.setItem(KEY, nowOpen ? '1' : '0');
   });
 })();
+
+// Fallback: sebelum keluar/refresh, commit autosave
+window.addEventListener('beforeunload', saveToLocalSilent);
+
+// Saat halaman siap → load dari LS untuk tanggal aktif jika ada
+document.addEventListener('DOMContentLoaded', () => {
+  const d = normalizeDateKey(byId('sessionDate')?.value || '');
+  const all = readAllSessionsLS();
+  if (all[d]) applyPayload(all[d]);
+});
+
+// Ketika ganti tanggal → simpan dulu yang lama, lalu load tanggal baru
+byId('sessionDate')?.addEventListener('change', () => {
+  saveToLocalSilent();
+  const d = normalizeDateKey(byId('sessionDate').value || '');
+  const all = readAllSessionsLS();
+  if (all[d]) applyPayload(all[d]);
+  else {
+    // tidak ada data tanggal tsb → kosongkan view sesuai setting sekarang
+    renderAll?.();
+    byId("unsavedDot")?.classList.add("hidden");
+  }
+});
 

@@ -189,7 +189,7 @@ body { font-size: clamp(14px, calc(14px * var(--ui-zoom) / 100), 20px); }
 
   /* VS badge yang halus */
   .rnd-table tbody tr::after{
-    content:"VS"; position:absolute; top:50%; left:50%; transform:translate(-150%,110%);
+    content:"VS"; position:absolute; top:50%; left:50%; transform:translate(-150%,50%);
     font-size:10px; padding:2px 6px; border-radius:999px; pointer-events:none;
     background:rgba(148,163,184,.12); color:#94a3b8;
   }
@@ -203,3 +203,45 @@ body { font-size: clamp(14px, calc(14px * var(--ui-zoom) / 100), 20px); }
   .rnd-break-row td{ text-align:center; font-size:12px; opacity:.75; padding:6px 0; }
 }
 
+/* Jangan tampilkan VS di baris jeda */
+@media (max-width:640px){
+  .rnd-break-row::after {
+    content: none !important;
+  }
+}
+
+
+
+/* ==== Panel Pemain: nyaman di HP ==== */
+@media (max-width: 640px){
+  /* bikin area pemain punya scroll sendiri */
+  #playersPanel{
+    /* tinggi maksimum = tinggi layar - kira-kira header & kontrol di atas */
+    max-height: calc(100vh - 220px);
+    overflow-y: auto;
+    padding-bottom: 72px;          /* ruang bawah biar tak ketutup tombol/OS bar */
+    scrollbar-gutter: stable both-edges; /* biar layout nggak loncat saat muncul scrollbar */
+  }
+
+  /* baris input "Nama pemain" + tombol Tambah dibuat sticky */
+  #playersPanel > .flex:first-child{
+    position: sticky;
+    top: -6px;                     /* nempel ke atas panel */
+    z-index: 10;
+    padding-top: 6px;
+    padding-bottom: 8px;
+    background: var(--tw-card-bg, #0f172a); /* gelap */
+    /* kalau mode terang */
+  }
+  :root:not(.dark) #playersPanel > .flex:first-child{
+    background: #ffffff;
+  }
+}
+
+/* grid kartu pemain tetap rapi di layar kecil */
+@media (max-width: 480px){
+  #playersList{ grid-template-columns: 1fr !important; gap: 8px !important; }
+  #playersList li{ padding: 9px 10px; }
+  #playersList li .player-meta{ flex-basis: 100% !important; }
+  #playersList li .player-meta select{ width: 100% !important; min-width: 0 !important; height: 32px; }
+}
