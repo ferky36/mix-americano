@@ -787,13 +787,13 @@ function renderCourt(container, arr) {
 
     // === Tim A | Tim B (urut: A1 | B1, A2 | B2)
     const tdA1 = selCell("a1", "Player1A", "rnd-teamA-1");
-    const tdB1 = selCell("b1", "Player1B", "rnd-teamB-1");
     const tdA2 = selCell("a2", "Player2A", "rnd-teamA-2");
+    const tdB1 = selCell("b1", "Player1B", "rnd-teamB-1");
     const tdB2 = selCell("b2", "Player2B", "rnd-teamB-2");
 
     tr.appendChild(tdA1);
-    tr.appendChild(tdB1);
     tr.appendChild(tdA2);
+    tr.appendChild(tdB1);
     tr.appendChild(tdB2);
 
     // === Skor Tim A | Tim B
