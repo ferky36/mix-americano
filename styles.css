@@ -425,3 +425,40 @@ body { font-size: clamp(14px, calc(14px * var(--ui-zoom) / 100), 20px); }
   background-color: rgba(47, 53, 61, 0.8);
 }
 
+/* ===== Players panel: pindahkan scroll ke #playerListContainer ===== */
+
+/* Matikan overflow di panel (biar tak double-scroll) */
+#playersPanel{
+  overflow: visible !important;
+  max-height: none !important;
+  padding-bottom: 0 !important;
+}
+
+/* Area scroll khusus daftar pemain */
+#playerListContainer{
+  overflow: auto;
+  -webkit-overflow-scrolling: touch; /* momentum scroll iOS */
+  overscroll-behavior: contain;      /* cegah 'narik' scroll halaman */
+  border-radius: 12px;
+}
+
+/* Tinggi default desktop */
+@media (min-width: 641px){
+  #playerListContainer{ max-height: 60vh; }
+}
+
+/* Tinggi responsif di HP */
+@media (max-width: 640px){
+  #playerListContainer{ max-height: 50vh; }
+}
+
+/* Toolbar input (Nama pemain + Tambah) dibuat sticky agar selalu terlihat */
+#playersToolbar{
+  position: sticky;
+  top: 0;                /* nempel di atas area scroll */
+  z-index: 10;
+  padding-top: 6px;
+  padding-bottom: 8px;
+  background: #ffffff;
+}
+.dark #playersToolbar{ background: #0f172a; } /* warna latar saat dark */

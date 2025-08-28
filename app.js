@@ -1856,3 +1856,36 @@ byId('btnApplyPlayerTemplate')?.addEventListener('click', () => {
     applyDefaultPlayersTemplate();
   }
 });
+
+
+function fitPlayersScroll() {
+  const panel = document.getElementById('playersPanel');
+  const sc    = document.getElementById('playerListContainer');
+  if (!panel || !sc || panel.classList.contains('hidden')) return;
+
+  const rect = panel.getBoundingClientRect();
+  const vh   = window.innerHeight || document.documentElement.clientHeight;
+
+  // Tinggi sisa viewport dari atas panel sampai bawah, minus sedikit padding
+  const h = Math.max(220, vh - rect.top - 12);
+  sc.style.maxHeight = h + 'px';
+}
+
+// Panggil saat awal, saat resize/orientasi berubah, dan ketika panel dibuka
+window.addEventListener('resize', fitPlayersScroll);
+window.addEventListener('orientationchange', fitPlayersScroll);
+document.addEventListener('DOMContentLoaded', fitPlayersScroll);
+
+// Jika kamu punya tombol collapse pemain, ukur ulang setelah transisi
+document.getElementById('btnCollapsePlayers')?.addEventListener('click', () => {
+  setTimeout(fitPlayersScroll, 180);
+});
+
+// Setelah renderPlayersList selesai, ukur ulang juga
+const _renderPlayersList = window.renderPlayersList;
+window.renderPlayersList = function(...args){
+  const r = _renderPlayersList?.apply(this, args);
+  requestAnimationFrame(fitPlayersScroll);
+  return r;
+};
+
