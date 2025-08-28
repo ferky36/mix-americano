@@ -485,7 +485,7 @@ function renderPlayersList() {
   byId("globalInfo").textContent =
     "Pemain: " +
     players.length +
-    " | Ronde/lapangan: " +
+    " | Match/lapangan: " +
     (byId("roundCount").value || 10) +
     " | Menit/ronde: " +
     (byId("minutesPerRound").value || 12);
@@ -652,7 +652,7 @@ function renderCourt(container, arr) {
     <thead>
       <tr class="text-left border-b border-gray-200 dark:border-gray-700">
         <th class="py-2 pr-4"></th>
-        <th class="py-2 pr-4">Ronde</th>
+        <th class="py-2 pr-4">Jadwal</th>
         <th class="py-2 pr-4">Waktu</th>
         <th class="py-2 pr-4">Player1A</th>
         <th class="py-2 pr-4">Player2A</th>
@@ -660,7 +660,7 @@ function renderCourt(container, arr) {
         <th class="py-2 pr-4">Player2B</th>
         <th class="py-2 pr-4">Skor Tim A</th>
         <th class="py-2 pr-4">Skor Tim B</th>
-        <th class="py-2 pr-4">Hitung</th>
+        <th class="py-2 pr-4">Action</th>
       </tr>
     </thead>
     <tbody></tbody>`;
@@ -710,15 +710,17 @@ function renderCourt(container, arr) {
     tr.appendChild(tdHandle);
 
     const tdIdx = document.createElement("td");
-    tdIdx.textContent = "Ronde " + (i + 1);
-    tdIdx.className = "py-2 pr-4 font-medium rnd-col-round"; 
-    tdIdx.dataset.label = "Ronde";
+    tdIdx.textContent = "Match " + (i + 1);
+    tdIdx.className = "py-2 pr-4 font-medium"; 
+    tdIdx.classList.add("rnd-col-round", "text-center");
+    tdIdx.dataset.label = "Match";
     tr.appendChild(tdIdx);
 
     // === Waktu (Start–End)
     const tdTime = document.createElement("td");
     tdTime.textContent = `${roundStartTime(i)}–${roundEndTime(i)}`;
-    tdTime.className = "py-2 pr-4 rnd-col-time";
+    tdTime.className = "py-2 pr-4";
+    tdTime.classList.add("rnd-col-time", "text-center");
     tdTime.dataset.label = "Waktu";
     tr.appendChild(tdTime);
 
@@ -786,10 +788,10 @@ function renderCourt(container, arr) {
     }
 
     // === Tim A | Tim B (urut: A1 | B1, A2 | B2)
-    const tdA1 = selCell("a1", "Player1A", "rnd-teamA-1");
-    const tdA2 = selCell("a2", "Player2A", "rnd-teamA-2");
-    const tdB1 = selCell("b1", "Player1B", "rnd-teamB-1");
-    const tdB2 = selCell("b2", "Player2B", "rnd-teamB-2");
+    const tdA1 = selCell("a1", "TIM A", "rnd-teamA-1");
+    const tdA2 = selCell("a2", " ", "rnd-teamA-2");
+    const tdB1 = selCell("b1", "TIM B", "rnd-teamB-1");
+    const tdB2 = selCell("b2", " ", "rnd-teamB-2");
 
     tr.appendChild(tdA1);
     tr.appendChild(tdA2);
@@ -797,8 +799,8 @@ function renderCourt(container, arr) {
     tr.appendChild(tdB2);
 
     // === Skor Tim A | Tim B
-    const tdSA = scCell("scoreA","Skor Tim A"); tdSA.classList.add("rnd-scoreA");
-    const tdSB = scCell("scoreB","Skor Tim B"); tdSB.classList.add("rnd-scoreB");
+    const tdSA = scCell("scoreA","Skor"); tdSA.classList.add("rnd-scoreA");
+    const tdSB = scCell("scoreB","Skor"); tdSB.classList.add("rnd-scoreB");
 
     tr.appendChild(tdSA);
     tr.appendChild(tdSB);
@@ -809,7 +811,7 @@ function renderCourt(container, arr) {
     tdCalc.className = 'rnd-col-actions';
     const btnCalc = document.createElement('button');
     btnCalc.className = 'px-3 py-1.5 rounded-lg border dark:border-gray-700 text-sm w-full sm:w-auto';
-    btnCalc.textContent = '🧮 Hitung';
+    btnCalc.textContent = (r.scoreA || r.scoreB) ? '🔁 Hitung Ulang' : '🧮 Mulai Main';
     btnCalc.addEventListener('click', ()=> openScoreModal(activeCourt, i));
     tdCalc.appendChild(btnCalc);
     tr.appendChild(tdCalc);
@@ -993,7 +995,7 @@ function validateAll(){
     const filtered = names.filter(Boolean);
     const set = new Set(filtered);
     if(set.size !== filtered.length){
-      problems.push('Bentrok jadwal: Ronde '+(i+1)+' ada pemain di dua lapangan.');
+      problems.push('Bentrok jadwal: Match '+(i+1)+' ada pemain di dua lapangan.');
     }
   }
 
@@ -1008,9 +1010,9 @@ function validateAll(){
       if(!(r&&r.a1&&r.a2&&r.b1&&r.b2)) continue;
       const key = matchKey(r);
       if(seen.has(key)){
-        problems.push('Duplikat lawan (Lap '+(ci+1)+'): '+key+' muncul lagi di Ronde '+(i+1)+' (sebelumnya '+seen.get(key)+').');
+        problems.push('Duplikat lawan (Lap '+(ci+1)+'): '+key+' muncul lagi di Match '+(i+1)+' (sebelumnya '+seen.get(key)+').');
       } else {
-        seen.set(key, 'Ronde '+(i+1));
+        seen.set(key, 'Match '+(i+1));
       }
     }
   });
@@ -1466,7 +1468,7 @@ function openScoreModal(courtIdx, roundIdx){
 
   byId('scoreTeamA').textContent = [r.a1||'-', r.a2||'-'].join(' & ');
   byId('scoreTeamB').textContent = [r.b1||'-', r.b2||'-'].join(' & ');
-  byId('scoreRoundTitle').textContent = `Lap ${courtIdx+1} • Ronde ${roundIdx+1}`;
+  byId('scoreRoundTitle').textContent = `Lap ${courtIdx+1} • Match ${roundIdx+1}`;
   byId('scoreAVal').textContent = scoreCtx.a;
   byId('scoreBVal').textContent = scoreCtx.b;
 
@@ -1542,10 +1544,10 @@ function startScoreTimer(){
 
 function commitScoreToRound(auto=false){
   const r = (roundsByCourt[scoreCtx.court] || [])[scoreCtx.round];
-  if(!r){ alert('Ronde tidak ditemukan.'); return; }
+  if(!r){ alert('Match tidak ditemukan.'); return; }
 
   if (!auto){
-    const msg = `Simpan skor untuk Lap ${scoreCtx.court+1} • Ronde ${scoreCtx.round+1}\n`+
+    const msg = `Simpan skor untuk Lap ${scoreCtx.court+1} • Match ${scoreCtx.round+1}\n`+
                 `A (${r.a1} & ${r.a2}) : ${scoreCtx.a}\n`+
                 `B (${r.b1} & ${r.b2}) : ${scoreCtx.b}`;
     if(!confirm(msg)) return;

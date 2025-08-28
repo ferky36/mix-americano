@@ -245,3 +245,183 @@ body { font-size: clamp(14px, calc(14px * var(--ui-zoom) / 100), 20px); }
   #playersList li .player-meta{ flex-basis: 100% !important; }
   #playersList li .player-meta select{ width: 100% !important; min-width: 0 !important; height: 32px; }
 }
+
+.border {border-width: 1.5px !important }
+
+
+
+
+
+/* ====== HP: jadikan baris ronde sebagai "kartu" dua kolom ====== */
+@media (max-width: 640px){
+  .rnd-table thead{ display:none; }
+
+  /* hide title MATCH dan AKSI */
+  .rnd-col-round::before,
+  .rnd-col-actions::before {
+    content: none !important;
+  }
+
+
+  .rnd-table tbody tr{
+    display:grid;
+    grid-template-columns: 1fr 1fr;   /* A | B */
+    gap:10px 14px;
+    padding:12px;
+    border-radius:14px;
+    background:#fff;
+    border:1px solid #e5e7eb;
+    position:relative;
+  }
+  .dark .rnd-table tbody tr{
+    background:#0f172a;
+    border-color:#334155;
+  }
+
+  /* Header kartu = Ronde + Waktu (center, full width) */
+  .rnd-col-round,
+  .rnd-col-time{
+    grid-column: 1 / -1;
+    text-align:center !important;
+  }
+  .rnd-col-round{
+    font-weight:700;
+    font-size:1rem;
+    margin-top:2px;
+  }
+  .rnd-col-round::before{
+    content:"RONDE";
+    display:block;
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    opacity:.7;
+    margin-bottom:3px;
+  }
+  .rnd-col-time{
+    font-size:.9rem;
+    color:#6b7280;
+    margin-top:-2px;
+    margin-bottom:4px;
+  }
+  .dark .rnd-col-time{ color:#9ca3af; }
+
+  /* Label Tim A / Tim B */
+  .rnd-teamA-1::before,
+  .rnd-teamB-1::before,
+  .rnd-teamA-2::before,
+  .rnd-teamB-2::before{
+    display:block;
+    margin-bottom:6px;
+    font-weight:700;
+    font-size:12px;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    opacity:.9;
+    text-align: center;
+  }
+  .rnd-teamA-1::before{ content:"Tim A"; }
+  .rnd-teamB-1::before{ content:"Tim B"; }
+
+  /* Penempatan: A1 | B1 lalu A2 | B2 */
+  .rnd-teamA-1{ grid-column:1; grid-row:3; text-align: center; }
+  .rnd-teamB-1{ grid-column:2; grid-row:3; text-align: center; }
+  .rnd-teamA-2{ grid-column:1; grid-row:4; text-align: center; }
+  .rnd-teamB-2{ grid-column:2; grid-row:4; text-align: center; }
+
+  /* Skor tim */
+  .rnd-scoreA{ grid-column:1; grid-row:5; }
+  .rnd-scoreB{ grid-column:2; grid-row:5; }
+  .rnd-scoreA::before,
+  .rnd-scoreB::before{
+    display:block;
+    margin:6px 0 4px;
+    font-size:11px;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    opacity:.8;
+    text-align: center;
+  }
+  .rnd-scoreA::before{ content:"Skor Tim A"; }
+  .rnd-scoreB::before{ content:"Skor Tim B"; }
+
+  /* Aksi (tombol) full width di bawah */
+  .rnd-col-actions{ grid-column:1 / -1; grid-row:6; }
+  .rnd-col-actions .btn,
+  .rnd-col-actions button{ width:100%; }
+
+  /* Sembunyikan handle drag & header no. di HP */
+  .rnd-col-drag{ display:none !important; }
+
+  /* Badge VS di tengah (bukan di baris jeda) */
+  .rnd-table tbody tr::after{
+    content:"VS";
+    position:absolute;
+    left:50%; top:56%;
+    transform:translate(-50%,-50%);
+    font-size:11px;
+    padding:2px 6px;
+    border-radius:999px;
+    background:rgba(148,163,184,.15);
+    color:#475569;
+    pointer-events:none; z-index:1;
+  }
+  .dark .rnd-table tbody tr::after{ color:#cbd5e1; }
+  /* .rnd-break-row::after{ content:none !important; } */
+  /* Jangan tampilkan garis vertikal di baris jeda */
+    .rnd-break-row::before,
+    .rnd-break-row::after {
+    content: none !important;
+    }
+
+  /* Input & tombol nyaman di-tap */
+  .rnd-table select,
+  .rnd-table input[type="text"],
+  .rnd-table input[type="number"],
+  .rnd-table .btn,
+  .rnd-table button{ width:100%; }
+
+  /* garis vertikal tengah */
+  .rnd-table tbody tr{
+    position: relative;
+  }
+  .rnd-table tbody tr::before {
+    content: "";
+    position: absolute;
+    top: 30%;
+    bottom: 15%;
+    left: 50%;
+    width: 1px;
+    background: rgba(148,163,184,.3); /* abu-abu tipis */
+  }
+
+  /* badge VS di atas garis */
+  .rnd-table tbody tr::after{
+    content:"VS";
+    position:absolute;
+    left:50%; top:50%;
+    transform:translate(-50%,-50%);
+    font-size:11px;
+    padding:2px 6px;
+    border-radius:999px;
+    background:#fff;
+    border:1px solid rgba(148,163,184,.4);
+    color:#475569;
+    z-index:2;
+  }
+  .dark .rnd-table tbody tr::after{
+    background:#0f172a;
+    color:#cbd5e1;
+  }
+
+}
+
+/* Sticky header tabel tetap berlaku di desktop */
+.rnd-table thead th{
+  position:sticky; top:0;
+  background:#f9fafb;
+}
+.dark .rnd-table thead th{
+  background-color: rgba(47, 53, 61, 0.8);
+}
+
