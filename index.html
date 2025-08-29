@@ -29,7 +29,7 @@
         <!-- panel kontrol: hidden di HP, tampil di ≥md -->
         <div id="hdrControls" class="hidden md:flex flex-wrap gap-2 items-center w-full md:w-auto mt-2 md:mt-0">
           <button id="btnTheme" class="px-3 py-2 rounded-xl bg-white/20 text-white font-semibold shadow hover:bg-white/30" title="Toggle Dark Mode">🌙/☀️</button>
-          <button id="btnSave" class="px-4 py-2 rounded-xl bg-white text-indigo-700 font-semibold shadow hover:opacity-90">💾 Save ke JSON</button>
+          <button id="btnSave" class="px-4 py-2 rounded-xl bg-white text-indigo-700 font-semibold shadow hover:opacity-90">💾 Save</button>
           <div class="flex items-stretch gap-2 bg-white/10 rounded-xl p-1">
             <select id="datePicker" class="px-3 py-2 rounded-lg bg-white/90 text-gray-900">
               <option value="">Pilih tanggal…</option>
@@ -37,6 +37,11 @@
             <button id="btnLoadByDate" class="px-3 py-2 rounded-lg bg-white text-indigo-700 font-semibold shadow hover:opacity-90">Load</button>
           </div>
           <button id="btnImportJSON" class="px-3 py-2 rounded-lg bg-emerald-600 text-white font-semibold shadow hover:opacity-90">Load JSON File</button>
+          <button id="btnMakeEventLink"
+                  class="px-3 py-2 rounded-xl bg-emerald-600 text-white font-semibold shadow hover:opacity-90">
+            🔗 Buat Link Event
+          </button>
+
           <input id="fileInputJSON" type="file" accept="application/json" class="hidden" />
           <button id="btnReport" class="px-3 py-2 rounded-xl bg-white text-indigo-700 font-semibold shadow hover:opacity-90">
             📊 Report
@@ -344,6 +349,17 @@
   </div>
 
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+  <!-- Supabase SDK dari CDN -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script type="module" id="supabase-init">
+
+    const SUPABASE_URL = 'https://edyneqtxtxdweczvcvvt.supabase.co';   // <- ganti dengan Project URL
+    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVkeW5lcXR4dHhkd2VjenZjdnZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYzNzM1MjgsImV4cCI6MjA3MTk0OTUyOH0.J_tYzbZ6fM4hw8QSiOaVcQwnPkUNC-uAZKe7W5i81DY'; // <- ganti dengan anon key
+
+    window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    console.log('[Supabase] client ready:', !!window.sb);
+
+  </script>
   <script src="app.js"></script>
   <script src="app-responsive-addon.js"></script>
 </body>

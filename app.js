@@ -105,11 +105,6 @@ function roundEndTime(i){
 // ===== Local storage helpers =====
 const STORAGE_KEY = 'mixam_sessions_v1';
 
-function normalizeDateKey(raw) {
-  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
-  const m = (raw || '').match(/^(\d{2})\s*\/\s*(\d{2})\s*\/\s*(\d{4})$/);
-  return m ? `${m[3]}-${m[2]}-${m[1]}` : new Date().toISOString().slice(0,10);
-}
 function readAllSessionsLS() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); }
   catch { return {}; }
@@ -117,6 +112,164 @@ function readAllSessionsLS() {
 function writeAllSessionsLS(obj) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
 }
+
+/***** ===== Supabase Cloud Mode Helpers ===== *****/
+let currentEventId = null;          // UUID event dari URL
+let currentSessionDate = null;      // 'YYYY-MM-DD'
+let _serverVersion = 0;             // versi terakhir dari DB
+
+function getUrlParams() {
+  const url = new URL(location.href);
+  return {
+    event: url.searchParams.get('event') || null,
+    date:  url.searchParams.get('date')  || null,
+  };
+}
+
+function isUuid(v){
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v || '');
+}
+
+function isCloudMode(){ 
+  return !!(window.sb && isUuid(currentEventId));
+}
+
+function normalizeDateKey(s){
+  // terima '2025-08-26' atau '26/08/2025' → kembalikan 'YYYY-MM-DD'
+  if (!s) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+  return s;
+}
+
+function makeSlug(s) {
+  const core = String(s || '').toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+  // fallback kalau title kosong → id pendek acak
+  return core || ('ev-' + Math.random().toString(36).slice(2, 8));
+}
+
+async function createNewEvent(title = "Mix Americano") {
+  const slug = makeSlug(title);
+  const { data, error } = await sb.from('events')
+    .insert({ title, slug })
+    .select('id')
+    .single();
+  if (error) throw error;
+  return data.id; // UUID
+}
+
+
+
+// Load state (JSONB) sekali saat buka/refresh
+async function loadStateFromCloud() {
+  const { data, error } = await sb.from('event_states')
+    .select('state, version, updated_at')
+    .eq('event_id', currentEventId)
+    .eq('session_date', currentSessionDate)
+    .maybeSingle();
+
+  if (error) { console.error(error); return false; }
+
+  if (data && data.state) {
+    _serverVersion = data.version || 0;
+    applyPayload(data.state);               // ← fungsi kamu yg sudah ada
+    markSaved?.(data.updated_at);
+    return true;
+  }
+  return false;
+}
+
+// Save (upsert) dengan optimistic concurrency
+async function saveStateToCloud() {
+  try {
+    const payload = currentPayload();       // ← fungsi kamu yg sudah ada
+    const { data, error } = await sb.from('event_states')
+      .upsert({
+        event_id: currentEventId,                 // UUID
+        session_date: currentSessionDate,         // 'YYYY-MM-DD'
+        state: payload,                            // JSONB
+        version: (_serverVersion || 0) + 1
+      }, { onConflict: 'event_id,session_date' })
+      .select('version, updated_at')
+      .single();
+
+    if (error) throw error;
+    _serverVersion = data.version;
+    markSaved?.(data.updated_at);
+    return true;
+  } catch (e) {
+    console.error(e);
+    alert('Gagal menyimpan ke Cloud. Coba lagi.');
+    return false;
+  }
+}
+
+// Realtime subscribe untuk row event+date aktif
+function subscribeRealtimeForState(){
+  if (!isCloudMode()) return;
+
+  sb.channel(`es:${currentEventId}`)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'event_states',
+      filter: `event_id=eq.${currentEventId}`
+    }, (payload) => {
+      const row = payload.new || payload.old;
+      if (!row) return;
+      // hanya tarik ulang bila tanggal yang aktif
+      if (row.session_date === currentSessionDate) {
+        loadStateFromCloud();
+      }
+    })
+    .subscribe();
+}
+
+
+// === SAVE (silent) untuk autosave/aksi internal ===
+function saveToStoreSilent() {
+  const d = byId("sessionDate").value || "";
+  if (!d) return false; // skip tanpa alert
+  store.sessions[d] = currentPayload();
+  store.lastTs = new Date().toISOString();
+  markSaved(store.lastTs);
+  populateDatePicker();
+  byId("datePicker").value = d;
+  return true;
+}
+function randomSlug(len = 6){
+  const s = Math.random().toString(36).slice(2, 2+len);
+  return 'EV' + s.toUpperCase();             // contoh: EV3F9QK
+}
+
+function buildEventUrl(eventId, dateStr){
+  const u = new URL(location.href);
+  u.searchParams.set('event', eventId);
+  if (dateStr) u.searchParams.set('date', dateStr);
+  return u.toString();
+}
+
+async function copyToClipboard(text){
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (e){
+    // fallback
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta);
+    return true;
+  }
+}
+
+
+
 
 
 
@@ -153,7 +306,7 @@ function allowKey(e){
   return false;
 }
 
-// ================== Thene ================== //
+// ================== Theme ================== //
 function applyThemeFromStorage() {
   const t = localStorage.getItem(THEME_KEY) || "light";
   document.documentElement.classList.toggle("dark", t === "dark");
@@ -203,6 +356,19 @@ function currentPayload(){
 
 
 let _autoSaveTimer = null;
+
+function initCloudFromUrl() {
+  const p = getUrlParams();           // fungsi yang sudah kamu punya
+  if (p.event) {
+    currentEventId = p.event;
+  }
+  if (p.date) {
+    currentSessionDate = p.date;
+    const el = byId('sessionDate');
+    if (el) el.value = p.date;        // sinkron ke input tanggal
+  }
+}
+
 
 function markDirty() {
   dirty = true;
@@ -411,10 +577,15 @@ function normalizeLoadedSession(data){
 
 
 function startAutoSave() {
-  if (autosaveTimer) clearInterval(autosaveTimer);
-  autosaveTimer = setInterval(() => {
-    if (dirty) saveToStore();
-  }, 30000);
+  clearInterval(window._autosaveTick);
+  window._autosaveTick = setInterval(async () => {
+    if (!dirty) return;
+    if (isCloudMode()) {
+      await saveStateToCloud();
+    } else {
+      saveToStoreSilent();
+    }
+  }, 10000); // 0.8s atau sesuai seleramu
 }
 
 
@@ -1617,7 +1788,19 @@ byId('btnResetActive').addEventListener('click', ()=>{
 
 byId('btnClearScoresActive').addEventListener('click', clearScoresActive);
 byId('btnClearScoresAll').addEventListener('click', clearScoresAll);
-byId("btnSave").addEventListener("click", saveToJSONFile);
+// save ke cloud atau local storage
+byId('btnSave')?.addEventListener('click', async () => {
+  console.log(isCloudMode());
+  if (isCloudMode()) {
+    console.log('Menyimpan ke cloud...');
+    const ok = await saveStateToCloud();
+    if (!ok) alert('Gagal menyimpan ke Cloud. Coba lagi.');
+  } else {
+    const ok = saveToStore?.();
+    console.log('Menyimpan ke json...');
+    if (!ok) alert('Gagal menyimpan ke Local Storage.');
+  }
+});
 byId("btnLoadByDate").addEventListener("click", loadSessionByDate);
 byId("btnImportJSON").addEventListener("click", () =>
   byId("fileInputJSON").click()
@@ -1640,14 +1823,51 @@ byId("roundCount").addEventListener("input", () => {
   renderAll();
 });
 
-// byId("tab1").addEventListener("click", () => {
-//   activeTab = 1;
-//   renderAll();
-// });
-// byId("tab2").addEventListener("click", () => {
-//   activeTab = 2;
-//   renderAll();
-// });
+// tanggal sesi diubah
+byId('sessionDate')?.addEventListener('change', async (e) => {
+  currentSessionDate = normalizeDateKey(e.target.value);
+  const url = new URL(location.href);
+  url.searchParams.set('date', currentSessionDate);
+  history.replaceState({}, "", url);
+
+  if (isCloudMode()) {
+    const ok = await loadStateFromCloud();
+    if (!ok) {
+      seedDefaultIfEmpty?.();
+      renderAll?.();
+      await saveStateToCloud();
+    } else {
+      renderAll?.();
+    }
+  } else {
+    // fallback lokal
+    const all = readAllSessionsLS?.() || {};
+    if (all[currentSessionDate]) {
+      applyPayload(all[currentSessionDate]);
+    } else {
+      seedDefaultIfEmpty?.();
+      saveToStoreSilent?.();
+    }
+    renderAll?.();
+  }
+});
+
+
+byId('btnLoadByDate')?.addEventListener('click', () => {
+  const d = byId('datePicker')?.value || '';
+  if (!d) return;
+  const all = readAllSessionsLS ? readAllSessionsLS() : {};
+  if (all && all[d]) {
+    applyPayload(all[d]);
+    // sinkronkan tanggal input
+    const sd = byId('sessionDate');
+    if (sd) sd.value = d;
+    markSaved(new Date().toISOString());
+  } else {
+    alert('Tidak ada data tersimpan untuk tanggal itu.');
+  }
+});
+
 
 byId("btnAddPlayer").addEventListener("click", () => {
   const v = byId("newPlayer").value;
@@ -1681,33 +1901,100 @@ byId("btnApplyText").addEventListener("click", () => {
 byId("btnCancelText").addEventListener("click", hideTextModal);
 
 // Boot
-(function boot() {
-  applyThemeFromStorage();
+// (function boot() {
+//   applyThemeFromStorage();
+//   if (!byId("sessionDate").value) {
+//     const d = new Date();
+//     const s =
+//       d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+//     byId("sessionDate").value = s;
+//   }
+//   players = [
+//     "Della",
+//     "Rangga",
+//     "Fai",
+//     "Gizla",
+//     "Abdi",
+//     "Diana",
+//     "Kris",
+//     "Ichsan",
+//     "Marchel",
+//     "Altundri",
+//     "Ferdi",
+//     "Tyas",
+//   ];
+//   renderPlayersList();
+//   renderAll();
+//   validateNames();
+//   startAutoSave();
+// })();
+
+async function boot() {
+  applyThemeFromStorage?.();
+
+  // Tentukan tanggal dari UI/URL
   if (!byId("sessionDate").value) {
-    const d = new Date();
-    const s =
-      d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
-    byId("sessionDate").value = s;
+    byId("sessionDate").value = new Date().toISOString().slice(0,10);
   }
-  players = [
-    "Della",
-    "Rangga",
-    "Fai",
-    "Gizla",
-    "Abdi",
-    "Diana",
-    "Kris",
-    "Ichsan",
-    "Marchel",
-    "Altundri",
-    "Ferdi",
-    "Tyas",
-  ];
-  renderPlayersList();
-  renderAll();
-  validateNames();
+  const params = getUrlParams();
+  currentSessionDate = normalizeDateKey(params.date || byId("sessionDate").value);
+
+  // Pastikan input date di UI sama
+  byId("sessionDate").value = currentSessionDate;
+
+  // Pastikan ada event UUID di URL. Jika tidak ada → buat baru
+  if (params.event && isUuid(params.event)) {
+    currentEventId = params.event;
+  } else {
+    // bikin event baru lalu update URL
+    const uuid = await createNewEvent("Mix Americano");
+    currentEventId = uuid;
+    const url = new URL(location.href);
+    url.searchParams.set('event', uuid);
+    url.searchParams.set('date', currentSessionDate);
+    history.replaceState({}, "", url);
+  }
+
+  // === CLOUD MODE ===
+  const ok = await loadStateFromCloud();
+  if (!ok) {
+    // seed default lokal → render → simpan pertama kali
+    seedDefaultIfEmpty?.();
+    renderPlayersList?.();
+    renderAll?.();
+    validateNames?.();
+    await saveStateToCloud();
+  } else {
+    renderPlayersList?.();
+    renderAll?.();
+    validateNames?.();
+  }
+  subscribeRealtimeForState();
   startAutoSave();
-})();
+}
+
+
+// helper kecil: seed default jika players kosong
+function seedDefaultIfEmpty(){
+  if (!Array.isArray(window.players) || window.players.length === 0) {
+    window.players = [
+      "Della","Rangga","Fai","Gizla","Abdi","Diana",
+      "Kris","Ichsan","Marchel","Altundri","Ferdi","Tyas",
+    ];
+  }
+  window.playerMeta = window.playerMeta || {};
+  if (!Array.isArray(window.roundsByCourt) || window.roundsByCourt.length === 0) {
+    const R = parseInt(byId('roundCount')?.value || '10', 10);
+    window.roundsByCourt = [
+      Array.from({length:R}, () => ({a1:'',a2:'',b1:'',b2:'',scoreA:'',scoreB:''}))
+    ];
+  }
+  // kalau kamu pakai courts[], samakan juga:
+  if (!Array.isArray(window.courts) || window.courts.length === 0) {
+    window.courts = roundsByCourt.map((rounds,i)=>({ name:`Lapangan ${i+1}`, rounds }));
+  }
+}
+
 
 // Report events
 byId('btnReport').addEventListener('click', ()=>{
@@ -1832,30 +2119,67 @@ window.addEventListener('beforeunload', saveToLocalSilent);
 
 // Saat halaman siap → load dari LS untuk tanggal aktif jika ada
 document.addEventListener('DOMContentLoaded', () => {
-  const d = normalizeDateKey(byId('sessionDate')?.value || '');
-  const all = readAllSessionsLS();
-  if (all[d]) applyPayload(all[d]);
-  renderPlayersList();
+  boot();                 // ← ini yang menjalankan flow Cloud/Local
 });
 
+
 // Ketika ganti tanggal → simpan dulu yang lama, lalu load tanggal baru
-byId('sessionDate')?.addEventListener('change', () => {
-  saveToLocalSilent();
-  const d = normalizeDateKey(byId('sessionDate').value || '');
-  const all = readAllSessionsLS();
-  if (all[d]) applyPayload(all[d]);
-  else {
-    // tidak ada data tanggal tsb → kosongkan view sesuai setting sekarang
-    renderAll?.();
-    byId("unsavedDot")?.classList.add("hidden");
-  }
-});
+// byId('sessionDate')?.addEventListener('change', () => {
+//   saveToLocalSilent();
+//   const d = normalizeDateKey(byId('sessionDate').value || '');
+//   const all = readAllSessionsLS();
+//   if (all[d]) applyPayload(all[d]);
+//   else {
+//     // tidak ada data tanggal tsb → kosongkan view sesuai setting sekarang
+//     renderAll?.();
+//     byId("unsavedDot")?.classList.add("hidden");
+//   }
+// });
 
 byId('btnApplyPlayerTemplate')?.addEventListener('click', () => {
   if (confirm('Terapkan template pemain 12 orang? Daftar sekarang akan diganti.')) {
     applyDefaultPlayersTemplate();
   }
 });
+byId('btnMakeEventLink')?.addEventListener('click', async () => {
+  // tanggal
+  let d = (byId('sessionDate')?.value || '').trim();
+  if (!d) {
+    d = new Date().toISOString().slice(0,10);
+    const el = byId('sessionDate'); if (el) el.value = d;
+  }
+
+  // selalu pastikan event_id = UUID dari DB
+  let ev = currentEventId;
+  if (!isUuid(ev)) {
+    ev = await createNewEvent("Mix Americano");   // ← ambil UUID dari Supabase
+  }
+
+  // bentuk URL + switch ke Cloud Mode
+  const url = buildEventUrl(ev, d);
+  currentEventId = ev;
+  currentSessionDate = d;
+  history.replaceState({}, '', url);
+
+  // Cloud load/save + realtime
+  if (window.sb) {
+    const ok = await loadStateFromCloud();
+    if (!ok) {
+      seedDefaultIfEmpty?.();
+      renderPlayersList?.(); renderAll?.(); validateNames?.();
+      await saveStateToCloud();
+    }
+    subscribeRealtimeForState?.();
+    startAutoSave?.();
+  }
+
+  const copied = await copyToClipboard(url);
+  alert(copied
+    ? `Link event sudah dibuat & disalin:\n\n${url}`
+    : `Link event:\n\n${url}\n\n(Clipboard gagal – salin manual)`
+  );
+});
+
 
 
 function fitPlayersScroll() {
