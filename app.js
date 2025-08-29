@@ -143,25 +143,86 @@ function normalizeDateKey(s){
   return s;
 }
 
-function makeSlug(s) {
-  const core = String(s || '').toLowerCase()
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9-]/g, '')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '');
-  // fallback kalau title kosong → id pendek acak
-  return core || ('ev-' + Math.random().toString(36).slice(2, 8));
+// helper kecil untuk slug
+function slugify(s) {
+  return String(s || '')
+    .toLowerCase()
+    .replace(/\s+/g, '-')            // spasi → dash
+    .replace(/[^a-z0-9-]/g, '')      // buang non-alfanumerik
+    .replace(/-+/g, '-')             // rapikan ganda
+    .replace(/^-|-$/g, '') || 'event';
 }
 
-async function createNewEvent(title = "Mix Americano") {
-  const slug = makeSlug(title);
-  const { data, error } = await sb.from('events')
-    .insert({ title, slug })
-    .select('id')
+async function createEventIfNotExists(name, date) {
+  // 1) cek sudah ada?
+  const { data: exist, error: e1 } = await sb
+    .from('events')
+    .select('id, title')
+    .eq('event_name', name)
+    .eq('event_date', date)
+    .maybeSingle();
+  if (e1) throw e1;
+  if (exist) {
+    return { id: exist.id, created: false, title: exist.title  }; // sudah ada
+  }
+
+  // 2) insert baru
+  const { data, error } = await sb
+    .from('events')
+    .insert({ title: name, event_name: name, event_date: date })
+    .select('id, title')
     .single();
   if (error) throw error;
-  return data.id; // UUID
+  return { id: data.id, created: true, title: data.title  };
 }
+
+function leaveEventMode(clearLS = true) {
+  // 1. Hapus parameter event & date dari URL
+  const u = new URL(location.href);
+  u.searchParams.delete('event');
+  u.searchParams.delete('date');
+  history.replaceState({}, '', u);
+
+  // 2. Reset context cloud
+  currentEventId = null;
+  _serverVersion = 0;
+
+  // 3. Clear localStorage kalau diminta
+  if (clearLS) {
+    localStorage.removeItem(STORAGE_KEY);
+    store = { sessions:{}, lastTs:null };
+  }
+
+  // 4. Seed default (pemain & ronde baru)
+  seedDefaultIfEmpty();
+  renderPlayersList?.();
+  renderAll?.();
+  validateNames?.();
+  setAppTitle('Mix Americano');   // judul default
+  startAutoSave();
+}
+
+
+
+function setAppTitle(title) {
+  const h = byId('appTitle');
+  if (h && title) h.textContent = title;
+  if (title) document.title = title + ' – Mix Americano';
+}
+
+async function fetchEventTitleFromDB(eventId){
+  try{
+    const { data, error } = await sb
+      .from('events')
+      .select('title')
+      .eq('id', eventId)
+      .single();
+    if (error) return null;
+    return data?.title || null;
+  }catch{ return null; }
+}
+
+
 
 
 
@@ -176,8 +237,11 @@ async function loadStateFromCloud() {
   if (error) { console.error(error); return false; }
 
   if (data && data.state) {
+    console.log('Loaded state from Cloud, version', data);
     _serverVersion = data.version || 0;
     applyPayload(data.state);               // ← fungsi kamu yg sudah ada
+    // kalau belum sempat set judul dari DB, pakai yang di payload
+    if (data.state.eventTitle) setAppTitle(data.state.eventTitle);
     markSaved?.(data.updated_at);
     return true;
   }
@@ -348,7 +412,7 @@ function currentPayload(){
     rounds2: roundsByCourt[1] || [],
     breakPerRound: byId('breakPerRound').value,
     showBreakRows: !!byId('showBreakRows').checked,
-
+    eventTitle: byId('appTitle')?.textContent || 'Mix Americano',
 
     ts: new Date().toISOString()
   };
@@ -398,7 +462,7 @@ function markSaved(ts) {
       "Saved " + new Date(ts).toLocaleTimeString();
 }
 function saveToStore() {
-  const raw = byId("sessionDate").value || "";
+  const raw = byId("sessionDate").value || new Date().toISOString().slice(0,10);
   if (!raw) { alert("Isi tanggal dulu ya."); return false; }
 
   const d = normalizeDateKey(raw);
@@ -464,6 +528,9 @@ function applyPayload(payload) {
   // 6) Tandai saved
   if (payload.ts) markSaved(payload.ts);
   else byId("unsavedDot")?.classList.add("hidden");
+
+  // 7) Judul event
+  if (payload.eventTitle) setAppTitle(payload.eventTitle);
 }
 
 
@@ -1801,14 +1868,14 @@ byId('btnSave')?.addEventListener('click', async () => {
     if (!ok) alert('Gagal menyimpan ke Local Storage.');
   }
 });
-byId("btnLoadByDate").addEventListener("click", loadSessionByDate);
-byId("btnImportJSON").addEventListener("click", () =>
-  byId("fileInputJSON").click()
-);
-byId("fileInputJSON").addEventListener("change", (e) => {
-  if (e.target.files && e.target.files[0]) loadJSONFromFile(e.target.files[0]);
-  e.target.value = "";
-});
+// byId("btnLoadByDate").addEventListener("click", loadSessionByDate);
+// byId("btnImportJSON").addEventListener("click", () =>
+//   byId("fileInputJSON").click()
+// );
+// byId("fileInputJSON").addEventListener("change", (e) => {
+//   if (e.target.files && e.target.files[0]) loadJSONFromFile(e.target.files[0]);
+//   e.target.value = "";
+// });
 
 byId("startTime").addEventListener("change", () => {
   markDirty();
@@ -1831,11 +1898,11 @@ byId('sessionDate')?.addEventListener('change', async (e) => {
   history.replaceState({}, "", url);
 
   if (isCloudMode()) {
-    const ok = await loadStateFromCloud();
+    // const ok = await loadStateFromCloud();
     if (!ok) {
       seedDefaultIfEmpty?.();
       renderAll?.();
-      await saveStateToCloud();
+      // await saveStateToCloud();
     } else {
       renderAll?.();
     }
@@ -1932,46 +1999,59 @@ byId("btnCancelText").addEventListener("click", hideTextModal);
 async function boot() {
   applyThemeFromStorage?.();
 
-  // Tentukan tanggal dari UI/URL
+  // Set tanggal default di input (hari ini) kalau kosong
   if (!byId("sessionDate").value) {
     byId("sessionDate").value = new Date().toISOString().slice(0,10);
   }
+
   const params = getUrlParams();
   currentSessionDate = normalizeDateKey(params.date || byId("sessionDate").value);
-
-  // Pastikan input date di UI sama
   byId("sessionDate").value = currentSessionDate;
 
-  // Pastikan ada event UUID di URL. Jika tidak ada → buat baru
-  if (params.event && isUuid(params.event)) {
-    currentEventId = params.event;
-  } else {
-    // bikin event baru lalu update URL
-    const uuid = await createNewEvent("Mix Americano");
-    currentEventId = uuid;
-    const url = new URL(location.href);
-    url.searchParams.set('event', uuid);
-    url.searchParams.set('date', currentSessionDate);
-    history.replaceState({}, "", url);
+  // ⬇️ Mode Cloud hanya jika ada event UUID valid di URL
+  currentEventId = (params.event && isUuid(params.event)) ? params.event : null;
+
+  if (isCloudMode()) {
+    // --- CLOUD MODE ---
+    const t = await fetchEventTitleFromDB(currentEventId); // optional (judul)
+    if (t) setAppTitle(t);
+
+    const ok = await loadStateFromCloud();
+    if (!ok) {
+      seedDefaultIfEmpty?.();
+      renderPlayersList?.(); renderAll?.(); validateNames?.();
+      await saveStateToCloud();
+    } else {
+      renderPlayersList?.(); renderAll?.(); validateNames?.();
+    }
+    subscribeRealtimeForState?.();
+    startAutoSave?.();
+    return;
   }
 
-  // === CLOUD MODE ===
-  const ok = await loadStateFromCloud();
-  if (!ok) {
-    // seed default lokal → render → simpan pertama kali
-    seedDefaultIfEmpty?.();
-    renderPlayersList?.();
-    renderAll?.();
-    validateNames?.();
-    await saveStateToCloud();
+  // --- LOCAL MODE (tanpa ?event=) ---
+  setAppTitle('Mix Americano'); // default judul lokal
+  const all = readAllSessionsLS?.() || {};
+  if (all[currentSessionDate]) {
+    applyPayload(all[currentSessionDate]);
+    markSaved?.(all.__lastTs || new Date().toISOString());
   } else {
-    renderPlayersList?.();
-    renderAll?.();
-    validateNames?.();
+    seedDefaultIfEmpty?.();
+    // simpan seed pertama agar konsisten
+    const payload = currentPayload();
+    all[currentSessionDate] = payload;
+    all.__lastTs = payload.ts;
+    writeAllSessionsLS(all);
+    markSaved?.(payload.ts);
   }
-  subscribeRealtimeForState();
-  startAutoSave();
+  renderPlayersList?.();
+  renderAll?.();
+  validateNames?.();
+  startAutoSave?.();
 }
+
+
+
 
 
 // helper kecil: seed default jika players kosong
@@ -2117,11 +2197,6 @@ byId('btnResetScore').addEventListener('click', ()=>{
 // Fallback: sebelum keluar/refresh, commit autosave
 window.addEventListener('beforeunload', saveToLocalSilent);
 
-// Saat halaman siap → load dari LS untuk tanggal aktif jika ada
-document.addEventListener('DOMContentLoaded', () => {
-  boot();                 // ← ini yang menjalankan flow Cloud/Local
-});
-
 
 // Ketika ganti tanggal → simpan dulu yang lama, lalu load tanggal baru
 // byId('sessionDate')?.addEventListener('change', () => {
@@ -2141,44 +2216,7 @@ byId('btnApplyPlayerTemplate')?.addEventListener('click', () => {
     applyDefaultPlayersTemplate();
   }
 });
-byId('btnMakeEventLink')?.addEventListener('click', async () => {
-  // tanggal
-  let d = (byId('sessionDate')?.value || '').trim();
-  if (!d) {
-    d = new Date().toISOString().slice(0,10);
-    const el = byId('sessionDate'); if (el) el.value = d;
-  }
 
-  // selalu pastikan event_id = UUID dari DB
-  let ev = currentEventId;
-  if (!isUuid(ev)) {
-    ev = await createNewEvent("Mix Americano");   // ← ambil UUID dari Supabase
-  }
-
-  // bentuk URL + switch ke Cloud Mode
-  const url = buildEventUrl(ev, d);
-  currentEventId = ev;
-  currentSessionDate = d;
-  history.replaceState({}, '', url);
-
-  // Cloud load/save + realtime
-  if (window.sb) {
-    const ok = await loadStateFromCloud();
-    if (!ok) {
-      seedDefaultIfEmpty?.();
-      renderPlayersList?.(); renderAll?.(); validateNames?.();
-      await saveStateToCloud();
-    }
-    subscribeRealtimeForState?.();
-    startAutoSave?.();
-  }
-
-  const copied = await copyToClipboard(url);
-  alert(copied
-    ? `Link event sudah dibuat & disalin:\n\n${url}`
-    : `Link event:\n\n${url}\n\n(Clipboard gagal – salin manual)`
-  );
-});
 
 
 
@@ -2213,3 +2251,80 @@ window.renderPlayersList = function(...args){
   return r;
 };
 
+// Buka modal
+byId('btnMakeEventLink')?.addEventListener('click', () => {
+  // pre-fill tanggal dari input sekarang
+  byId('eventDateInput').value = byId('sessionDate').value || new Date().toISOString().slice(0,10);
+  byId('eventNameInput').value = document.querySelector('h1')?.textContent?.trim() || '';
+  byId('eventModal').classList.remove('hidden');
+});
+byId('eventCancelBtn')?.addEventListener('click', () => {
+  byId('eventModal').classList.add('hidden');
+});
+
+// Klik Create Event
+byId('eventCreateBtn')?.addEventListener('click', async () => {
+  const name = (byId('eventNameInput').value || '').trim();
+  const date = normalizeDateKey(byId('eventDateInput').value || '');
+  if (!name || !date) { alert('Nama event dan tanggal wajib diisi.'); return; }
+
+  try {
+    const { id, created } = await createEventIfNotExists(name, date);
+    if (!created) {
+      alert('Event dengan nama itu di tanggal tersebut sudah ada.\nSilakan pilih nama lain atau tanggal lain.');
+      return;
+    }
+
+    // update title
+    setAppTitle(name);
+    currentEventId = id;
+    currentSessionDate = date;
+    byId('sessionDate').value = date;
+
+    const url = new URL(location.href);
+    url.searchParams.set('event', id);
+    url.searchParams.set('date', date);
+    history.replaceState({}, '', url);
+
+    await saveStateToCloud();
+    subscribeRealtimeForState();
+    startAutoSave();
+
+    // tampilkan UI success
+    const link = url.toString();
+    byId('eventForm').classList.add('hidden');
+    byId('eventSuccess').classList.remove('hidden');
+    byId('eventLinkOutput').value = link;
+
+
+  } catch (err) {
+    console.error(err);
+    alert('Gagal membuat event. Coba lagi.');
+  }
+});
+
+// Klik Copy Link
+byId('eventCopyBtn')?.addEventListener('click', async () => {
+  const link = byId('eventLinkOutput').value;
+  try {
+    await navigator.clipboard.writeText(link);
+    byId('eventCopyBtn').textContent = 'Copied!';
+    setTimeout(()=> byId('eventCopyBtn').textContent = 'Copy', 2000);
+  } catch {
+    alert('Gagal menyalin link, salin manual: ' + link);
+  }
+});
+
+byId('btnLeaveEvent')?.addEventListener('click', ()=>{
+  if (confirm('Keluar event dan hapus data lokal?')) {
+    leaveEventMode(true);   // true = clear localStorage
+    roundsByCourt[activeCourt] = [];
+    markDirty(); renderAll();refreshFairness();
+    window.location.reload(true);
+
+  }
+});
+
+
+
+document.addEventListener('DOMContentLoaded', boot);
