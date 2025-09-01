@@ -68,10 +68,6 @@ function debounce(fn, wait = 120){
   let t; 
   return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
 }
-function debounce(fn, wait = 120){
-  let t; 
-  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
-}
 // panggilan ringan untuk refresh fairness
 const refreshFairness = debounce(() => renderFairnessInfo(), 120);
 function parseHM(str){ // "19:00" -> minutes since midnight
@@ -117,12 +113,18 @@ function writeAllSessionsLS(obj) {
 let currentEventId = null;          // UUID event dari URL
 let currentSessionDate = null;      // 'YYYY-MM-DD'
 let _serverVersion = 0;             // versi terakhir dari DB
+let _forceViewer = false;           // true jika URL memaksa readonly (share link)
+let _ownerHintFromUrl = null;       // UUID owner yang dibawa di URL (untuk create oleh viewer)
 
 function getUrlParams() {
   const url = new URL(location.href);
   return {
     event: url.searchParams.get('event') || null,
     date:  url.searchParams.get('date')  || null,
+    role:  url.searchParams.get('role')  || null,
+    view:  url.searchParams.get('view')  || null,
+    owner: url.searchParams.get('owner') || null,
+    invite: url.searchParams.get('invite') || null,
   };
 }
 
@@ -153,7 +155,7 @@ function slugify(s) {
     .replace(/^-|-$/g, '') || 'event';
 }
 
-async function createEventIfNotExists(name, date) {
+async function createEventIfNotExists(name, date, ownerHint=null) {
   // 1) cek sudah ada?
   const { data: exist, error: e1 } = await sb
     .from('events')
@@ -167,9 +169,11 @@ async function createEventIfNotExists(name, date) {
   }
 
   // 2) insert baru
+  const payload = { title: name, event_name: name, event_date: date };
+  if (ownerHint && isUuid(ownerHint)) payload.owner_id = ownerHint;
   const { data, error } = await sb
     .from('events')
-    .insert({ title: name, event_name: name, event_date: date })
+    .insert(payload)
     .select('id, title')
     .single();
   if (error) throw error;
@@ -200,6 +204,8 @@ function leaveEventMode(clearLS = true) {
   validateNames?.();
   setAppTitle('Mix Americano');   // judul default
   startAutoSave();
+  // default back to editor when leaving cloud
+  setAccessRole('editor');
 }
 
 
@@ -208,6 +214,43 @@ function setAppTitle(title) {
   const h = byId('appTitle');
   if (h && title) h.textContent = title;
   if (title) document.title = title + ' – Mix Americano';
+}
+
+// Ensure document.title uses clean separator regardless of prior encoding
+try {
+  if (typeof setAppTitle === 'function') {
+    const __origSetTitle = setAppTitle;
+    setAppTitle = function(title){
+      __origSetTitle(title);
+      if (title) document.title = title + ' — Mix Americano';
+    };
+  }
+} catch {}
+
+// Fetch role from Supabase based on current user and event membership
+async function loadAccessRoleFromCloud(){
+  try{
+    if (!isCloudMode() || !window.sb?.auth || !currentEventId) { setAccessRole('editor'); return; }
+    const { data: userData } = await sb.auth.getUser();
+    const uid = userData?.user?.id || null;
+    if (!uid){ setAccessRole('viewer'); return; }
+
+    // 1) event owner shortcut (optional)
+    try{
+      const { data: ev } = await sb.from('events').select('owner_id').eq('id', currentEventId).maybeSingle();
+      if (ev?.owner_id && ev.owner_id === uid) { setAccessRole('editor'); return; }
+    }catch{}
+
+    // 2) membership check
+    const { data: mem } = await sb
+      .from('event_members')
+      .select('role')
+      .eq('event_id', currentEventId)
+      .eq('user_id', uid)
+      .maybeSingle();
+    const role = (mem?.role === 'editor') ? 'editor' : 'viewer';
+    setAccessRole(role);
+  }catch{ setAccessRole('viewer'); }
 }
 
 async function fetchEventTitleFromDB(eventId){
@@ -318,6 +361,26 @@ function buildEventUrl(eventId, dateStr){
   return u.toString();
 }
 
+function buildViewerUrl(eventId, dateStr, ownerId){
+  const u = new URL(buildEventUrl(eventId, dateStr));
+  u.searchParams.set('view', '1');
+  if (ownerId && isUuid(ownerId)) u.searchParams.set('owner', ownerId);
+  return u.toString();
+}
+
+function buildInviteUrl(eventId, dateStr, token){
+  const u = new URL(buildEventUrl(eventId, dateStr));
+  if (token) u.searchParams.set('invite', token);
+  return u.toString();
+}
+
+function randomToken(len = 24){
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let out = '';
+  for(let i=0;i<len;i++) out += chars[Math.floor(Math.random()*chars.length)];
+  return out;
+}
+
 async function copyToClipboard(text){
   try {
     await navigator.clipboard.writeText(text);
@@ -357,6 +420,40 @@ let scoreCtx = {
   remainMs: 0,        // ⬅️ baru (millisecond)
   running: false      // ⬅️ baru
 };
+
+// ================== Access Control ================== //
+// role: 'editor' (full access) | 'viewer' (read-only)
+let accessRole = 'editor';
+function isViewer(){ return accessRole !== 'editor'; }
+function setAccessRole(role){ accessRole = (role === 'viewer') ? 'viewer' : 'editor'; applyAccessMode(); renderAll?.(); renderPlayersList?.(); }
+function applyAccessMode(){
+  document.documentElement.setAttribute('data-readonly', String(isViewer()));
+  const disableIds = ['btnAddCourt','btnMakeEventLink','btnStartTimer','btnFinishScore','btnResetScore','btnAPlus','btnAMinus','btnBPlus','btnBMinus'];
+  disableIds.forEach(id=>{ const el = byId(id); if (el) el.disabled = isViewer(); });
+
+  // Hide edit-centric UI in viewer mode
+  const hideIds = [
+    'playersPanel',           // panel daftar pemain
+    'btnSave',                // tombol save lokal
+    'btnMakeEventLink',       // buat link event
+    'btnLeaveEvent',          // keluar event
+    'btnFilterToggle',        // toggle filter
+    'filterPanel',            // panel filter input tanggal/waktu/durasi
+    'globalInfo',             // ringkasan global pemain/match
+    'scoreControlsLeft',      // start/reset
+    'btnFinishScore',         // finish & isi match
+    'btnRecalc',              // hitung ulang
+    'scoreButtonsA',          // +/- skor A
+    'scoreButtonsB'           // +/- skor B
+  ];
+  hideIds.forEach(id=>{ const el = byId(id); if (el) el.classList.toggle('hidden', isViewer()); });
+
+  // courts toolbar: hide add-court button if exists
+  const addBtn = byId('btnAddCourt'); if (addBtn) addBtn.classList.toggle('hidden', isViewer());
+
+  // fairness info box (if present): hide in viewer
+  const fair = byId('fairnessInfo'); if (fair) fair.classList.toggle('hidden', isViewer());
+}
 
 
 function onlyDigits(str){ return String(str||'').replace(/[^\d]/g,''); }
@@ -430,6 +527,40 @@ function initCloudFromUrl() {
     currentSessionDate = p.date;
     const el = byId('sessionDate');
     if (el) el.value = p.date;        // sinkron ke input tanggal
+  }
+  // Force viewer from link (?view=1 or role=viewer)
+  _forceViewer = (String(p.view||'') === '1') || (String(p.role||'').toLowerCase() === 'viewer');
+  if (_forceViewer) setAccessRole('viewer');
+
+  // Load access role if in cloud mode (skip elevation if forced viewer)
+  if (currentEventId && !_forceViewer) {
+    loadAccessRoleFromCloud?.();
+  } else {
+    applyAccessMode();
+  }
+
+  // Jika link undangan (invite=token) dibuka: terima undangan setelah login
+  if (p.invite && currentEventId){
+    (async () => {
+      try{
+        const { data: ud } = await sb.auth.getUser();
+        const email = ud?.user?.email || null;
+        if (!email) return; // user belum login
+        const { data: inv, error } = await sb.from('event_invites')
+          .select('event_id, email, role')
+          .eq('token', p.invite)
+          .maybeSingle();
+        if (error || !inv) return;
+        if (String(inv.email).toLowerCase() !== String(email).toLowerCase()) return;
+        // tambahkan membership jika belum ada
+        const uid = ud.user.id;
+        await sb.from('event_members').insert({ event_id: currentEventId, user_id: uid, role: inv.role }).onConflict('event_id,user_id').ignore();
+        // opsional: tandai accepted
+        await sb.from('event_invites').update({ accepted_at: new Date().toISOString() }).eq('token', p.invite);
+        // refresh akses
+        loadAccessRoleFromCloud?.();
+      }catch(e){ console.warn('accept-invite failed', e); }
+    })();
   }
 }
 
@@ -685,6 +816,7 @@ function renderPlayersList() {
       gSel.className = 'player-meta border rounded px-1 py-0.5 text-xs dark:bg-gray-900 dark:border-gray-700';
       ['','M','F'].forEach(v => gSel.appendChild(new Option(v || '-Pilih Gender-', v)));
       gSel.value = meta.gender || '';
+      gSel.disabled = isViewer();
       gSel.onchange = () => {
         playerMeta[name] = { ...playerMeta[name], gender: gSel.value };
         markDirty();
@@ -697,6 +829,7 @@ function renderPlayersList() {
       [['','-Pilih Level-'], ['beg','Beginner'], ['pro','Pro']]
         .forEach(([v,t]) => lSel.add(new Option(t, v)));
       lSel.value = meta.level || '';
+      lSel.disabled = isViewer();
       lSel.onchange = () => {
         playerMeta[name] = { ...playerMeta[name], level: lSel.value };
         markDirty();
@@ -706,6 +839,7 @@ function renderPlayersList() {
       // sisipkan di antara nama & tombol hapus
       const nameSpan = li.querySelector('.player-name');
       const delBtn   = li.querySelector('.del');
+      if (isViewer()) delBtn.style.display = 'none';
       nameSpan.after(gSel, lSel);
 
     li.querySelector(".del").addEventListener("click", () => {
@@ -729,6 +863,7 @@ function renderPlayersList() {
     (byId("minutesPerRound").value || 12);
 }
 function addPlayer(name) {
+  if (isViewer()) return;
   name = (name || '').trim();
   if (!name || players.includes(name)) return; // tolak kosong/duplikat
   players.push(name);
@@ -814,6 +949,23 @@ function validateNames(){
       "</div>"
     );
   }
+
+  // Normalize duplicate-name message (replace any garbled output)
+  (function(){
+    const map2 = new Map();
+    const dups2 = [];
+    players.forEach((p,i)=>{
+      const k=p.trim().toLowerCase();
+      if(map2.has(k)) dups2.push([map2.get(k), i]); else map2.set(k,i);
+    });
+    if (dups2.length){
+      const filtered = items.filter(s => !s.startsWith("<div class='text-amber-600'>Duplikat nama:"));
+      const fixed = "<div class='text-amber-600'>Duplikat nama: " +
+                    dups2.map(([a,b])=> players[a] + " & " + players[b]).join(', ') +
+                    "</div>";
+      items.length = 0; items.push(...filtered, fixed);
+    }
+  })();
 
   // --- existing: saran typo (Levenshtein <= 2) ---
   const sugg=[];
@@ -914,14 +1066,16 @@ function renderCourt(container, arr) {
     const tr = document.createElement("tr");
     tr.className =
       "border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/40";
-    tr.draggable = true;
+    tr.draggable = !isViewer();
     tr.dataset.index = i;
     tr.addEventListener("dragstart", (e) => {
+      if (isViewer()) { e.preventDefault(); return; }
       tr.classList.add("row-dragging");
       e.dataTransfer.setData("text/plain", String(i));
     });
     tr.addEventListener("dragend", () => tr.classList.remove("row-dragging"));
     tr.addEventListener("dragover", (e) => {
+      if (isViewer()) { e.preventDefault(); return; }
       e.preventDefault();
       tr.classList.add("row-drop-target");
     });
@@ -929,6 +1083,7 @@ function renderCourt(container, arr) {
       tr.classList.remove("row-drop-target")
     );
     tr.addEventListener("drop", (e) => {
+      if (isViewer()) { e.preventDefault(); return; }
       e.preventDefault();
       tr.classList.remove("row-drop-target");
       const from = Number(e.dataTransfer.getData("text/plain"));
@@ -944,6 +1099,8 @@ function renderCourt(container, arr) {
     const tdHandle = document.createElement("td");
     tdHandle.textContent = "≡";
     tdHandle.className = "py-2 pr-4 text-gray-400 rnd-col-drag";
+    // Clean handle icon override
+    try { tdHandle.textContent = "☰"; } catch {}
     tdHandle.style.cursor = "grab";
     tr.appendChild(tdHandle);
 
@@ -960,6 +1117,8 @@ function renderCourt(container, arr) {
     tdTime.className = "py-2 pr-4";
     tdTime.classList.add("rnd-col-time", "text-center");
     tdTime.dataset.label = "Waktu";
+    // Override time separator to en dash
+    try { tdTime.textContent = `${roundStartTime(i)}–${roundEndTime(i)}`; } catch {}
     tr.appendChild(tdTime);
 
     // helper: select pemain
@@ -971,9 +1130,12 @@ function renderCourt(container, arr) {
       const sel = document.createElement("select");
       sel.className =
         "border rounded-lg px-2 py-1 min-w-[6rem] max-w-[7rem] sm:max-w-[10rem] bg-white dark:bg-gray-900 dark:border-gray-700";
+      // Reset placeholder option to a clean dash
+      try { sel.innerHTML = ''; sel.appendChild(new Option('-', '')); } catch {}
       sel.appendChild(new Option("—", ""));
       players.forEach((p) => sel.appendChild(new Option(p, p)));
       sel.value = r[k] || "";
+      sel.disabled = isViewer();
       sel.addEventListener("change", (e) => {
         arr[i] = { ...arr[i], [k]: e.target.value };
         markDirty();
@@ -1043,6 +1205,14 @@ function renderCourt(container, arr) {
     tr.appendChild(tdSA);
     tr.appendChild(tdSB);
 
+    // Viewer mode: tampilkan baris tanpa kolom aksi
+    if (isViewer()) {
+      tbody.appendChild(tr);
+      // lanjut ke ronde berikutnya tanpa tombol aksi
+      continue;
+    }
+
+
     // === tombol Hitung (aksi)
     const tdCalc = document.createElement('td');
     tdCalc.dataset.label = 'Aksi';
@@ -1051,13 +1221,17 @@ function renderCourt(container, arr) {
     btnCalc.className = 'px-3 py-1.5 rounded-lg border dark:border-gray-700 text-sm w-full sm:w-auto';
     btnCalc.textContent = (r.scoreA || r.scoreB) ? '🔁 Hitung Ulang' : '🧮 Mulai Main';
     btnCalc.addEventListener('click', ()=> openScoreModal(activeCourt, i));
+    // Clean label override
+    try { btnCalc.textContent = (r.scoreA || r.scoreB) ? 'Hitung Ulang' : 'Mulai Main'; } catch {}
     tdCalc.appendChild(btnCalc);
     tr.appendChild(tdCalc);
 
     tbody.appendChild(tr);
 
     // === Baris jeda (opsional)
-    const showBreak = byId('showBreakRows')?.checked;
+    // Viewer: paksa tampil (abaikan toggle) agar jeda tetap terlihat sesuai setelan menit/jeda
+    const _showBreakEl = byId('showBreakRows');
+    const showBreak = isViewer() ? true : (_showBreakEl?.checked);
     const brkMin = parseInt(byId('breakPerRound').value || '0', 10);
     if (showBreak && brkMin > 0 && i < R-1) {
       const trBreak = document.createElement('tr');
@@ -1066,8 +1240,12 @@ function renderCourt(container, arr) {
       const fullCols = table.querySelector('thead tr').children.length;
       tdBreak.colSpan = fullCols;
       tdBreak.className = 'py-1 text-center opacity-80';
+      // Clean break text override
+      try { tdBreak.textContent = `Jeda ${brkMin}:00 • Next ${roundStartTime(i+1)}`; } catch {}
       tdBreak.textContent = `🕒 Jeda ${brkMin}:00 • Next ${roundStartTime(i+1)}`;
       trBreak.appendChild(tdBreak);
+      // Force clean break text (override any garbled replacements)
+      try { tdBreak.textContent = `Jeda ${brkMin}:00 • Next ${roundStartTime(i+1)}`; } catch {}
       tbody.appendChild(trBreak);
     }
   }
@@ -1134,6 +1312,38 @@ function renderFairnessInfo(){
 }
 
 
+// Override fairness renderer with a clean version (icons/text)
+try {
+  window.renderFairnessInfo = function(){
+    let box = byId('fairnessInfo');
+    if(!box){
+      box = document.createElement('div');
+      box.id='fairnessInfo';
+      box.className='mt-3 text-xs bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 rounded-lg p-2';
+      const toolbar = byId('courtsToolbar') || document.body;
+      toolbar.parentNode.insertBefore(box, toolbar.nextSibling);
+    }
+    const cnt = countAppearAll(-1);
+    const list = players.slice().sort((a,b)=>{
+      const da=(cnt[a]||0), db=(cnt[b]||0);
+      if(da!==db) return db-da; return a.localeCompare(b);
+    });
+    const min = Math.min(...list.map(p=>cnt[p]||0));
+    const max = Math.max(...list.map(p=>cnt[p]||0));
+    const spread = max-min;
+    const rows = list.map(p=>{
+      const n = cnt[p]||0;
+      const mark = (n===min ? '↓' : (n===max ? '↑' : '•'));
+      return `<span class="inline-block mr-3">${mark} <b>${p}</b>: ${n}</span>`;
+    }).join('');
+    box.innerHTML = `
+      <div class="font-semibold mb-1">Fairness Info (semua lapangan): min=${min}, max=${max}, selisih=${spread}</div>
+      <div class="leading-6">${rows}</div>
+      <div class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">Tips: jika ada ↑ dan ↓ berjauhan, klik "Terapkan" lagi untuk mengacak ulang; sistem mengutamakan pemain yang masih kurang main.</div>
+    `;
+  };
+} catch {}
+
 function clearScoresActive(){
   const arr = roundsByCourt[activeCourt] || [];
   if (arr.length && arr.some(r => r && (r.scoreA || r.scoreB))) {
@@ -1158,6 +1368,7 @@ function clearScoresAll(){
 function renderCourtsToolbar(){
   const bar = byId('courtsToolbar');
   const addBtn = byId('btnAddCourt');
+  if (addBtn) addBtn.disabled = isViewer();
 
   // simpan posisi scroll sebelum kita rebuild
   const prevScroll = bar.scrollLeft;
@@ -1184,10 +1395,12 @@ function renderCourtsToolbar(){
 
     const wrap = document.createElement('span');
     wrap.className = 'court-close-wrap inline-flex items-center';
-    if (idx > 0) {
+    if (idx > 0 && !isViewer()) {
       const del = document.createElement('button');
       del.className = 'court-close text-xs px-1';
       del.title = 'Hapus Lapangan';
+      // Clean close icon
+      try { del.textContent = '✕'; } catch {}
       del.textContent = '🗑️';
       del.addEventListener('click', (e)=>{
         e.stopPropagation();
@@ -1396,6 +1609,11 @@ function runReport(){
   const uniquePlayers = new Set(arr.map(x=>x.player)).size;
   byId('reportSummary').textContent =
     `Rentang: ${from} → ${to} • Tanggal: ${totalDates} • Game: ${totalGames} • Pemain: ${uniquePlayers}`;
+
+  // Normalize report summary text (clean separators)
+  try {
+    byId('reportSummary').textContent = `Rentang: ${from} - ${to} | Tanggal: ${totalDates} | Game: ${totalGames} | Pemain: ${uniquePlayers}`;
+  } catch {}
 
   // table
   const tbody = byId('reportTable').querySelector('tbody');
@@ -1736,6 +1954,9 @@ function openScoreModal(courtIdx, roundIdx){
     setScoreModalLocked(false); // Start enabled
   }
 
+  // Read-only mode: selalu terkunci
+  if (isViewer()) setScoreModalLocked(true);
+
   byId('scoreModal').classList.remove('hidden');
 }
 
@@ -1747,6 +1968,7 @@ function closeScoreModal(){
 }
 
 function startScoreTimer(){
+  if (isViewer()) return;
   if (scoreCtx.running) return;
   // jika sudah 0: reset ke durasi default lagi
   if (scoreCtx.remainMs <= 0){
@@ -1772,10 +1994,12 @@ function startScoreTimer(){
     if (scoreCtx.remainMs <= 0){
       clearInterval(scoreCtx.timerId); scoreCtx.timerId=null; scoreCtx.running=false;
       const msg = 'Waktu habis untuk ronde ini.\nKlik OK untuk menyimpan skor saat ini.';
-      alert(msg);
+      // Tanpa alert; langsung tampilkan status selesai di UI
+      const __t = byId('scoreTimer'); if (__t) __t.textContent = 'Permainan Selesai';
+      setScoreModalLocked(true);
       // auto commit skor → sama seperti Finish tapi TANPA konfirmasi tambahan
       commitScoreToRound(/*auto*/true);
-      closeScoreModal();
+      // Jangan tutup modal; biarkan pengguna melihat status dan klik "Hitung Ulang"
     }
   }, 250);
 }
@@ -1806,6 +2030,28 @@ function updateScoreDisplay(){
 
 // EVENTS
 byId("btnTheme").addEventListener("click", toggleTheme);
+
+// Manual Save: tunjukkan loading & sukses di tombol
+byId('btnSave')?.addEventListener('click', async ()=>{
+  const btn = byId('btnSave'); if (!btn) return;
+  const old = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Saving...';
+  try{
+    let ok = false;
+    if (isCloudMode()) ok = await saveStateToCloud();
+    else ok = saveToStore();
+    if (ok !== false){
+      btn.textContent = 'Saved ✓';
+      setTimeout(()=>{ btn.textContent = old || 'Save'; btn.disabled = false; }, 1200);
+    } else {
+      btn.textContent = old || 'Save'; btn.disabled = false;
+    }
+  }catch(e){
+    console.error(e);
+    btn.textContent = old || 'Save'; btn.disabled = false;
+    alert('Gagal menyimpan.');
+  }
+});
 
 // Header menu toggle (HP)
 const btnHdrMenu = document.getElementById("btnHdrMenu");
@@ -2116,10 +2362,10 @@ byId('btnApplyPlayersActive').addEventListener('click', ()=>{
 // Modal Hitung Skor
 byId('btnCloseScore').addEventListener('click', closeScoreModal);
 
-byId('btnAPlus').addEventListener('click', ()=>{ scoreCtx.a = Math.min(999, scoreCtx.a + 1); updateScoreDisplay(); });
-byId('btnAMinus').addEventListener('click', ()=>{ scoreCtx.a = Math.max(0,   scoreCtx.a - 1); updateScoreDisplay(); });
-byId('btnBPlus').addEventListener('click', ()=>{ scoreCtx.b = Math.min(999, scoreCtx.b + 1); updateScoreDisplay(); });
-byId('btnBMinus').addEventListener('click', ()=>{ scoreCtx.b = Math.max(0,   scoreCtx.b - 1); updateScoreDisplay(); });
+byId('btnAPlus').addEventListener('click', ()=>{ if (isViewer()) return; scoreCtx.a = Math.min(999, scoreCtx.a + 1); updateScoreDisplay(); });
+byId('btnAMinus').addEventListener('click', ()=>{ if (isViewer()) return; scoreCtx.a = Math.max(0,   scoreCtx.a - 1); updateScoreDisplay(); });
+byId('btnBPlus').addEventListener('click', ()=>{ if (isViewer()) return; scoreCtx.b = Math.min(999, scoreCtx.b + 1); updateScoreDisplay(); });
+byId('btnBMinus').addEventListener('click', ()=>{ if (isViewer()) return; scoreCtx.b = Math.max(0,   scoreCtx.b - 1); updateScoreDisplay(); });
 // Set skor seri (rata-rata, dibulatkan ke bawah)
 // byId('btnTie').addEventListener('click', ()=>{
 //   const avg = Math.max(scoreCtx.a, scoreCtx.b);
@@ -2136,11 +2382,13 @@ byId('btnStartTimer').addEventListener('click', startScoreTimer);
 
 // Finish manual (tetap dengan konfirmasi)
 byId('btnFinishScore').addEventListener('click', ()=>{
+  if (isViewer()) return;
   commitScoreToRound(/*auto*/false);
   closeScoreModal();
 });
 
 byId('btnRecalc').addEventListener('click', ()=>{
+  if (isViewer()) return;
   setScoreModalLocked(false);                  // munculkan semua kontrol
   const start = byId('btnStartTimer'); if (start) start.disabled = true;   // tidak boleh start ulang
   const t = byId('scoreTimer');     if (t)     t.textContent = 'Permainan Selesai';
@@ -2148,6 +2396,7 @@ byId('btnRecalc').addEventListener('click', ()=>{
 
 // Reset skor & timer (tapi tidak menghapus skor di ronde)
 byId('btnResetScore').addEventListener('click', ()=>{
+  if (isViewer()) return;
   scoreCtx.a = 0; scoreCtx.b = 0;
   updateScoreDisplay();
   // opsional: reset timer tampilan juga
@@ -2252,7 +2501,7 @@ window.renderPlayersList = function(...args){
 };
 
 // Buka modal
-byId('btnMakeEventLink')?.addEventListener('click', () => {
+  byId('btnMakeEventLink')?.addEventListener('click', () => {
   // pre-fill tanggal dari input sekarang
   byId('eventDateInput').value = byId('sessionDate').value || new Date().toISOString().slice(0,10);
   byId('eventNameInput').value = document.querySelector('h1')?.textContent?.trim() || '';
@@ -2264,12 +2513,21 @@ byId('eventCancelBtn')?.addEventListener('click', () => {
 
 // Klik Create Event
 byId('eventCreateBtn')?.addEventListener('click', async () => {
+  const btnCreate = byId('eventCreateBtn');
+  const oldText = btnCreate?.textContent;
+  if (btnCreate) { btnCreate.disabled = true; btnCreate.textContent = 'Creating...'; }
   const name = (byId('eventNameInput').value || '').trim();
   const date = normalizeDateKey(byId('eventDateInput').value || '');
   if (!name || !date) { alert('Nama event dan tanggal wajib diisi.'); return; }
 
   try {
-    const { id, created } = await createEventIfNotExists(name, date);
+    // owner hint: dari URL (owner param) bila view=1, atau dari user login
+    let ownerHint = null;
+    const p = getUrlParams();
+    if (String(p.view||'')==='1' && isUuid(p.owner)) ownerHint = p.owner;
+    try { const { data:ud } = await sb.auth.getUser(); if (!ownerHint) ownerHint = ud?.user?.id || null; } catch{}
+
+    const { id, created } = await createEventIfNotExists(name, date, ownerHint);
     if (!created) {
       alert('Event dengan nama itu di tanggal tersebut sudah ada.\nSilakan pilih nama lain atau tanggal lain.');
       return;
@@ -2290,22 +2548,107 @@ byId('eventCreateBtn')?.addEventListener('click', async () => {
     subscribeRealtimeForState();
     startAutoSave();
 
-    // tampilkan UI success
-    const link = url.toString();
+    // tampilkan UI success: share link default = viewer (readonly) + embed owner
+    const link = buildViewerUrl(id, date, ownerHint);
     byId('eventForm').classList.add('hidden');
     byId('eventSuccess').classList.remove('hidden');
     byId('eventLinkOutput').value = link;
+
+    // tambahkan Editor link box bila belum ada
+    (function ensureEditorLinkBox(){
+      const successBox = byId('eventSuccess');
+      if (!successBox) return;
+      let inp = byId('eventEditorLinkOutput');
+      let btn = byId('eventCopyEditorBtn');
+      if (!inp || !btn){
+        const wrap = document.createElement('div');
+        wrap.className = 'flex items-center gap-2';
+        inp = document.createElement('input');
+        inp.id='eventEditorLinkOutput'; inp.readOnly = true;
+        inp.className='flex-1 border rounded-lg px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100';
+        btn = document.createElement('button'); btn.id='eventCopyEditorBtn';
+        btn.className='px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm'; btn.textContent='Copy Editor Link';
+        wrap.appendChild(inp); wrap.appendChild(btn);
+        successBox.appendChild(wrap);
+        btn.addEventListener('click', async ()=>{
+          try{ await navigator.clipboard.writeText(inp.value); btn.textContent='Copied!'; setTimeout(()=>btn.textContent='Copy Editor Link',2000);}catch{}
+        });
+      }
+      const editorURL = buildEventUrl(id, date);
+      inp.value = editorURL;
+    })();
+
+    // tambahkan form invite sederhana bila belum ada
+    (function ensureInviteForm(){
+      const successBox = byId('eventSuccess'); if (!successBox) return;
+      if (byId('btnInviteMember')) return;
+      const box = document.createElement('div');
+      box.className = 'border-t dark:border-gray-700 pt-3 space-y-2';
+      box.innerHTML = `
+        <div class="text-sm font-semibold">Invite Anggota</div>
+        <div class="text-xs text-gray-500 dark:text-gray-300">Masukkan email Supabase user (yang digunakan login), pilih role, lalu buat link undangan.</div>
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <input id="inviteEmail" type="email" placeholder="email@example.com" class="flex-1 border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100" />
+          <select id="inviteRole" class="border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100">
+            <option value="viewer">viewer</option>
+            <option value="editor">editor</option>
+          </select>
+          <button id="btnInviteMember" class="px-3 py-2 rounded-lg bg-emerald-600 text-white text-sm">Buat Link Undangan</button>
+        </div>
+        <div class="flex items-center gap-2 hidden" id="inviteLinkRow">
+          <input id="inviteLinkOut" readonly class="flex-1 border rounded-lg px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100" />
+          <button id="btnCopyInvite" class="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm">Copy Link</button>
+        </div>
+        <div id="inviteMsg" class="text-xs"></div>`;
+      successBox.appendChild(box);
+      byId('btnInviteMember').addEventListener('click', async ()=>{
+        const btn = byId('btnInviteMember');
+        const email = (byId('inviteEmail').value||'').trim();
+        const role = byId('inviteRole').value||'viewer';
+        const msg = byId('inviteMsg'); msg.textContent='';
+        if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { msg.textContent='Email tidak valid.'; return; }
+        if (!isCloudMode() || !currentEventId){ msg.textContent='Mode Cloud belum aktif. Buat event dulu.'; return; }
+        try{
+          if (btn){ btn.disabled = true; btn.textContent = 'Membuat…'; }
+          // Pastikan user login
+          const { data:ud } = await sb.auth.getUser();
+          if (!ud?.user){ msg.textContent='Silakan login terlebih dahulu.'; return; }
+
+          // Panggil RPC SECURITY DEFINER agar lolos RLS dengan validasi owner/editor di sisi DB
+          const { data: token, error } = await sb.rpc('create_event_invite', {
+            p_event_id: currentEventId,
+            p_email: email,
+            p_role: role
+          });
+          if (error) throw error;
+
+          const link = buildInviteUrl(currentEventId, byId('sessionDate').value || '', token);
+          const row = byId('inviteLinkRow'); const out = byId('inviteLinkOut'); const cp = byId('btnCopyInvite');
+          if (row && out && cp){ row.classList.remove('hidden'); out.value = link; msg.textContent='Link undangan dibuat. Kirimkan ke email terkait.';
+            cp.onclick = async ()=>{ try{ await navigator.clipboard.writeText(out.value); cp.textContent='Copied!'; setTimeout(()=>cp.textContent='Copy Link',1200);}catch{} };
+          }
+        }catch(e){ console.error(e); msg.textContent = 'Gagal membuat link undangan' + (e?.message? ': '+e.message : ''); }
+        finally { if (btn){ btn.disabled = false; btn.textContent = 'Buat Link Undangan'; } }
+      });
+    })();
 
 
   } catch (err) {
     console.error(err);
     alert('Gagal membuat event. Coba lagi.');
+  } finally {
+    if (btnCreate) { btnCreate.disabled = false; btnCreate.textContent = oldText || 'Create & Buat Link'; }
   }
 });
 
 // Klik Copy Link
 byId('eventCopyBtn')?.addEventListener('click', async () => {
-  const link = byId('eventLinkOutput').value;
+  // Pastikan yang disalin adalah viewer link
+  let link = byId('eventLinkOutput').value;
+  try{
+    const u = new URL(link, location.href);
+    if (!u.searchParams.get('view')){ u.searchParams.set('view','1'); link = u.toString(); }
+  }catch{}
   try {
     await navigator.clipboard.writeText(link);
     byId('eventCopyBtn').textContent = 'Copied!';
@@ -2326,5 +2669,8 @@ byId('btnLeaveEvent')?.addEventListener('click', ()=>{
 });
 
 
+
+// Pastikan inisialisasi mode Cloud + Access selalu dipanggil saat load
+document.addEventListener('DOMContentLoaded', ()=>{ try{ initCloudFromUrl?.(); }catch(e){ console.warn('initCloudFromUrl error', e); } });
 
 document.addEventListener('DOMContentLoaded', boot);
