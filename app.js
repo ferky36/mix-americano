@@ -156,27 +156,16 @@ function slugify(s) {
 }
 
 async function createEventIfNotExists(name, date) {
-  // 1) cek sudah ada?
-  const { data: exist, error: e1 } = await sb
-    .from('events')
-    .select('id, title')
-    .eq('event_name', name)
-    .eq('event_date', date)
-    .maybeSingle();
-  if (e1) throw e1;
-  if (exist) {
-    return { id: exist.id, created: false, title: exist.title  }; // sudah ada
-  }
-
-  // 2) insert baru
-  const payload = { title: name, event_name: name, event_date: date };
-  const { data, error } = await sb
-    .from('events')
-    .insert(payload)
-    .select('id, title')
-    .single();
+  // Gunakan RPC SECURITY DEFINER agar lolos RLS dan mengisi owner_id otomatis di DB
+  const { data, error } = await sb.rpc('create_event_if_not_exists', {
+    p_title: name,
+    p_name: name,
+    p_date: date
+  });
   if (error) throw error;
-  return { id: data.id, created: true, title: data.title  };
+  // data bisa berupa array [{id,created}] atau object tergantung PostgREST
+  const row = Array.isArray(data) ? data[0] : data;
+  return { id: row.id, created: !!row.created, title: name };
 }
 
 function leaveEventMode(clearLS = true) {
