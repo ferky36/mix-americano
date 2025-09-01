@@ -226,6 +226,19 @@ try {
   }
 } catch {}
 
+// ======== Auth Redirect Helper (GitHub Pages base) ========
+// Konfigurasi URL redirect OTP Supabase agar tidak mengarah ke file:// saat lokal
+const APP_BASE_URL = 'https://ferky36.github.io/mix-americano';
+function getAuthRedirectURL(){
+  try {
+    const u = new URL(location.href);
+    // Jika sedang di http/https, gunakan halaman saat ini (pertahankan query seperti ?invite, ?event)
+    if (u.protocol === 'http:' || u.protocol === 'https:') return u.origin + u.pathname + u.search;
+  } catch {}
+  // Fallback (mis. file://) → pakai URL GitHub Pages, sertakan query string
+  return APP_BASE_URL + (location.search || '');
+}
+
 // ========== Auth helpers ==========
 async function handleAuthRedirect(){
   try{
@@ -2746,7 +2759,7 @@ byId('loginSendBtn')?.addEventListener('click', async ()=>{
   if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ msg.textContent='Email tidak valid.'; return; }
   btn.disabled = true; btn.textContent='Mengirim…';
   try{
-    await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + location.pathname + location.search } });
+    await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: getAuthRedirectURL() } });
     msg.textContent='Cek email Anda untuk magic link.';
   }catch(e){ console.error(e); msg.textContent='Gagal mengirim link.'; }
   finally{ btn.disabled=false; btn.textContent='Kirim Link Login'; }
