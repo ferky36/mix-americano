@@ -227,15 +227,9 @@ try {
 } catch {}
 
 // ======== Auth Redirect Helper (GitHub Pages base) ========
-// Konfigurasi URL redirect OTP Supabase agar tidak mengarah ke file:// saat lokal
+// Paksa magic link selalu redirect ke GitHub Pages (bukan localhost)
 const APP_BASE_URL = 'https://ferky36.github.io/mix-americano';
 function getAuthRedirectURL(){
-  try {
-    const u = new URL(location.href);
-    // Jika sedang di http/https, gunakan halaman saat ini (pertahankan query seperti ?invite, ?event)
-    if (u.protocol === 'http:' || u.protocol === 'https:') return u.origin + u.pathname + u.search;
-  } catch {}
-  // Fallback (mis. file://) → pakai URL GitHub Pages, sertakan query string
   return APP_BASE_URL + (location.search || '');
 }
 
