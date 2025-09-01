@@ -155,7 +155,7 @@ function slugify(s) {
     .replace(/^-|-$/g, '') || 'event';
 }
 
-async function createEventIfNotExists(name, date, ownerHint=null) {
+async function createEventIfNotExists(name, date) {
   // 1) cek sudah ada?
   const { data: exist, error: e1 } = await sb
     .from('events')
@@ -170,7 +170,6 @@ async function createEventIfNotExists(name, date, ownerHint=null) {
 
   // 2) insert baru
   const payload = { title: name, event_name: name, event_date: date };
-  if (ownerHint && isUuid(ownerHint)) payload.owner_id = ownerHint;
   const { data, error } = await sb
     .from('events')
     .insert(payload)
@@ -227,6 +226,59 @@ try {
   }
 } catch {}
 
+// ========== Auth helpers ==========
+async function handleAuthRedirect(){
+  try{
+    const hash = location.hash || '';
+    const hasCode = /[?#&](code|access_token)=/.test(location.href) || hash.includes('type=recovery');
+    if (hasCode && sb?.auth?.exchangeCodeForSession) {
+      await sb.auth.exchangeCodeForSession(window.location.href);
+      history.replaceState({}, '', location.pathname + location.search);
+    }
+  }catch(e){ console.warn('auth redirect handling failed', e); }
+}
+
+async function getCurrentUser(){
+  try{ const { data } = await sb.auth.getUser(); return data?.user || null; }catch{ return null; }
+}
+
+async function updateAuthUI(){
+  const user = await getCurrentUser();
+  const loginBtn = byId('btnLogin'); const logoutBtn = byId('btnLogout'); const info = byId('authInfo'); const email = byId('authUserEmail');
+  if (user){
+    loginBtn?.classList.add('hidden');
+    logoutBtn?.classList.remove('hidden');
+    info?.classList.remove('hidden');
+    if (email) email.textContent = user.email || user.id;
+  } else {
+    loginBtn?.classList.remove('hidden');
+    logoutBtn?.classList.add('hidden');
+    info?.classList.add('hidden');
+  }
+}
+
+function ensureAuthButtons(){
+  const bar = byId('hdrControls'); if (!bar) return;
+  if (!byId('authInfo')){
+    const span = document.createElement('span'); span.id='authInfo'; span.className='text-xs px-2 py-1 bg-white/10 rounded hidden';
+    const se = document.createElement('span'); se.id='authUserEmail'; span.innerHTML = 'Signed in: ';
+    span.appendChild(se);
+    bar.appendChild(span);
+  }
+  if (!byId('btnLogin')){
+    const b = document.createElement('button'); b.id='btnLogin'; b.className='px-3 py-2 rounded-xl bg-white text-indigo-700 font-semibold shadow hover:opacity-90'; b.textContent='Login';
+    bar.appendChild(b);
+    b.addEventListener('click', ()=>{
+      const m = byId('loginModal'); if (!m) return; m.classList.remove('hidden');
+      try{ sb.auth.getUser().then(({data})=>{ if (data?.user?.email) byId('loginEmail').value = data.user.email; }); }catch{}
+    });
+  }
+  if (!byId('btnLogout')){
+    const b = document.createElement('button'); b.id='btnLogout'; b.className='px-3 py-2 rounded-xl bg-white text-indigo-700 font-semibold shadow hover:opacity-90 hidden'; b.textContent='Logout';
+    bar.appendChild(b);
+    b.addEventListener('click', async ()=>{ try{ await sb.auth.signOut(); }catch{} location.reload(); });
+  }
+}
 // Fetch role from Supabase based on current user and event membership
 async function loadAccessRoleFromCloud(){
   try{
@@ -361,10 +413,9 @@ function buildEventUrl(eventId, dateStr){
   return u.toString();
 }
 
-function buildViewerUrl(eventId, dateStr, ownerId){
+function buildViewerUrl(eventId, dateStr){
   const u = new URL(buildEventUrl(eventId, dateStr));
   u.searchParams.set('view', '1');
-  if (ownerId && isUuid(ownerId)) u.searchParams.set('owner', ownerId);
   return u.toString();
 }
 
@@ -453,6 +504,9 @@ function applyAccessMode(){
 
   // fairness info box (if present): hide in viewer
   const fair = byId('fairnessInfo'); if (fair) fair.classList.toggle('hidden', isViewer());
+
+  // Auth UI
+  updateAuthUI?.();
 }
 
 
@@ -2521,13 +2575,11 @@ byId('eventCreateBtn')?.addEventListener('click', async () => {
   if (!name || !date) { alert('Nama event dan tanggal wajib diisi.'); return; }
 
   try {
-    // owner hint: dari URL (owner param) bila view=1, atau dari user login
-    let ownerHint = null;
-    const p = getUrlParams();
-    if (String(p.view||'')==='1' && isUuid(p.owner)) ownerHint = p.owner;
-    try { const { data:ud } = await sb.auth.getUser(); if (!ownerHint) ownerHint = ud?.user?.id || null; } catch{}
+    // pastikan user login
+    const { data: ud } = await sb.auth.getUser();
+    if (!ud?.user) { byId('eventModal')?.classList.add('hidden'); byId('loginModal')?.classList.remove('hidden'); return; }
 
-    const { id, created } = await createEventIfNotExists(name, date, ownerHint);
+    const { id, created } = await createEventIfNotExists(name, date);
     if (!created) {
       alert('Event dengan nama itu di tanggal tersebut sudah ada.\nSilakan pilih nama lain atau tanggal lain.');
       return;
@@ -2549,7 +2601,7 @@ byId('eventCreateBtn')?.addEventListener('click', async () => {
     startAutoSave();
 
     // tampilkan UI success: share link default = viewer (readonly) + embed owner
-    const link = buildViewerUrl(id, date, ownerHint);
+    const link = buildViewerUrl(id, date);
     byId('eventForm').classList.add('hidden');
     byId('eventSuccess').classList.remove('hidden');
     byId('eventLinkOutput').value = link;
@@ -2671,6 +2723,35 @@ byId('btnLeaveEvent')?.addEventListener('click', ()=>{
 
 
 // Pastikan inisialisasi mode Cloud + Access selalu dipanggil saat load
-document.addEventListener('DOMContentLoaded', ()=>{ try{ initCloudFromUrl?.(); }catch(e){ console.warn('initCloudFromUrl error', e); } });
+document.addEventListener('DOMContentLoaded', async ()=>{
+  try{ await handleAuthRedirect(); }catch{}
+  try{ initCloudFromUrl?.(); }catch(e){ console.warn('initCloudFromUrl error', e); }
+  try{ updateAuthUI?.(); }catch{}
+  try{ ensureAuthButtons?.(); updateAuthUI?.(); }catch{}
+});
 
 document.addEventListener('DOMContentLoaded', boot);
+
+// ========== Auth UI bindings ==========
+byId('btnLogin')?.addEventListener('click', ()=>{
+  const m = byId('loginModal'); if (!m) return; m.classList.remove('hidden');
+  const user = null; try{ sb.auth.getUser().then(({data})=>{ if (data?.user?.email) byId('loginEmail').value = data.user.email; }); }catch{}
+});
+byId('loginBackdrop')?.addEventListener('click', ()=> byId('loginModal').classList.add('hidden'));
+byId('loginCancelBtn')?.addEventListener('click', ()=> byId('loginModal').classList.add('hidden'));
+byId('loginSendBtn')?.addEventListener('click', async ()=>{
+  const email = (byId('loginEmail').value||'').trim();
+  const msg = byId('loginMsg'); const btn = byId('loginSendBtn');
+  msg.textContent='';
+  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ msg.textContent='Email tidak valid.'; return; }
+  btn.disabled = true; btn.textContent='Mengirim…';
+  try{
+    await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + location.pathname + location.search } });
+    msg.textContent='Cek email Anda untuk magic link.';
+  }catch(e){ console.error(e); msg.textContent='Gagal mengirim link.'; }
+  finally{ btn.disabled=false; btn.textContent='Kirim Link Login'; }
+});
+byId('btnLogout')?.addEventListener('click', async ()=>{
+  try{ await sb.auth.signOut(); }catch{}
+  location.reload();
+});
