@@ -307,8 +307,8 @@ async function fetchEventTitleFromDB(eventId){
       .from('events')
       .select('title')
       .eq('id', eventId)
-      .single();
-    if (error) return null;
+      .maybeSingle(); // jangan pakai .single() agar tidak PGRST116 ketika 0 row (bukan owner/member)
+    if (error) return null;      
     return data?.title || null;
   }catch{ return null; }
 }
