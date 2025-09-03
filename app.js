@@ -408,8 +408,6 @@ function saveToStoreSilent() {
   store.sessions[d] = currentPayload();
   store.lastTs = new Date().toISOString();
   markSaved(store.lastTs);
-  populateDatePicker();
-  byId("datePicker").value = d;
   return true;
 }
 function randomSlug(len = 6){
@@ -548,20 +546,7 @@ function toggleTheme() {
 }
 
 // ================== Sessions ================== //
-function populateDatePicker() {
-  const sel = byId("datePicker");
-  const cur = sel.value;
-  sel.innerHTML = '<option value="">Pilih tanggal…</option>';
-  Object.keys(store.sessions)
-    .sort()
-    .forEach((d) => {
-      const o = document.createElement("option");
-      o.value = d;
-      o.textContent = d;
-      sel.appendChild(o);
-    });
-  if (Array.from(sel.options).some((o) => o.value === cur)) sel.value = cur;
-}
+// removed: populateDatePicker (deprecated)
 function currentPayload(){
   return {
     date: byId('sessionDate').value || '',
@@ -680,8 +665,7 @@ function saveToStore() {
   writeAllSessionsLS(all);
 
   markSaved(store.lastTs);
-  populateDatePicker?.();
-  byId("datePicker") && (byId("datePicker").value = d);
+  // removed: datePicker UI update
   return true;
 }
 
@@ -772,9 +756,8 @@ function loadJSONFromFile(file){
       });
 
       store = incoming;
-      populateDatePicker();
-
-      alert('JSON dimuat. Pilih tanggal lalu klik Load.');
+      // removed: populateDatePicker UI
+      alert('JSON dimuat.');
     }catch(e){
       console.error(e);
       alert('File JSON tidak valid.');
@@ -784,8 +767,9 @@ function loadJSONFromFile(file){
 }
 
 function loadSessionByDate(){
-  const d = byId('datePicker').value || '';
-  if(!d){ alert('Pilih tanggal dulu.'); return; }
+  // removed: no UI to pick arbitrary local dates
+  alert('Fitur muat berdasarkan tanggal lokal dinonaktifkan.');
+  return;
 
   let data = store.sessions[d];
   if(!data){ alert('Tidak ada data untuk tanggal tsb.'); return; }
@@ -2236,20 +2220,7 @@ byId('sessionDate')?.addEventListener('change', async (e) => {
 });
 
 
-byId('btnLoadByDate')?.addEventListener('click', () => {
-  const d = byId('datePicker')?.value || '';
-  if (!d) return;
-  const all = readAllSessionsLS ? readAllSessionsLS() : {};
-  if (all && all[d]) {
-    applyPayload(all[d]);
-    // sinkronkan tanggal input
-    const sd = byId('sessionDate');
-    if (sd) sd.value = d;
-    markSaved(new Date().toISOString());
-  } else {
-    alert('Tidak ada data tersimpan untuk tanggal itu.');
-  }
-});
+// removed: btnLoadByDate handler (deprecated)
 
 
 byId("btnAddPlayer").addEventListener("click", () => {
