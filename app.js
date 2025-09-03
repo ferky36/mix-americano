@@ -168,6 +168,21 @@ async function createEventIfNotExists(name, date) {
   return { id: row.id, created: !!row.created, title: name };
 }
 
+// ===== Util: state & UI for Event/Create/Search button =====
+function refreshEventButtonLabel(){
+  const btn = byId('btnMakeEventLink');
+  if (!btn) return;
+  // Default: Buat Link Event
+  let label = 'Buat Link Event';
+  // Jika sudah login dan ada event aktif, ubah menjadi Cari Event
+  (async () => {
+    const user = await getCurrentUser();
+    if (user && currentEventId) label = 'Cari Event';
+    // Keep the icon minimal; label only
+    btn.textContent = label;
+  })();
+}
+
 function leaveEventMode(clearLS = true) {
   // 1. Hapus parameter event & date dari URL
   const u = new URL(location.href);
@@ -475,7 +490,7 @@ function isViewer(){ return accessRole !== 'editor'; }
 function setAccessRole(role){ accessRole = (role === 'viewer') ? 'viewer' : 'editor'; applyAccessMode(); renderAll?.(); renderPlayersList?.(); }
 function applyAccessMode(){
   document.documentElement.setAttribute('data-readonly', String(isViewer()));
-  const disableIds = ['btnAddCourt','btnMakeEventLink','btnStartTimer','btnFinishScore','btnResetScore','btnAPlus','btnAMinus','btnBPlus','btnBMinus'];
+  const disableIds = ['btnAddCourt','btnMakeEventLink','btnStartTimer','btnFinishScore','btnResetScore','btnAPlus','btnAMinus','btnBPlus','btnBMinus','btnApplyPlayersActive','btnResetActive','btnClearScoresActive','btnClearScoresAll'];
   disableIds.forEach(id=>{ const el = byId(id); if (el) el.disabled = isViewer(); });
 
   // Hide edit-centric UI in viewer mode
@@ -491,7 +506,12 @@ function applyAccessMode(){
     'btnFinishScore',         // finish & isi match
     'btnRecalc',              // hitung ulang
     'scoreButtonsA',          // +/- skor A
-    'scoreButtonsB'           // +/- skor B
+    'scoreButtonsB',          // +/- skor B
+    'btnApplyPlayersActive',           // +/- skor B
+    'pairMode',           // +/- skor B
+    'btnResetActive',           // +/- skor B
+    'btnClearScoresActive',           // +/- skor B
+    'btnClearScoresAll'           // +/- skor B
   ];
   hideIds.forEach(id=>{ const el = byId(id); if (el) el.classList.toggle('hidden', isViewer()); });
 
@@ -2551,11 +2571,112 @@ window.renderPlayersList = function(...args){
 };
 
 // Buka modal
-  byId('btnMakeEventLink')?.addEventListener('click', () => {
-  // pre-fill tanggal dari input sekarang
+// Open Create Event modal (extracted)
+function openCreateEventModal(){
   byId('eventDateInput').value = byId('sessionDate').value || new Date().toISOString().slice(0,10);
   byId('eventNameInput').value = document.querySelector('h1')?.textContent?.trim() || '';
   byId('eventModal').classList.remove('hidden');
+}
+
+// Helpers for Search Event modal
+async function getMyEventIds(){
+  try{
+    const { data: ud } = await sb.auth.getUser();
+    const uid = ud?.user?.id || null;
+    if (!uid) return [];
+    const out = new Set();
+    // owned events
+    try{
+      const { data: owned } = await sb.from('events').select('id').eq('owner_id', uid);
+      (owned||[]).forEach(r=> out.add(r.id));
+    }catch{}
+    // member events
+    try{
+      const { data: mems } = await sb.from('event_members').select('event_id').eq('user_id', uid);
+      (mems||[]).forEach(r=> out.add(r.event_id));
+    }catch{}
+    return Array.from(out);
+  }catch{ return []; }
+}
+
+async function loadSearchDates(){
+  const sel = byId('searchDateSelect'); if (!sel) return;
+  sel.innerHTML = '<option value="">Pilih tanggal…</option>';
+  const ids = await getMyEventIds();
+  if (!ids.length) return;
+  try{
+    const { data: rows } = await sb.from('event_states')
+      .select('session_date')
+      .in('event_id', ids)
+      .order('session_date', { ascending: false });
+    const seen = new Set();
+    (rows||[]).forEach(r=>{ if (r.session_date && !seen.has(r.session_date)) { seen.add(r.session_date); const o=document.createElement('option'); o.value=r.session_date; o.textContent=r.session_date; sel.appendChild(o);} });
+    // preselect current date if exists
+    const cur = normalizeDateKey(byId('sessionDate')?.value || '');
+    if (cur && seen.has(cur)) sel.value = cur;
+  }catch{}
+}
+
+async function loadSearchEventsForDate(dateStr){
+  const evSel = byId('searchEventSelect'); const btnOpen = byId('openEventBtn');
+  if (!evSel) return;
+  evSel.innerHTML = '<option value="">Memuat…</option>';
+  btnOpen && (btnOpen.disabled = true);
+  const ids = await getMyEventIds();
+  if (!ids.length || !dateStr){ evSel.innerHTML = '<option value="">– Tidak ada –</option>'; return; }
+  try{
+    const { data: states } = await sb.from('event_states')
+      .select('event_id, updated_at')
+      .eq('session_date', dateStr)
+      .in('event_id', ids)
+      .order('updated_at', { ascending: false });
+    const eids = Array.from(new Set((states||[]).map(r=>r.event_id).filter(Boolean)));
+    if (!eids.length){ evSel.innerHTML = '<option value="">– Tidak ada –</option>'; return; }
+    const { data: evs } = await sb.from('events').select('id,title').in('id', eids);
+    const titleMap = new Map((evs||[]).map(r=>[r.id, r.title || r.id]));
+    evSel.innerHTML = '';
+    eids.forEach(id=>{
+      const o = document.createElement('option'); o.value = id; o.textContent = titleMap.get(id) || id; evSel.appendChild(o);
+    });
+    btnOpen && (btnOpen.disabled = false);
+  }catch{
+    evSel.innerHTML = '<option value="">– Gagal memuat –</option>';
+  }
+}
+
+async function switchToEvent(eventId, dateStr){
+  try{
+    currentEventId = eventId; currentSessionDate = normalizeDateKey(dateStr);
+    const url = new URL(location.href); url.searchParams.set('event', eventId); url.searchParams.set('date', currentSessionDate); history.replaceState({}, '', url);
+    const t = await fetchEventTitleFromDB(eventId); if (t) setAppTitle(t);
+    const ok = await loadStateFromCloud();
+    if (!ok){ seedDefaultIfEmpty?.(); }
+    renderPlayersList?.(); renderAll?.(); validateNames?.();
+    subscribeRealtimeForState?.();
+    startAutoSave?.();
+    loadAccessRoleFromCloud?.();
+    refreshEventButtonLabel?.();
+  }catch(e){ console.warn('switchToEvent failed', e); }
+}
+
+function openSearchEventModal(){
+  const m = byId('searchEventModal'); if (!m) return;
+  m.classList.remove('hidden');
+  // reset
+  const evSel = byId('searchEventSelect'); if (evSel) { evSel.innerHTML = '<option value="">– Pilih tanggal dulu –</option>'; }
+  const btn = byId('openEventBtn'); if (btn) btn.disabled = true;
+  // load dates then events for initial selection
+  (async ()=>{
+    await loadSearchDates();
+    const d = byId('searchDateSelect')?.value || '';
+    if (d) await loadSearchEventsForDate(d);
+  })();
+}
+
+// Unified click behavior for header button
+byId('btnMakeEventLink')?.addEventListener('click', async () => {
+  const user = await getCurrentUser();
+  if (user && currentEventId) openSearchEventModal(); else openCreateEventModal();
 });
 byId('eventCancelBtn')?.addEventListener('click', () => {
   byId('eventModal').classList.add('hidden');
@@ -2595,6 +2716,7 @@ byId('eventCreateBtn')?.addEventListener('click', async () => {
     await saveStateToCloud();
     subscribeRealtimeForState();
     startAutoSave();
+    refreshEventButtonLabel?.();
 
     // tampilkan UI success: share link default = viewer (readonly) + embed owner
     const link = buildViewerUrl(id, date);
@@ -2706,6 +2828,20 @@ byId('eventCopyBtn')?.addEventListener('click', async () => {
   }
 });
 
+// Search Event modal bindings
+byId('searchCancelBtn')?.addEventListener('click', ()=> byId('searchEventModal')?.classList.add('hidden'));
+byId('searchDateSelect')?.addEventListener('change', async ()=>{
+  const d = byId('searchDateSelect')?.value || '';
+  await loadSearchEventsForDate(d);
+});
+byId('openEventBtn')?.addEventListener('click', async ()=>{
+  const d = byId('searchDateSelect')?.value || '';
+  const ev = byId('searchEventSelect')?.value || '';
+  if (!d || !ev) { alert('Pilih tanggal dan event.'); return; }
+  byId('searchEventModal')?.classList.add('hidden');
+  await switchToEvent(ev, d);
+});
+
 byId('btnLeaveEvent')?.addEventListener('click', ()=>{
   if (confirm('Keluar event dan hapus data lokal?')) {
     leaveEventMode(true);   // true = clear localStorage
@@ -2724,6 +2860,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   try{ initCloudFromUrl?.(); }catch(e){ console.warn('initCloudFromUrl error', e); }
   try{ updateAuthUI?.(); }catch{}
   try{ ensureAuthButtons?.(); updateAuthUI?.(); }catch{}
+  try{ refreshEventButtonLabel?.(); }catch{}
 });
 
 document.addEventListener('DOMContentLoaded', boot);
