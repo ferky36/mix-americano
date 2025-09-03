@@ -13,6 +13,17 @@ const csvEscape = (v) => {
   return /[,\"\n]/.test(s) ? '"' + s.replace(/\"/g, '""') + '"' : s;
 };
 const byId = (id) => document.getElementById(id);
+// Global loading overlay
+let __loadingCount = 0;
+function showLoading(text){
+  const o = byId('loadingOverlay'); if (!o) return; __loadingCount++;
+  const t = byId('loadingText'); if (t && text) t.textContent = text;
+  o.classList.remove('hidden');
+}
+function hideLoading(){
+  const o = byId('loadingOverlay'); if (!o) return; __loadingCount = Math.max(0, __loadingCount-1);
+  if (__loadingCount === 0) o.classList.add('hidden');
+}
 const parsePlayersText = (t) =>
   (t || "")
     .split(/\r?\n/)
@@ -240,6 +251,7 @@ function getAuthRedirectURL(){
 // ========== Auth helpers ==========
 async function handleAuthRedirect(){
   try{
+    showLoading('Memproses login…');
     const hash = location.hash || '';
     const hasCode = /[?#&](code|access_token)=/.test(location.href) || hash.includes('type=recovery');
     if (hasCode && sb?.auth?.exchangeCodeForSession) {
@@ -247,6 +259,7 @@ async function handleAuthRedirect(){
       history.replaceState({}, '', location.pathname + location.search);
     }
   }catch(e){ console.warn('auth redirect handling failed', e); }
+  finally { hideLoading(); }
 }
 
 async function getCurrentUser(){
@@ -293,6 +306,7 @@ function ensureAuthButtons(){
 // Fetch role from Supabase based on current user and event membership
 async function loadAccessRoleFromCloud(){
   try{
+    showLoading('Memuat akses…');
     if (!isCloudMode() || !window.sb?.auth || !currentEventId) { setAccessRole('editor'); return; }
     const { data: userData } = await sb.auth.getUser();
     const uid = userData?.user?.id || null;
@@ -314,10 +328,12 @@ async function loadAccessRoleFromCloud(){
     const role = (mem?.role === 'editor') ? 'editor' : 'viewer';
     setAccessRole(role);
   }catch{ setAccessRole('viewer'); }
+  finally { hideLoading(); }
 }
 
 async function fetchEventTitleFromDB(eventId){
   try{
+    showLoading('Memuat judul event…');
     const { data, error } = await sb
       .from('events')
       .select('title')
@@ -326,6 +342,7 @@ async function fetchEventTitleFromDB(eventId){
     if (error) return null;      
     return data?.title || null;
   }catch{ return null; }
+  finally { hideLoading(); }
 }
 
 
@@ -334,13 +351,14 @@ async function fetchEventTitleFromDB(eventId){
 
 // Load state (JSONB) sekali saat buka/refresh
 async function loadStateFromCloud() {
+  showLoading('Memuat data dari Cloud…');
   const { data, error } = await sb.from('event_states')
     .select('state, version, updated_at')
     .eq('event_id', currentEventId)
     .eq('session_date', currentSessionDate)
     .maybeSingle();
 
-  if (error) { console.error(error); return false; }
+  if (error) { console.error(error); hideLoading(); return false; }
 
   if (data && data.state) {
     console.log('Loaded state from Cloud, version', data);
@@ -349,8 +367,10 @@ async function loadStateFromCloud() {
     // kalau belum sempat set judul dari DB, pakai yang di payload
     if (data.state.eventTitle) setAppTitle(data.state.eventTitle);
     markSaved?.(data.updated_at);
+    hideLoading();
     return true;
   }
+  hideLoading();
   return false;
 }
 
@@ -573,6 +593,13 @@ function currentPayload(){
 
 
 let _autoSaveTimer = null;
+
+// Wrapper util untuk menampilkan loading saat menyimpan ke Cloud
+async function saveStateToCloudWithLoading(){
+  showLoading('Menyimpan ke Cloud…');
+  try{ return await saveStateToCloud(); }
+  finally{ hideLoading(); }
+}
 
 function initCloudFromUrl() {
   const p = getUrlParams();           // fungsi yang sudah kamu punya
@@ -856,7 +883,7 @@ function startAutoSave() {
   window._autosaveTick = setInterval(async () => {
     if (!dirty) return;
     if (isCloudMode()) {
-      await saveStateToCloud();
+      await saveStateToCloudWithLoading();
     } else {
       saveToStoreSilent();
     }
@@ -2115,7 +2142,7 @@ byId('btnSave')?.addEventListener('click', async ()=>{
   btn.disabled = true; btn.textContent = 'Saving...';
   try{
     let ok = false;
-    if (isCloudMode()) ok = await saveStateToCloud();
+    if (isCloudMode()) ok = await saveStateToCloudWithLoading();
     else ok = saveToStore();
     if (ok !== false){
       btn.textContent = 'Saved ✓';
@@ -2183,7 +2210,7 @@ byId('btnSave')?.addEventListener('click', async () => {
   console.log(isCloudMode());
   if (isCloudMode()) {
     console.log('Menyimpan ke cloud...');
-    const ok = await saveStateToCloud();
+    const ok = await saveStateToCloudWithLoading();
     if (!ok) alert('Gagal menyimpan ke Cloud. Coba lagi.');
   } else {
     const ok = saveToStore?.();
@@ -2575,9 +2602,11 @@ function openCreateEventModal(){
 // Helpers for Search Event modal
 async function getMyEventIds(){
   try{
+    showLoading('Memuat daftar event…');
+    showLoading('Mengundang…');
     const { data: ud } = await sb.auth.getUser();
     const uid = ud?.user?.id || null;
-    if (!uid) return [];
+    if (!uid) { hideLoading(); return []; }
     const out = new Set();
     // owned events
     try{
@@ -2589,8 +2618,9 @@ async function getMyEventIds(){
       const { data: mems } = await sb.from('event_members').select('event_id').eq('user_id', uid);
       (mems||[]).forEach(r=> out.add(r.event_id));
     }catch{}
+    hideLoading();
     return Array.from(out);
-  }catch{ return []; }
+  }catch{ hideLoading(); return []; }
 }
 
 async function loadSearchDates(){
@@ -2599,6 +2629,7 @@ async function loadSearchDates(){
   const ids = await getMyEventIds();
   if (!ids.length) return;
   try{
+    showLoading('Memuat tanggal…');
     const { data: rows } = await sb.from('event_states')
       .select('session_date')
       .in('event_id', ids)
@@ -2609,6 +2640,7 @@ async function loadSearchDates(){
     const cur = normalizeDateKey(byId('sessionDate')?.value || '');
     if (cur && seen.has(cur)) sel.value = cur;
   }catch{}
+  finally { hideLoading(); }
 }
 
 async function loadSearchEventsForDate(dateStr){
@@ -2619,6 +2651,7 @@ async function loadSearchEventsForDate(dateStr){
   const ids = await getMyEventIds();
   if (!ids.length || !dateStr){ evSel.innerHTML = '<option value="">– Tidak ada –</option>'; return; }
   try{
+    showLoading('Memuat event…');
     const { data: states } = await sb.from('event_states')
       .select('event_id, updated_at')
       .eq('session_date', dateStr)
@@ -2635,11 +2668,12 @@ async function loadSearchEventsForDate(dateStr){
     btnOpen && (btnOpen.disabled = false);
   }catch{
     evSel.innerHTML = '<option value="">– Gagal memuat –</option>';
-  }
+  } finally { hideLoading(); }
 }
 
 async function switchToEvent(eventId, dateStr){
   try{
+    showLoading('Membuka event…');
     currentEventId = eventId; currentSessionDate = normalizeDateKey(dateStr);
     const url = new URL(location.href); url.searchParams.set('event', eventId); url.searchParams.set('date', currentSessionDate); history.replaceState({}, '', url);
     const t = await fetchEventTitleFromDB(eventId); if (t) setAppTitle(t);
@@ -2651,6 +2685,7 @@ async function switchToEvent(eventId, dateStr){
     loadAccessRoleFromCloud?.();
     refreshEventButtonLabel?.();
   }catch(e){ console.warn('switchToEvent failed', e); }
+  finally { hideLoading(); }
 }
 
 function openSearchEventModal(){
@@ -2739,7 +2774,7 @@ function openShareEventModal(){
         const row = byId('inviteLinkRow'); const out = byId('inviteLinkOut'); const cp = byId('btnCopyInvite');
         if (row && out && cp){ row.classList.remove('hidden'); out.value = link; msg.textContent='Link undangan dibuat. Kirimkan ke email terkait.'; cp.onclick = async ()=>{ try{ await navigator.clipboard.writeText(out.value); cp.textContent='Copied!'; setTimeout(()=>cp.textContent='Copy Link',1200);}catch{} }; }
       }catch(e){ console.error(e); msg.textContent = 'Gagal membuat link undangan' + (e?.message? ': '+e.message : ''); }
-      finally { if (btn){ btn.disabled = false; btn.textContent = 'Buat Link Undangan'; } }
+      finally { if (btn){ btn.disabled = false; btn.textContent = 'Buat Link Undangan'; } hideLoading(); }
     });
   })();
 }
@@ -2779,7 +2814,7 @@ byId('eventCreateBtn')?.addEventListener('click', async () => {
     url.searchParams.set('date', date);
     history.replaceState({}, '', url);
 
-    await saveStateToCloud();
+    await saveStateToCloudWithLoading();
     subscribeRealtimeForState();
     startAutoSave();
     refreshEventButtonLabel?.();
