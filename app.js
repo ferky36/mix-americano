@@ -209,7 +209,6 @@ function leaveEventMode(clearLS = true) {
   startAutoSave();
   // default back to editor when leaving cloud
   setAccessRole('editor');
-  refreshEventButtonLabel?.();
 }
 
 
@@ -2600,31 +2599,44 @@ async function getMyEventIds(){
   }catch{ return []; }
 }
 
-async function loadSearchEvents(){
+async function loadSearchDates(){
+  const sel = byId('searchDateSelect'); if (!sel) return;
+  sel.innerHTML = '<option value="">Pilih tanggal…</option>';
+  const ids = await getMyEventIds();
+  if (!ids.length) return;
+  try{
+    const { data: rows } = await sb.from('event_states')
+      .select('session_date')
+      .in('event_id', ids)
+      .order('session_date', { ascending: false });
+    const seen = new Set();
+    (rows||[]).forEach(r=>{ if (r.session_date && !seen.has(r.session_date)) { seen.add(r.session_date); const o=document.createElement('option'); o.value=r.session_date; o.textContent=r.session_date; sel.appendChild(o);} });
+    // preselect current date if exists
+    const cur = normalizeDateKey(byId('sessionDate')?.value || '');
+    if (cur && seen.has(cur)) sel.value = cur;
+  }catch{}
+}
+
+async function loadSearchEventsForDate(dateStr){
   const evSel = byId('searchEventSelect'); const btnOpen = byId('openEventBtn');
   if (!evSel) return;
   evSel.innerHTML = '<option value="">Memuat…</option>';
   btnOpen && (btnOpen.disabled = true);
   const ids = await getMyEventIds();
-  if (!ids.length){ evSel.innerHTML = '<option value="">– Tidak ada –</option>'; return; }
+  if (!ids.length || !dateStr){ evSel.innerHTML = '<option value="">– Tidak ada –</option>'; return; }
   try{
-    // Ambil semua kombinasi event_id + session_date milik user
     const { data: states } = await sb.from('event_states')
-      .select('event_id, session_date, updated_at')
+      .select('event_id, updated_at')
+      .eq('session_date', dateStr)
       .in('event_id', ids)
       .order('updated_at', { ascending: false });
-    if (!states?.length){ evSel.innerHTML = '<option value="">– Tidak ada –</option>'; return; }
-    const eids = Array.from(new Set(states.map(r=>r.event_id).filter(Boolean)));
+    const eids = Array.from(new Set((states||[]).map(r=>r.event_id).filter(Boolean)));
+    if (!eids.length){ evSel.innerHTML = '<option value="">– Tidak ada –</option>'; return; }
     const { data: evs } = await sb.from('events').select('id,title').in('id', eids);
     const titleMap = new Map((evs||[]).map(r=>[r.id, r.title || r.id]));
-    // Tampilkan opsi: "YYYY-MM-DD — Title"
     evSel.innerHTML = '';
-    states.forEach(r=>{
-      const title = titleMap.get(r.event_id) || r.event_id;
-      const o = document.createElement('option');
-      o.value = `${r.event_id}__${r.session_date}`; // gabung id dan tanggal
-      o.textContent = `${r.session_date} — ${title}`;
-      evSel.appendChild(o);
+    eids.forEach(id=>{
+      const o = document.createElement('option'); o.value = id; o.textContent = titleMap.get(id) || id; evSel.appendChild(o);
     });
     btnOpen && (btnOpen.disabled = false);
   }catch{
@@ -2651,10 +2663,14 @@ function openSearchEventModal(){
   const m = byId('searchEventModal'); if (!m) return;
   m.classList.remove('hidden');
   // reset
-  const evSel = byId('searchEventSelect'); if (evSel) { evSel.innerHTML = '<option value="">Memuat…</option>'; }
+  const evSel = byId('searchEventSelect'); if (evSel) { evSel.innerHTML = '<option value="">– Pilih tanggal dulu –</option>'; }
   const btn = byId('openEventBtn'); if (btn) btn.disabled = true;
-  // langsung load semua event yg bisa diakses user
-  (async ()=>{ await loadSearchEvents(); })();
+  // load dates then events for initial selection
+  (async ()=>{
+    await loadSearchDates();
+    const d = byId('searchDateSelect')?.value || '';
+    if (d) await loadSearchEventsForDate(d);
+  })();
 }
 
 // Unified click behavior for header button
@@ -2814,10 +2830,14 @@ byId('eventCopyBtn')?.addEventListener('click', async () => {
 
 // Search Event modal bindings
 byId('searchCancelBtn')?.addEventListener('click', ()=> byId('searchEventModal')?.classList.add('hidden'));
+byId('searchDateSelect')?.addEventListener('change', async ()=>{
+  const d = byId('searchDateSelect')?.value || '';
+  await loadSearchEventsForDate(d);
+});
 byId('openEventBtn')?.addEventListener('click', async ()=>{
-  const val = byId('searchEventSelect')?.value || '';
-  if (!val) { alert('Pilih event.'); return; }
-  const [ev, d] = val.split('__');
+  const d = byId('searchDateSelect')?.value || '';
+  const ev = byId('searchEventSelect')?.value || '';
+  if (!d || !ev) { alert('Pilih tanggal dan event.'); return; }
   byId('searchEventModal')?.classList.add('hidden');
   await switchToEvent(ev, d);
 });
