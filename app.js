@@ -601,17 +601,39 @@ function initCloudFromUrl() {
         const { data: ud } = await sb.auth.getUser();
         const email = ud?.user?.email || null;
         if (!email) return; // user belum login
+
+        // 1) Coba pakai RPC SECURITY DEFINER jika tersedia (lebih aman terhadap RLS)
+        try{
+          const { data: accData, error: accErr } = await sb.rpc('accept_event_invite', { p_token: p.invite });
+          if (!accErr && accData){
+            // Jika RPC mengembalikan event_id/role, sinkronkan lokal
+            if (accData.event_id && !currentEventId) currentEventId = accData.event_id;
+            loadAccessRoleFromCloud?.();
+            return; // selesai
+          }
+        }catch{}
+
+        // 2) Fallback tanpa RPC: validasi token lalu UPSERT membership (upgrade ke editor bila perlu)
         const { data: inv, error } = await sb.from('event_invites')
           .select('event_id, email, role')
           .eq('token', p.invite)
           .maybeSingle();
         if (error || !inv) return;
         if (String(inv.email).toLowerCase() !== String(email).toLowerCase()) return;
-        // tambahkan membership jika belum ada
+
+        // gunakan event_id dari undangan untuk berjaga-jaga
+        const eid = inv.event_id || currentEventId;
+        if (!currentEventId) currentEventId = eid;
+
+        // UPSERT agar jika sudah ada row (viewer) akan di-upgrade ke editor
         const uid = ud.user.id;
-        await sb.from('event_members').insert({ event_id: currentEventId, user_id: uid, role: inv.role }).onConflict('event_id,user_id').ignore();
-        // opsional: tandai accepted
-        await sb.from('event_invites').update({ accepted_at: new Date().toISOString() }).eq('token', p.invite);
+        const up = await sb.from('event_members')
+          .upsert({ event_id: eid, user_id: uid, role: inv.role }, { onConflict: 'event_id,user_id' });
+        if (up?.error) { console.warn('membership upsert failed', up.error); return; }
+
+        // tandai accepted (best effort)
+        try{ await sb.from('event_invites').update({ accepted_at: new Date().toISOString() }).eq('token', p.invite); }catch{}
+
         // refresh akses
         loadAccessRoleFromCloud?.();
       }catch(e){ console.warn('accept-invite failed', e); }
