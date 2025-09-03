@@ -488,7 +488,7 @@ function isViewer(){ return accessRole !== 'editor'; }
 function setAccessRole(role){ accessRole = (role === 'viewer') ? 'viewer' : 'editor'; applyAccessMode(); renderAll?.(); renderPlayersList?.(); }
 function applyAccessMode(){
   document.documentElement.setAttribute('data-readonly', String(isViewer()));
-  const disableIds = ['btnAddCourt','btnMakeEventLink','btnStartTimer','btnFinishScore','btnResetScore','btnAPlus','btnAMinus','btnBPlus','btnBMinus','btnApplyPlayersActive','btnResetActive','btnClearScoresActive','btnClearScoresAll'];
+  const disableIds = ['btnAddCourt','btnMakeEventLink','btnShareEvent','btnStartTimer','btnFinishScore','btnResetScore','btnAPlus','btnAMinus','btnBPlus','btnBMinus','btnApplyPlayersActive','btnResetActive','btnClearScoresActive','btnClearScoresAll'];
   disableIds.forEach(id=>{ const el = byId(id); if (el) el.disabled = isViewer(); });
 
   // Hide edit-centric UI in viewer mode
@@ -496,6 +496,7 @@ function applyAccessMode(){
     'playersPanel',           // panel daftar pemain
     'btnSave',                // tombol save lokal
     'btnMakeEventLink',       // buat link event
+    'btnShareEvent',          // share & undang
     'btnLeaveEvent',          // keluar event
     'btnFilterToggle',        // toggle filter
     'filterPanel',            // panel filter input tanggal/waktu/durasi
@@ -2671,6 +2672,78 @@ byId('btnMakeEventLink')?.addEventListener('click', async () => {
   const user = await getCurrentUser();
   if (user && currentEventId) openSearchEventModal(); else openCreateEventModal();
 });
+// Open Share/Invite for current event anytime
+function openShareEventModal(){
+  if (!isCloudMode() || !currentEventId){ openCreateEventModal(); return; }
+  const m = byId('eventModal'); if (!m) return;
+  // show modal
+  m.classList.remove('hidden');
+  // show success panel, hide form
+  byId('eventForm')?.classList.add('hidden');
+  byId('eventSuccess')?.classList.remove('hidden');
+  // ensure viewer link
+  const d = byId('sessionDate')?.value || currentSessionDate || new Date().toISOString().slice(0,10);
+  const viewerLink = buildViewerUrl(currentEventId, d);
+  const out = byId('eventLinkOutput'); if (out) out.value = viewerLink;
+  // editor link box
+  (function ensureEditorLinkBox(){
+    const successBox = byId('eventSuccess'); if (!successBox) return;
+    let inp = byId('eventEditorLinkOutput'); let btn = byId('eventCopyEditorBtn');
+    if (!inp || !btn){
+      const wrap = document.createElement('div'); wrap.className = 'flex items-center gap-2';
+      inp = document.createElement('input'); inp.id='eventEditorLinkOutput'; inp.readOnly = true; inp.className='flex-1 border rounded-lg px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100';
+      btn = document.createElement('button'); btn.id='eventCopyEditorBtn'; btn.className='px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm'; btn.textContent='Copy Editor Link';
+      wrap.appendChild(inp); wrap.appendChild(btn); successBox.appendChild(wrap);
+      btn.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(inp.value); btn.textContent='Copied!'; setTimeout(()=>btn.textContent='Copy Editor Link',2000);}catch{} });
+    }
+    const editorURL = buildEventUrl(currentEventId, d);
+    inp.value = editorURL;
+  })();
+  // ensure invite form
+  (function ensureInviteForm(){
+    const successBox = byId('eventSuccess'); if (!successBox) return;
+    if (byId('btnInviteMember')) return;
+    const box = document.createElement('div');
+    box.className = 'border-t dark:border-gray-700 pt-3 space-y-2';
+    box.innerHTML = `
+      <div class="text-sm font-semibold">Invite Anggota</div>
+      <div class="text-xs text-gray-500 dark:text-gray-300">Masukkan email Supabase user (yang digunakan login), pilih role, lalu buat link undangan.</div>
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <input id="inviteEmail" type="email" placeholder="email@example.com" class="flex-1 border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100" />
+        <select id="inviteRole" class="border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100">
+          <option value="viewer">viewer</option>
+          <option value="editor">editor</option>
+        </select>
+        <button id="btnInviteMember" class="px-3 py-2 rounded-lg bg-emerald-600 text-white text-sm">Buat Link Undangan</button>
+      </div>
+      <div class="flex items-center gap-2 hidden" id="inviteLinkRow">
+        <input id="inviteLinkOut" readonly class="flex-1 border rounded-lg px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100" />
+        <button id="btnCopyInvite" class="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm">Copy Link</button>
+      </div>
+      <div id="inviteMsg" class="text-xs"></div>`;
+    successBox.appendChild(box);
+    byId('btnInviteMember').addEventListener('click', async ()=>{
+      const btn = byId('btnInviteMember');
+      const email = (byId('inviteEmail').value||'').trim();
+      const role = byId('inviteRole').value||'viewer';
+      const msg = byId('inviteMsg'); msg.textContent='';
+      if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { msg.textContent='Email tidak valid.'; return; }
+      if (!isCloudMode() || !currentEventId){ msg.textContent='Mode Cloud belum aktif. Buat event dulu.'; return; }
+      try{
+        if (btn){ btn.disabled = true; btn.textContent = 'Membuat…'; }
+        const { data:ud } = await sb.auth.getUser();
+        if (!ud?.user){ msg.textContent='Silakan login terlebih dahulu.'; return; }
+        const { data: token, error } = await sb.rpc('create_event_invite', { p_event_id: currentEventId, p_email: email, p_role: role });
+        if (error) throw error;
+        const link = buildInviteUrl(currentEventId, byId('sessionDate').value || '', token);
+        const row = byId('inviteLinkRow'); const out = byId('inviteLinkOut'); const cp = byId('btnCopyInvite');
+        if (row && out && cp){ row.classList.remove('hidden'); out.value = link; msg.textContent='Link undangan dibuat. Kirimkan ke email terkait.'; cp.onclick = async ()=>{ try{ await navigator.clipboard.writeText(out.value); cp.textContent='Copied!'; setTimeout(()=>cp.textContent='Copy Link',1200);}catch{} }; }
+      }catch(e){ console.error(e); msg.textContent = 'Gagal membuat link undangan' + (e?.message? ': '+e.message : ''); }
+      finally { if (btn){ btn.disabled = false; btn.textContent = 'Buat Link Undangan'; } }
+    });
+  })();
+}
+byId('btnShareEvent')?.addEventListener('click', openShareEventModal);
 byId('eventCancelBtn')?.addEventListener('click', () => {
   byId('eventModal').classList.add('hidden');
 });
@@ -2864,17 +2937,19 @@ byId('btnLogin')?.addEventListener('click', ()=>{
   const user = null; try{ sb.auth.getUser().then(({data})=>{ if (data?.user?.email) byId('loginEmail').value = data.user.email; }); }catch{}
 });
 byId('loginBackdrop')?.addEventListener('click', ()=> byId('loginModal').classList.add('hidden'));
-byId('loginCancelBtn')?.addEventListener('click', ()=> byId('loginModal').classList.add('hidden'));
+byId('loginCancelBtn')?.addEventListener('click', ()=> { byId('loginModal').classList.add('hidden'); const b=byId('loginSendBtn'); if (b) b.textContent='Kirim Link Login'; const m=byId('loginMsg'); if(m) m.textContent=''; });
+// Login OTP sederhana (tanpa Edge Function)
 byId('loginSendBtn')?.addEventListener('click', async ()=>{
   const email = (byId('loginEmail').value||'').trim();
   const msg = byId('loginMsg'); const btn = byId('loginSendBtn');
-  msg.textContent='';
+  msg.textContent=''; msg.className = 'text-xs text-gray-500 dark:text-gray-300';
   if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ msg.textContent='Email tidak valid.'; return; }
   btn.disabled = true; btn.textContent='Mengirim…';
   try{
-    await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: getAuthRedirectURL() } });
+    await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: getAuthRedirectURL(), shouldCreateUser: true } });
     msg.textContent='Cek email Anda untuk magic link.';
-  }catch(e){ console.error(e); msg.textContent='Gagal mengirim link.'; }
+    msg.className='text-xs text-green-600 dark:text-green-400';
+  }catch(e){ console.error(e); msg.textContent='Gagal mengirim link.'; msg.className='text-xs text-red-600 dark:text-red-400'; }
   finally{ btn.disabled=false; btn.textContent='Kirim Link Login'; }
 });
 byId('btnLogout')?.addEventListener('click', async ()=>{
