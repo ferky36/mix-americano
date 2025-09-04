@@ -28,6 +28,19 @@ body { font-size: clamp(14px, calc(14px * var(--ui-zoom) / 100), 20px); }
 /* Animations for header/filter panels on mobile */
 @keyframes slideDown { from{opacity:0; transform:translateY(-6px);} to{opacity:1; transform:translateY(0);} }
 .hdr-slide { animation:slideDown .18s ease-out; }
+/* Mobile-friendly header controls panel */
+.hdr-mobile-panel { display:grid; grid-template-columns: 1fr 1fr; gap:.5rem; }
+@media (min-width: 640px){ .hdr-mobile-panel { grid-template-columns: repeat(3, minmax(0,1fr)); } }
+@media (min-width: 768px){ .hdr-mobile-panel { display:flex; gap:.5rem; } }
+
+/* Mobile panel background styling */
+@media (max-width: 767px){
+  #hdrControls { background: rgba(255,255,255,.08); padding:.5rem; border-radius: .75rem; }
+}
+
+/* Make header action buttons full-width on mobile without changing HTML */
+#hdrControls > button { width:100%; }
+@media (min-width:768px){ #hdrControls > button { width:auto; } }
 .filter-slide { animation:slideDown .18s ease-out; }
 
 /* Modal overlay fix */
