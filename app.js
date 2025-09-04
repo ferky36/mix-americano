@@ -883,11 +883,12 @@ function startAutoSave() {
   window._autosaveTick = setInterval(async () => {
     if (!dirty) return;
     if (isCloudMode()) {
-      await saveStateToCloudWithLoading();
+      // Autosave tanpa overlay/loading
+      await saveStateToCloud();
     } else {
       saveToStoreSilent();
     }
-  }, 10000); // 0.8s atau sesuai seleramu
+  }, 1800000); // 30 menit
 }
 
 
@@ -2603,7 +2604,6 @@ function openCreateEventModal(){
 async function getMyEventIds(){
   try{
     showLoading('Memuat daftar event…');
-    showLoading('Mengundang…');
     const { data: ud } = await sb.auth.getUser();
     const uid = ud?.user?.id || null;
     if (!uid) { hideLoading(); return []; }
