@@ -514,6 +514,11 @@ function applyAccessMode(){
   // Hide edit-centric UI in viewer mode
   const hideIds = [
     'playersPanel',           // panel daftar pemain
+    'btnCollapsePlayers',     // tombol collapsible pemain
+    'btnPasteText',           // tools pemain
+    'btnApplyPlayerTemplate', // tools pemain
+    'btnClearPlayers',        // tools pemain
+    'btnAddPlayer',           // tambah pemain
     'btnSave',                // tombol save lokal
     'btnMakeEventLink',       // buat link event
     'btnShareEvent',          // share & undang
@@ -539,6 +544,13 @@ function applyAccessMode(){
 
   // fairness info box (if present): hide in viewer
   const fair = byId('fairnessInfo'); if (fair) fair.classList.toggle('hidden', isViewer());
+
+  // Filter summary labels in viewer mode
+  try {
+    if (isViewer()) renderFilterSummary();
+    const sum = byId('filterSummary');
+    if (sum) sum.classList.toggle('hidden', !isViewer());
+  } catch {}
 
   // Auth UI
   updateAuthUI?.();
@@ -589,6 +601,88 @@ function currentPayload(){
 
     ts: new Date().toISOString()
   };
+}
+
+
+// Build a read-only summary of filter/schedule for viewer mode
+function renderFilterSummary(){
+  const panel = byId('filterPanel');
+  if (!panel) return;
+  // ensure container exists (after filterPanel)
+  let box = byId('filterSummary');
+  if (!box){
+    box = document.createElement('div');
+    box.id = 'filterSummary';
+    box.className = 'max-w-7xl mx-auto px-4 pb-4';
+    panel.parentNode.insertBefore(box, panel.nextSibling);
+  }
+
+  const date = byId('sessionDate')?.value || '';
+  const t = byId('startTime')?.value || '';
+  const m = byId('minutesPerRound')?.value || '';
+  const br = byId('breakPerRound')?.value || '0';
+  const showBr = !!byId('showBreakRows')?.checked;
+  const r = byId('roundCount')?.value || '';
+
+  function fmtDateLabel(iso){
+    if (!iso) return '-';
+    const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return iso;
+    return `${m[3]} / ${m[2]} / ${m[1]}`;
+  }
+
+  box.innerHTML = `
+    <div class="px-0">
+      <button id="filterSummaryToggle" class="w-full md:w-auto px-3 py-2 rounded-xl bg-white/20 dark:bg-gray-700
+            text-gray-900 dark:text-white font-semibold shadow hover:bg-white/30 flex items-center gap-2">
+        <span id="filterSummaryChevron">▲</span>
+        <span>Jadwal</span>
+      </button>
+      <div id="filterSummaryBody" class="mt-3">
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 text-sm">
+          <div>
+            <div class="block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Tanggal</div>
+            <div class="mt-1 font-medium">${fmtDateLabel(date)}</div>
+          </div>
+          <div>
+            <div class="block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Mulai</div>
+            <div class="mt-1 font-medium">${t || '-'}</div>
+          </div>
+          <div>
+            <div class="block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Menit/Match</div>
+            <div class="mt-1 font-medium">${m || '-'}</div>
+          </div>
+          <div>
+            <div class="block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Jeda/Match (menit)</div>
+            <div class="mt-1 font-medium">${br} &nbsp; <span class="text-xs text-gray-500">${showBr ? '(Tampilkan baris jeda)' : ''}</span></div>
+          </div>
+          <div>
+            <div class="block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Match/Lapangan</div>
+            <div class="mt-1 font-medium">${r || '-'}</div>
+          </div>
+        </div>
+        <div class="mt-4 p-3 rounded-2xl border dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-200 shadow-sm">
+          <span id="unsavedDot" class="hidden inline-block w-2 h-2 rounded-full bg-amber-500 mr-2 align-middle"></span>
+          <span id="lastSaved" class="align-middle">Saved -</span>
+        </div>
+      </div>
+    </div>
+  `;
+  // show only in viewer
+  box.classList.toggle('hidden', !isViewer());
+
+  // summary toggle
+  try {
+    const btn = byId('filterSummaryToggle');
+    const chevron = byId('filterSummaryChevron');
+    const body = byId('filterSummaryBody');
+    if (btn && body && chevron) {
+      btn.onclick = () => {
+        const hidden = body.classList.toggle('hidden');
+        chevron.textContent = hidden ? '▼' : '▲';
+      };
+    }
+  } catch {}
 }
 
 
@@ -672,7 +766,7 @@ function initCloudFromUrl() {
 
 function markDirty() {
   dirty = true;
-  byId("unsavedDot").classList.remove("hidden");
+  byId("unsavedDot")?.classList.remove("hidden");
 
   // autosave debounce → benar-benar menulis ke localStorage
   clearTimeout(_autoSaveTimer);
@@ -692,10 +786,12 @@ function saveToLocalSilent() {
 
 function markSaved(ts) {
   dirty = false;
-  byId("unsavedDot").classList.add("hidden");
-  if (ts)
-    byId("lastSaved").textContent =
-      "Saved " + new Date(ts).toLocaleTimeString();
+  byId("unsavedDot")?.classList.add("hidden");
+  if (ts){
+    const t = new Date(ts).toLocaleTimeString().replace(/:/g, '.');
+    const el = byId("lastSaved");
+    if (el) el.textContent = "Saved " + t;
+  }
 }
 function saveToStore() {
   const raw = byId("sessionDate").value || new Date().toISOString().slice(0,10);
@@ -1313,6 +1409,23 @@ function renderCourt(container, arr) {
     // Viewer mode: tampilkan baris tanpa kolom aksi
     if (isViewer()) {
       tbody.appendChild(tr);
+      // Tambahkan baris jeda juga di mode viewer (agar waktu jeda terlihat)
+      const _showBreakEl = byId('showBreakRows');
+      const showBreak = true; // paksa tampil di viewer
+      const brkMin = parseInt(byId('breakPerRound').value || '0', 10);
+      if (showBreak && brkMin > 0 && i < R-1) {
+        const trBreak = document.createElement('tr');
+        trBreak.className = 'text-xs text-gray-500 dark:text-gray-400 rnd-break-row';
+        const tdBreak = document.createElement('td');
+        const fullCols = table.querySelector('thead tr').children.length;
+        tdBreak.colSpan = fullCols;
+        tdBreak.className = 'py-1 text-center opacity-80';
+        try { tdBreak.textContent = `Jeda ${brkMin}:00 - Next ${roundStartTime(i+1)}`; } catch {}
+        tdBreak.textContent = `Jeda ${brkMin}:00 - Next ${roundStartTime(i+1)}`;
+        trBreak.appendChild(tdBreak);
+        try { tdBreak.textContent = `Jeda ${brkMin}:00 - Next ${roundStartTime(i+1)}`; } catch {}
+        tbody.appendChild(trBreak);
+      }
       // lanjut ke ronde berikutnya tanpa tombol aksi
       continue;
     }
@@ -2231,14 +2344,17 @@ byId('btnSave')?.addEventListener('click', async () => {
 byId("startTime").addEventListener("change", () => {
   markDirty();
   renderAll();
+  try{ renderFilterSummary(); }catch{}
 });
 byId("minutesPerRound").addEventListener("input", () => {
   markDirty();
   renderAll();
+  try{ renderFilterSummary(); }catch{}
 });
 byId("roundCount").addEventListener("input", () => {
   markDirty();
   renderAll();
+  try{ renderFilterSummary(); }catch{}
 });
 
 // tanggal sesi diubah
@@ -2268,6 +2384,7 @@ byId('sessionDate')?.addEventListener('change', async (e) => {
     }
     renderAll?.();
   }
+  try{ renderFilterSummary(); }catch{}
 });
 
 
@@ -2962,6 +3079,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   try{ updateAuthUI?.(); }catch{}
   try{ ensureAuthButtons?.(); updateAuthUI?.(); }catch{}
   try{ refreshEventButtonLabel?.(); }catch{}
+  try{ renderFilterSummary?.(); }catch{}
 });
 
 document.addEventListener('DOMContentLoaded', boot);
