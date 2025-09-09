@@ -2936,7 +2936,9 @@ function seedDefaultIfEmpty(){
 }
 
 
-// Report events
+// Report events (temporarily hidden/inactive)
+const _btnReport = byId('btnReport');
+if (_btnReport) _btnReport.classList.add('hidden');
 byId('btnReport').addEventListener('click', ()=>{
   const keys = Object.keys(store.sessions||{}).sort();
   byId('repFrom').value = keys[0] || byId('sessionDate').value;
