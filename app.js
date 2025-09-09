@@ -2758,9 +2758,14 @@ async function loadSearchDates(){
       .order('session_date', { ascending: false });
     const seen = new Set();
     (rows||[]).forEach(r=>{ if (r.session_date && !seen.has(r.session_date)) { seen.add(r.session_date); const o=document.createElement('option'); o.value=r.session_date; o.textContent=r.session_date; sel.appendChild(o);} });
-    // preselect current date if exists
+    // preselect current date if exists; otherwise select latest (first option)
     const cur = normalizeDateKey(byId('sessionDate')?.value || '');
-    if (cur && seen.has(cur)) sel.value = cur;
+    if (cur && seen.has(cur)) {
+      sel.value = cur;
+    } else {
+      const first = sel.querySelector('option[value]:not([value=""])');
+      if (first) sel.value = first.value;
+    }
   }catch{}
   finally { hideLoading(); }
 }
@@ -2827,7 +2832,8 @@ function openSearchEventModal(){ setEventModalTab('search');
 // Unified click behavior for header button
 byId('btnMakeEventLink')?.addEventListener('click', async () => {
   const user = await getCurrentUser();
-  if (user && currentEventId) openSearchEventModal(); else openCreateEventModal();
+  // jika sudah login, buka tab Cari agar langsung bisa memilih
+  if (user) openSearchEventModal(); else openCreateEventModal();
 });
 // Open Share/Invite for current event anytime
 function openShareEventModal(){
