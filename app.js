@@ -533,6 +533,8 @@ async function loadAccessRoleFromCloud(){
       .maybeSingle();
     const role = (mem?.role === 'editor') ? 'editor' : 'viewer';
     setAccessRole(role);
+    // Load event settings (max_players) once role known
+    try{ ensureMaxPlayersField(); await loadMaxPlayersFromDB(); }catch{}
   }catch{ setAccessRole('viewer'); }
   finally { hideLoading(); }
 }
@@ -693,6 +695,7 @@ async function copyToClipboard(text){
 let activeCourt = 0;                      // index lapangan aktif
 let roundsByCourt = [ [] ];               // array of courts, masing2 array rounds
 let players = [];
+let currentMaxPlayers = null; // null = unlimited; otherwise positive integer
 let dirty=false, autosaveTimer=null;
 let store = { sessions:{}, lastTs:null };
 const THEME_KEY='mix-americano-theme';
@@ -765,6 +768,15 @@ function applyAccessMode(){
     const vp = byId('viewerPlayersWrap');
     if (vp) vp.classList.toggle('hidden', !isViewer());
     if (isViewer() && typeof renderViewerPlayersList === 'function') renderViewerPlayersList();
+  } catch {}
+
+  // Toggle editor-only Max Players field
+  try {
+    ensureMaxPlayersField();
+    const maxEl = byId('maxPlayersInput');
+    if (maxEl) maxEl.toggleAttribute('disabled', isViewer());
+    const wrap = byId('maxPlayersWrap');
+    if (wrap) wrap.classList.toggle('hidden', isViewer());
   } catch {}
 
   // Auth UI
@@ -1323,6 +1335,76 @@ function renderViewerPlayersList(){
     li.innerHTML = `<span class='flex-1'>${escapeHtml(name)}</span><span class='flex gap-1'>${badges}</span>`;
     ul.appendChild(li);
   });
+}
+
+// ================== Max Players (Editor) ================== //
+function ensureMaxPlayersField(){
+  let wrap = byId('maxPlayersWrap');
+  if (wrap) return wrap;
+  const rc = byId('roundCount');
+  if (!rc || !rc.parentElement || !rc.parentElement.parentElement) return null;
+  const parent = rc.parentElement.parentElement; // grid container
+  wrap = document.createElement('div');
+  wrap.id = 'maxPlayersWrap';
+  wrap.className = '';
+  const label = document.createElement('label');
+  label.className = 'block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300';
+  label.textContent = 'Max Pemain';
+  const input = document.createElement('input');
+  input.id = 'maxPlayersInput';
+  input.type = 'number';
+  input.min = '1';
+  input.placeholder = 'Tak terbatas';
+  input.className = 'mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100';
+  input.value = currentMaxPlayers ? String(currentMaxPlayers) : '';
+  input.addEventListener('input', (e)=>{
+    // no-op; just allow typing
+  });
+  input.addEventListener('change', async (e)=>{
+    let v = String(e.target.value||'').trim();
+    if (v === '') {
+      await saveMaxPlayersToDB(null).catch(()=>{});
+      return;
+    }
+    v = parseInt(v, 10);
+    if (!Number.isFinite(v) || v <= 0) {
+      e.target.value = currentMaxPlayers ? String(currentMaxPlayers) : '';
+      return;
+    }
+    await saveMaxPlayersToDB(v).catch(()=>{
+      // revert on failure
+      e.target.value = currentMaxPlayers ? String(currentMaxPlayers) : '';
+    });
+  });
+  wrap.append(label, input);
+  // insert right after the roundCount container
+  if (rc.parentElement.nextSibling) {
+    parent.insertBefore(wrap, rc.parentElement.nextSibling);
+  } else {
+    parent.appendChild(wrap);
+  }
+  return wrap;
+}
+
+async function loadMaxPlayersFromDB(){
+  try{
+    if (!isCloudMode() || !window.sb?.from || !currentEventId) return;
+    const { data, error } = await sb.from('events').select('max_players').eq('id', currentEventId).maybeSingle();
+    if (error) return;
+    currentMaxPlayers = Number.isInteger(data?.max_players) ? data.max_players : null;
+    const input = byId('maxPlayersInput');
+    if (input) input.value = currentMaxPlayers ? String(currentMaxPlayers) : '';
+  }catch{}
+}
+
+async function saveMaxPlayersToDB(v){
+  if (!isCloudMode() || !window.sb?.from || !currentEventId) { currentMaxPlayers = (v??null); return; }
+  const payload = { max_players: v === null ? null : v };
+  const { data, error } = await sb.from('events').update(payload).eq('id', currentEventId).select('max_players').maybeSingle();
+  if (error) throw error;
+  currentMaxPlayers = Number.isInteger(data?.max_players) ? data.max_players : null;
+  const input = byId('maxPlayersInput');
+  if (input) input.value = currentMaxPlayers ? String(currentMaxPlayers) : '';
 }
 function addPlayer(name) {
   if (isViewer()) return;
@@ -2655,6 +2737,10 @@ byId('sessionDate')?.addEventListener('change', async (e) => {
 byId("btnAddPlayer").addEventListener("click", () => {
   const v = byId("newPlayer").value;
   byId("newPlayer").value = "";
+  if (Number.isInteger(currentMaxPlayers) && currentMaxPlayers > 0 && players.length >= currentMaxPlayers) {
+    alert('Batas maksimal pemain (' + currentMaxPlayers + ') telah tercapai.');
+    return;
+  }
   addPlayer(v);
 });
 byId("newPlayer").addEventListener("keydown", (e) => {
@@ -2675,7 +2761,12 @@ byId("btnPasteText").addEventListener("click", () => {
   byId("playersText").focus();
 });
 byId("btnApplyText").addEventListener("click", () => {
-  players = parsePlayersText(byId("playersText").value);
+  const newList = parsePlayersText(byId("playersText").value);
+  if (Number.isInteger(currentMaxPlayers) && currentMaxPlayers > 0 && newList.length > currentMaxPlayers) {
+    alert('Daftar melebihi batas maksimal pemain (' + currentMaxPlayers + '). Kurangi jumlah nama.');
+    return;
+  }
+  players = newList;
   hideTextModal();
   markDirty();
   renderPlayersList();
