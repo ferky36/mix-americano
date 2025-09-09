@@ -213,6 +213,8 @@ function leaveEventMode(clearLS = true) {
   startAutoSave();
   // default back to editor when leaving cloud
   setAccessRole('editor');
+  // hide Share/Undang & Keluar when no event
+  try{ updateEventActionButtons?.(); }catch{}
 }
 
 
@@ -2715,6 +2717,12 @@ function setEventModalTab(mode){
   const succ = document.getElementById("eventSuccess"); if (succ) succ.classList.add("hidden");
   if (tCreate){ tCreate.classList.toggle("bg-indigo-600", isCreate); tCreate.classList.toggle("text-white", isCreate); }
   if (tSearch){ tSearch.classList.toggle("bg-indigo-600", !isCreate); tSearch.classList.toggle("text-white", !isCreate); }
+  // Ensure tabs are visible and title set for Create/Search context
+  const tabs = document.getElementById('eventTabs'); if (tabs) tabs.classList.remove('hidden');
+  const titleEl = document.querySelector('#eventModal h3'); if (titleEl) titleEl.textContent = 'Buat/Cari Event';
+  // If editor link row exists from previous share, show it back in create/search context
+  const ed = document.getElementById('eventEditorLinkOutput');
+  if (ed && ed.parentElement) ed.parentElement.classList.remove('hidden');
 }
 function openCreateEventModal(){
   setEventModalTab("create"); byId('eventDateInput').value = byId('sessionDate').value || new Date().toISOString().slice(0,10);
@@ -2811,6 +2819,7 @@ async function switchToEvent(eventId, dateStr){
     startAutoSave?.();
     loadAccessRoleFromCloud?.();
     refreshEventButtonLabel?.();
+    updateEventActionButtons?.();
   }catch(e){ console.warn('switchToEvent failed', e); }
   finally { hideLoading(); }
 }
@@ -2841,6 +2850,9 @@ function openShareEventModal(){
   const m = byId('eventModal'); if (!m) return;
   // show modal
   m.classList.remove('hidden');
+  // adjust header/title and hide Buat/Cari tabs for share-only view
+  const titleEl = m.querySelector('h3'); if (titleEl) titleEl.textContent = 'Share / Undang';
+  const tabs = byId('eventTabs'); if (tabs) tabs.classList.add('hidden');
   // show success panel, hide form
   byId('eventForm')?.classList.add('hidden');
   byId('eventSearchForm')?.classList.add('hidden');
@@ -2849,19 +2861,10 @@ function openShareEventModal(){
   const d = byId('sessionDate')?.value || currentSessionDate || new Date().toISOString().slice(0,10);
   const viewerLink = buildViewerUrl(currentEventId, d);
   const out = byId('eventLinkOutput'); if (out) out.value = viewerLink;
-  // editor link box
-  (function ensureEditorLinkBox(){
-    const successBox = byId('eventSuccess'); if (!successBox) return;
-    let inp = byId('eventEditorLinkOutput'); let btn = byId('eventCopyEditorBtn');
-    if (!inp || !btn){
-      const wrap = document.createElement('div'); wrap.className = 'flex items-center gap-2';
-      inp = document.createElement('input'); inp.id='eventEditorLinkOutput'; inp.readOnly = true; inp.className='flex-1 border rounded-lg px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100';
-      btn = document.createElement('button'); btn.id='eventCopyEditorBtn'; btn.className='px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm'; btn.textContent='Copy Editor Link';
-      wrap.appendChild(inp); wrap.appendChild(btn); successBox.appendChild(wrap);
-      btn.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(inp.value); btn.textContent='Copied!'; setTimeout(()=>btn.textContent='Copy Editor Link',2000);}catch{} });
-    }
-    const editorURL = buildEventUrl(currentEventId, d);
-    inp.value = editorURL;
+  // hide editor link row in Share view to keep only viewer link and Invite
+  (function hideEditorLinkInShare(){
+    const inp = byId('eventEditorLinkOutput');
+    if (inp && inp.parentElement) inp.parentElement.classList.add('hidden');
   })();
   // ensure invite form
   (function ensureInviteForm(){
@@ -2950,6 +2953,7 @@ byId('eventCreateBtn')?.addEventListener('click', async () => {
     subscribeRealtimeForState();
     startAutoSave();
     refreshEventButtonLabel?.();
+    updateEventActionButtons?.();
 
     // tampilkan UI success: share link default = viewer (readonly) + embed owner
     const link = buildViewerUrl(id, date);
@@ -3033,7 +3037,7 @@ byId('eventCreateBtn')?.addEventListener('click', async () => {
         }catch(e){ console.error(e); msg.textContent = 'Gagal membuat link undangan' + (e?.message? ': '+e.message : ''); }
         finally { if (btn){ btn.disabled = false; btn.textContent = 'Buat Link Undangan'; } }
       });
-    })();
+  })();
 
 
   } catch (err) {
@@ -3085,6 +3089,15 @@ byId('btnLeaveEvent')?.addEventListener('click', ()=>{
   }
 });
 
+// Toggle visibility of Share/Undang and Keluar buttons based on event presence
+function updateEventActionButtons(){
+  const hasEvent = !!currentEventId;
+  ['btnShareEvent','btnLeaveEvent'].forEach(id=>{
+    const el = byId(id);
+    if (el) el.classList.toggle('hidden', !hasEvent);
+  });
+}
+
 
 
 // Pastikan inisialisasi mode Cloud + Access selalu dipanggil saat load
@@ -3094,6 +3107,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   try{ updateAuthUI?.(); }catch{}
   try{ ensureAuthButtons?.(); updateAuthUI?.(); }catch{}
   try{ refreshEventButtonLabel?.(); }catch{}
+  try{ updateEventActionButtons?.(); }catch{}
   try{ renderFilterSummary?.(); }catch{}
 });
 
