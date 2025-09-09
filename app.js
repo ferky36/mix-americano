@@ -2857,6 +2857,12 @@ function openShareEventModal(){
   byId('eventForm')?.classList.add('hidden');
   byId('eventSearchForm')?.classList.add('hidden');
   byId('eventSuccess')?.classList.remove('hidden');
+  // neutralize success info text for share context
+  (function tweakShareInfo(){
+    const sb = byId('eventSuccess');
+    const info = sb?.querySelector('.p-3');
+    if (info) info.textContent = 'Bagikan Link Event';
+  })();
   // ensure viewer link
   const d = byId('sessionDate')?.value || currentSessionDate || new Date().toISOString().slice(0,10);
   const viewerLink = buildViewerUrl(currentEventId, d);
@@ -2959,6 +2965,12 @@ byId('eventCreateBtn')?.addEventListener('click', async () => {
     const link = buildViewerUrl(id, date);
     byId('eventForm').classList.add('hidden');
     byId('eventSuccess').classList.remove('hidden');
+    // reset info text to creation success wording in create flow
+    (function tweakCreateInfo(){
+      const sb = byId('eventSuccess');
+      const info = sb?.querySelector('.p-3');
+      if (info) info.textContent = 'Event berhasil dibuat! Bagikan link berikut:';
+    })();
     byId('eventLinkOutput').value = link;
 
     // tambahkan Editor link box bila belum ada
