@@ -652,6 +652,13 @@ async function saveStateToCloud() {
       .single();
 
     if (error) throw error;
+    // Sinkronkan kolom events.max_players saat Save (bukan onchange)
+    try {
+      if (isCloudMode() && window.sb?.from && currentEventId) {
+        const mp = (Number.isInteger(currentMaxPlayers) && currentMaxPlayers > 0) ? currentMaxPlayers : null;
+        await sb.from('events').update({ max_players: mp }).eq('id', currentEventId);
+      }
+    } catch {}
     _serverVersion = data.version;
     markSaved?.(data.updated_at);
     return true;
@@ -871,6 +878,8 @@ function currentPayload(){
     roundCount: byId('roundCount').value,
     players: players.join('\n'),
     playerMeta,             // <<< tambahkan ini
+    // simpan limit pemain dalam state juga (null = tak terbatas)
+    maxPlayers: (Number.isInteger(currentMaxPlayers) && currentMaxPlayers > 0) ? currentMaxPlayers : null,
 
     // 🔹 format baru
     roundsByCourt,
@@ -1132,6 +1141,18 @@ function applyPayload(payload) {
 
   // 4) Terapkan ke roundsByCourt global milik app
   roundsByCourt.splice(0, roundsByCourt.length, ...restored);
+
+  // 4b) Max pemain dari payload (jika ada)
+  try {
+    if (payload.maxPlayers === null || payload.maxPlayers === undefined || payload.maxPlayers === '') {
+      currentMaxPlayers = null;
+    } else {
+      const mp = parseInt(payload.maxPlayers, 10);
+      currentMaxPlayers = (Number.isFinite(mp) && mp > 0) ? mp : null;
+    }
+    const maxEl = byId('maxPlayersInput');
+    if (maxEl) maxEl.value = currentMaxPlayers ? String(currentMaxPlayers) : '';
+  } catch {}
 
   // 5) Render & hitung
   renderAll?.();
@@ -1412,23 +1433,11 @@ function ensureMaxPlayersField(){
   input.className = 'mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100';
   input.value = currentMaxPlayers ? String(currentMaxPlayers) : '';
   input.addEventListener('input', (e)=>{
-    // no-op; just allow typing
-  });
-  input.addEventListener('change', async (e)=>{
-    let v = String(e.target.value||'').trim();
-    if (v === '') {
-      await saveMaxPlayersToDB(null).catch(()=>{});
-      return;
-    }
-    v = parseInt(v, 10);
-    if (!Number.isFinite(v) || v <= 0) {
-      e.target.value = currentMaxPlayers ? String(currentMaxPlayers) : '';
-      return;
-    }
-    await saveMaxPlayersToDB(v).catch(()=>{
-      // revert on failure
-      e.target.value = currentMaxPlayers ? String(currentMaxPlayers) : '';
-    });
+    // update nilai lokal + tandai dirty; simpan ke state saat Save
+    const raw = String(e.target.value||'').trim();
+    if (raw === '') { currentMaxPlayers = null; markDirty(); return; }
+    const v = parseInt(raw, 10);
+    if (Number.isFinite(v) && v > 0) { currentMaxPlayers = v; markDirty(); }
   });
   wrap.append(label, input);
   // insert right after the roundCount container
@@ -1449,16 +1458,6 @@ async function loadMaxPlayersFromDB(){
     const input = byId('maxPlayersInput');
     if (input) input.value = currentMaxPlayers ? String(currentMaxPlayers) : '';
   }catch{}
-}
-
-async function saveMaxPlayersToDB(v){
-  if (!isCloudMode() || !window.sb?.from || !currentEventId) { currentMaxPlayers = (v??null); return; }
-  const payload = { max_players: v === null ? null : v };
-  const { data, error } = await sb.from('events').update(payload).eq('id', currentEventId).select('max_players').maybeSingle();
-  if (error) throw error;
-  currentMaxPlayers = Number.isInteger(data?.max_players) ? data.max_players : null;
-  const input = byId('maxPlayersInput');
-  if (input) input.value = currentMaxPlayers ? String(currentMaxPlayers) : '';
 }
 function addPlayer(name) {
   if (isViewer()) return;
