@@ -183,15 +183,8 @@ async function createEventIfNotExists(name, date) {
 function refreshEventButtonLabel(){
   const btn = byId('btnMakeEventLink');
   if (!btn) return;
-  // Default: Buat Link Event
-  let label = 'Buat Link Event';
-  // Jika sudah login dan ada event aktif, ubah menjadi Cari Event
-  (async () => {
-    const user = await getCurrentUser();
-    if (user && currentEventId) label = 'Cari Event';
-    // Keep the icon minimal; label only
-    btn.textContent = label;
-  })();
+  // Sederhanakan: selalu tampil "Buat/Cari Event" agar user paham 2 opsi
+  btn.textContent = 'Buat/Cari Event';
 }
 
 function leaveEventMode(clearLS = true) {
@@ -2711,8 +2704,20 @@ window.renderPlayersList = function(...args){
 
 // Buka modal
 // Open Create Event modal (extracted)
+function setEventModalTab(mode){
+  const isCreate = mode !== "search";
+  const tCreate = document.getElementById("tabCreateEvent");
+  const tSearch = document.getElementById("tabSearchEvent");
+  const fCreate = document.getElementById("eventForm");
+  const fSearch = document.getElementById("eventSearchForm");
+  if (fCreate) fCreate.classList.toggle("hidden", !isCreate);
+  if (fSearch) fSearch.classList.toggle("hidden", isCreate);
+  const succ = document.getElementById("eventSuccess"); if (succ) succ.classList.add("hidden");
+  if (tCreate){ tCreate.classList.toggle("bg-indigo-600", isCreate); tCreate.classList.toggle("text-white", isCreate); }
+  if (tSearch){ tSearch.classList.toggle("bg-indigo-600", !isCreate); tSearch.classList.toggle("text-white", !isCreate); }
+}
 function openCreateEventModal(){
-  byId('eventDateInput').value = byId('sessionDate').value || new Date().toISOString().slice(0,10);
+  setEventModalTab("create"); byId('eventDateInput').value = byId('sessionDate').value || new Date().toISOString().slice(0,10);
   byId('eventNameInput').value = document.querySelector('h1')?.textContent?.trim() || '';
   byId('eventModal').classList.remove('hidden');
 }
@@ -2805,8 +2810,8 @@ async function switchToEvent(eventId, dateStr){
   finally { hideLoading(); }
 }
 
-function openSearchEventModal(){
-  const m = byId('searchEventModal'); if (!m) return;
+function openSearchEventModal(){ setEventModalTab('search');
+  const m = byId('eventModal'); if (!m) return;
   m.classList.remove('hidden');
   // reset
   const evSel = byId('searchEventSelect'); if (evSel) { evSel.innerHTML = '<option value="">– Pilih tanggal dulu –</option>'; }
@@ -2832,6 +2837,7 @@ function openShareEventModal(){
   m.classList.remove('hidden');
   // show success panel, hide form
   byId('eventForm')?.classList.add('hidden');
+  byId('eventSearchForm')?.classList.add('hidden');
   byId('eventSuccess')?.classList.remove('hidden');
   // ensure viewer link
   const d = byId('sessionDate')?.value || currentSessionDate || new Date().toISOString().slice(0,10);
@@ -2896,6 +2902,9 @@ function openShareEventModal(){
   })();
 }
 byId('btnShareEvent')?.addEventListener('click', openShareEventModal);
+// Tab handlers for Event modal
+byId('tabCreateEvent')?.addEventListener('click', ()=>{ setEventModalTab('create'); });
+byId('tabSearchEvent')?.addEventListener('click', async ()=>{ setEventModalTab('search'); await loadSearchDates(); const d = byId('searchDateSelect')?.value || ''; if (d) await loadSearchEventsForDate(d); });
 byId('eventCancelBtn')?.addEventListener('click', () => {
   byId('eventModal').classList.add('hidden');
 });
@@ -3047,7 +3056,7 @@ byId('eventCopyBtn')?.addEventListener('click', async () => {
 });
 
 // Search Event modal bindings
-byId('searchCancelBtn')?.addEventListener('click', ()=> byId('searchEventModal')?.classList.add('hidden'));
+byId('searchCancelBtn')?.addEventListener('click', ()=> byId('eventModal')?.classList.add('hidden'));
 byId('searchDateSelect')?.addEventListener('change', async ()=>{
   const d = byId('searchDateSelect')?.value || '';
   await loadSearchEventsForDate(d);
@@ -3056,7 +3065,7 @@ byId('openEventBtn')?.addEventListener('click', async ()=>{
   const d = byId('searchDateSelect')?.value || '';
   const ev = byId('searchEventSelect')?.value || '';
   if (!d || !ev) { alert('Pilih tanggal dan event.'); return; }
-  byId('searchEventModal')?.classList.add('hidden');
+  byId('eventModal')?.classList.add('hidden');
   await switchToEvent(ev, d);
 });
 
