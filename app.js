@@ -712,7 +712,7 @@ let scoreCtx = {
 // role: 'editor' (full access) | 'viewer' (read-only)
 let accessRole = 'editor';
 function isViewer(){ return accessRole !== 'editor'; }
-function setAccessRole(role){ accessRole = (role === 'viewer') ? 'viewer' : 'editor'; applyAccessMode(); renderAll?.(); renderPlayersList?.(); }
+function setAccessRole(role){ accessRole = (role === 'viewer') ? 'viewer' : 'editor'; applyAccessMode(); renderAll?.(); renderPlayersList?.(); renderViewerPlayersList?.(); }
 function applyAccessMode(){
   document.documentElement.setAttribute('data-readonly', String(isViewer()));
   const disableIds = ['btnAddCourt','btnMakeEventLink','btnShareEvent','btnStartTimer','btnFinishScore','btnResetScore','btnAPlus','btnAMinus','btnBPlus','btnBMinus','btnApplyPlayersActive','btnResetActive','btnClearScoresActive','btnClearScoresAll'];
@@ -757,6 +757,14 @@ function applyAccessMode(){
     if (isViewer()) renderFilterSummary();
     const sum = byId('filterSummary');
     if (sum) sum.classList.toggle('hidden', !isViewer());
+  } catch {}
+
+  // Viewer-only players panel visibility and render
+  try {
+    if (typeof ensureViewerPlayersPanel === 'function') ensureViewerPlayersPanel();
+    const vp = byId('viewerPlayersWrap');
+    if (vp) vp.classList.toggle('hidden', !isViewer());
+    if (isViewer() && typeof renderViewerPlayersList === 'function') renderViewerPlayersList();
   } catch {}
 
   // Auth UI
@@ -1271,6 +1279,50 @@ function renderPlayersList() {
     (byId("roundCount").value || 10) +
     " | Menit/ronde: " +
     (byId("minutesPerRound").value || 12);
+  try { if (isViewer()) renderViewerPlayersList?.(); } catch {}
+}
+// Ensure a viewer-only players panel exists; return wrapper element
+function ensureViewerPlayersPanel(){
+  let wrap = byId('viewerPlayersWrap');
+  if (wrap) return wrap;
+  const globalInfo = byId('globalInfo');
+  const parent = globalInfo ? globalInfo.parentElement : document.querySelector('main section');
+  if (!parent) return null;
+  wrap = document.createElement('div');
+  wrap.id = 'viewerPlayersWrap';
+  wrap.className = 'mt-4 hidden';
+  const h3 = document.createElement('h3');
+  h3.className = 'text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2';
+  h3.textContent = 'Daftar Pemain';
+  const ul = document.createElement('ul');
+  ul.id = 'viewerPlayersList';
+  ul.className = 'min-h-[44px] grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2';
+  wrap.append(h3, ul);
+  parent.appendChild(wrap);
+  return wrap;
+}
+
+// Render players for viewer mode into the viewer-only panel
+function renderViewerPlayersList(){
+  const wrap = ensureViewerPlayersPanel();
+  if (!wrap) return;
+  const ul = byId('viewerPlayersList');
+  if (!ul) return;
+  ul.innerHTML = '';
+  (players || []).forEach((name) => {
+    const li = document.createElement('li');
+    li.className = 'flex items-center gap-2 px-3 py-2 rounded-lg border bg-white dark:bg-gray-900 dark:border-gray-700';
+    const meta = (playerMeta && playerMeta[name]) ? playerMeta[name] : {};
+    const g = meta.gender || '';
+    const lv = meta.level || '';
+    const badge = (txt, cls) => `<span class="text-[10px] px-1.5 py-0.5 rounded ${cls}">${escapeHtml(String(txt))}</span>`;
+    const badges = [
+      g ? badge(g, 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200') : '',
+      lv ? badge(lv, 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200') : ''
+    ].filter(Boolean).join('');
+    li.innerHTML = `<span class='flex-1'>${escapeHtml(name)}</span><span class='flex gap-1'>${badges}</span>`;
+    ul.appendChild(li);
+  });
 }
 function addPlayer(name) {
   if (isViewer()) return;
