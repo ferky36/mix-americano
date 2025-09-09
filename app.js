@@ -436,14 +436,47 @@ async function submitJoinForm(){
   }catch{}
   try{
     showLoading('Joining…');
-    await requestJoinEventRPC({ name, gender, level });
-    await loadStateFromCloud();
-    renderPlayersList?.(); renderAll?.(); validateNames?.();
-    byId('joinModal')?.classList.add('hidden');
+    const res = await requestJoinEventRPC({ name, gender, level });
+    const status = (res && res.status) || '';
+    const joinedName = res?.name || name;
+    if (status === 'joined') {
+      showToast('Berhasil join sebagai '+ joinedName, 'success');
+      const ok = await loadStateFromCloud();
+      if (!ok) showToast('Berhasil join, tapi gagal memuat data terbaru.', 'warn');
+      renderPlayersList?.(); renderAll?.(); validateNames?.();
+      byId('joinModal')?.classList.add('hidden');
+    } else if (status === 'already') {
+      const nm = res?.name || name;
+      const t = 'Anda sudah terdaftar sebagai '+ nm;
+      msg.textContent = t; msg.className = 'text-xs text-amber-600 dark:text-amber-400';
+      showToast(t, 'warn');
+    } else if (status === 'full') {
+      const t = 'Event sudah penuh. Coba hubungi penyelenggara.';
+      msg.textContent = t; msg.className = 'text-xs text-amber-600 dark:text-amber-400';
+      showToast(t, 'warn');
+    } else if (status === 'closed') {
+      const t = 'Pendaftaran ditutup. Hanya member yang bisa join.';
+      msg.textContent = t; msg.className = 'text-xs text-amber-600 dark:text-amber-400';
+      showToast(t, 'warn');
+    } else if (status === 'unauthorized') {
+      const t = 'Silakan login terlebih dahulu.';
+      msg.textContent = t; msg.className = 'text-xs text-red-600 dark:text-red-400';
+      showToast(t, 'error');
+    } else if (status === 'not_found') {
+      const t = 'Event tidak ditemukan.';
+      msg.textContent = t; msg.className = 'text-xs text-red-600 dark:text-red-400';
+      showToast(t, 'error');
+    } else {
+      const t = 'Gagal join. Silakan coba lagi.';
+      msg.textContent = t; msg.className = 'text-xs text-red-600 dark:text-red-400';
+      showToast(t, 'error');
+    }
   }catch(e){
     console.error(e);
-    msg.textContent = 'Gagal join: ' + (e?.message || '');
+    const t = 'Gagal join: ' + (e?.message || '');
+    msg.textContent = t;
     msg.className = 'text-xs text-red-600 dark:text-red-400';
+    showToast(t, 'error');
   } finally { hideLoading(); refreshJoinUI(); }
 }
 
@@ -479,6 +512,27 @@ async function requestLeaveEventRPC(){
   });
   if (error) throw error;
   return data;
+}
+
+// ============== Toast helper ==============
+function showToast(message, type='info'){
+  try{
+    let host = byId('toastHost');
+    if (!host){
+      host = document.createElement('div');
+      host.id = 'toastHost';
+      host.className = 'fixed inset-x-0 top-3 z-[60] flex justify-center pointer-events-none';
+      document.body.appendChild(host);
+    }
+    const box = document.createElement('div');
+    const base = 'pointer-events-auto max-w-md mx-2 px-3 py-2 rounded-lg shadow text-sm';
+    const kind = type==='success' ? 'bg-emerald-600 text-white' : type==='error' ? 'bg-red-600 text-white' : type==='warn' ? 'bg-amber-500 text-black' : 'bg-gray-800 text-white';
+    box.className = base + ' ' + kind;
+    box.textContent = String(message||'');
+    host.appendChild(box);
+    setTimeout(()=>{ box.style.opacity='0'; box.style.transition='opacity .3s'; }, 2200);
+    setTimeout(()=>{ box.remove(); }, 2600);
+  }catch{}
 }
 
 async function refreshJoinUI(){
