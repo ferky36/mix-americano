@@ -645,20 +645,23 @@ async function loadStateFromCloud() {
 async function saveStateToCloud() {
   try {
     const payload = currentPayload();       // ← fungsi kamu yg sudah ada
-    // Merge waitingList dengan versi server untuk mencegah hilang data join dari viewer/tab lain
+    // Merge waitingList secara hati-hati: jika lokal kosong (belum terset), pakai server; jika tidak, anggap lokal otoritatif
     try{
       if (isCloudMode() && window.sb?.from && currentEventId && currentSessionDate){
-        const { data: cur } = await sb.from('event_states')
-          .select('state')
-          .eq('event_id', currentEventId)
-          .eq('session_date', currentSessionDate)
-          .maybeSingle();
-        const serverWL = (cur?.state?.waitingList || '')
-          .split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
         const localWL = (payload.waitingList || '')
           .split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-        const merged = Array.from(new Set([ ...localWL, ...serverWL ]));
-        payload.waitingList = merged.join('\n');
+        if (localWL.length === 0){
+          const { data: cur } = await sb.from('event_states')
+            .select('state')
+            .eq('event_id', currentEventId)
+            .eq('session_date', currentSessionDate)
+            .maybeSingle();
+          const serverWL = (cur?.state?.waitingList || '')
+            .split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+          payload.waitingList = serverWL.join('\n');
+        } else {
+          payload.waitingList = localWL.join('\n');
+        }
       }
     }catch{}
     const { data, error } = await sb.from('event_states')
@@ -1003,6 +1006,17 @@ async function saveStateToCloudWithLoading(){
   showLoading('Menyimpan ke Cloud…');
   try{ return await saveStateToCloud(); }
   finally{ hideLoading(); }
+}
+
+// Autosave helper: save to cloud if enabled; else save to local storage silently
+function maybeAutoSaveCloud(){
+  try{
+    if (isCloudMode()) {
+      saveStateToCloud(); // no overlay
+    } else {
+      saveToStoreSilent?.();
+    }
+  }catch(e){ console.warn('Auto-save failed', e); }
 }
 
 function initCloudFromUrl() {
@@ -1383,6 +1397,7 @@ function renderPlayersList() {
       renderPlayersList();
       renderAll();
       validateNames();
+      try{ maybeAutoSaveCloud(); }catch{}
     });
     ul.appendChild(li);
   });
@@ -1638,6 +1653,7 @@ function promoteFromWaiting(name){
   markDirty();
   renderPlayersList();
   renderAll?.();
+  try{ maybeAutoSaveCloud(); }catch{}
 }
 
 function removeFromWaiting(name){
@@ -1648,6 +1664,7 @@ function removeFromWaiting(name){
   delete playerMeta[name];
   markDirty();
   renderPlayersList();
+  try{ maybeAutoSaveCloud(); }catch{}
 }
 
 function upsertPlayerMeta(name, key, value) {
@@ -2962,6 +2979,7 @@ byId("btnAddPlayer").addEventListener("click", () => {
   const v = byId("newPlayer").value;
   byId("newPlayer").value = "";
   addPlayer(v);
+  try{ maybeAutoSaveCloud(); }catch{}
 });
 byId("newPlayer").addEventListener("keydown", (e) => {
   if (e.key === "Enter") {
@@ -2979,6 +2997,7 @@ byId("btnClearPlayers").addEventListener("click", () => {
   try{ renderViewerPlayersList?.(); }catch{}
   validateNames?.();
   showToast?.('Semua pemain dan waiting list telah dikosongkan','success');
+  try{ maybeAutoSaveCloud(); }catch{}
 });
 byId("btnPasteText").addEventListener("click", () => {
   showTextModal();
@@ -3005,6 +3024,7 @@ byId("btnApplyText").addEventListener("click", () => {
   markDirty();
   renderPlayersList();
   validateNames();
+  try{ maybeAutoSaveCloud(); }catch{}
 });
 byId("btnCancelText").addEventListener("click", hideTextModal);
 
