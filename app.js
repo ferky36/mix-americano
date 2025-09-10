@@ -3479,8 +3479,10 @@ async function loadSearchEventsForDate(dateStr){
     eids.forEach(id=>{
       const o = document.createElement('option'); o.value = id; o.textContent = titleMap.get(id) || id; evSel.appendChild(o);
     });
+    // Pastikan ada yang terseleksi (default ke pertama)
+    if (!evSel.value && evSel.options.length > 0) evSel.value = evSel.options[0].value;
     btnOpen && (btnOpen.disabled = false);
-    if (delBtn) delBtn.disabled = !evSel.value;
+    if (delBtn) delBtn.disabled = !(evSel.value && evSel.value.length > 0);
   }catch{
     evSel.innerHTML = '<option value="">– Gagal memuat –</option>';
   } finally { hideLoading(); }
