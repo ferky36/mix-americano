@@ -645,6 +645,22 @@ async function loadStateFromCloud() {
 async function saveStateToCloud() {
   try {
     const payload = currentPayload();       // ← fungsi kamu yg sudah ada
+    // Merge waitingList dengan versi server untuk mencegah hilang data join dari viewer/tab lain
+    try{
+      if (isCloudMode() && window.sb?.from && currentEventId && currentSessionDate){
+        const { data: cur } = await sb.from('event_states')
+          .select('state')
+          .eq('event_id', currentEventId)
+          .eq('session_date', currentSessionDate)
+          .maybeSingle();
+        const serverWL = (cur?.state?.waitingList || '')
+          .split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+        const localWL = (payload.waitingList || '')
+          .split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+        const merged = Array.from(new Set([ ...localWL, ...serverWL ]));
+        payload.waitingList = merged.join('\n');
+      }
+    }catch{}
     const { data, error } = await sb.from('event_states')
       .upsert({
         event_id: currentEventId,                 // UUID
