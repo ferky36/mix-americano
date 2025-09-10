@@ -450,10 +450,12 @@ async function submitJoinForm(){
       const t = 'Anda sudah terdaftar sebagai '+ nm;
       msg.textContent = t; msg.className = 'text-xs text-amber-600 dark:text-amber-400';
       showToast(t, 'warn');
-    } else if (status === 'full') {
-      const t = 'Event sudah penuh. Coba hubungi penyelenggara.';
+    } else if (status === 'waitlisted' || status === 'full') {
+      const t = 'List sudah penuh, Anda masuk ke waiting list';
       msg.textContent = t; msg.className = 'text-xs text-amber-600 dark:text-amber-400';
       showToast(t, 'warn');
+      const ok = await loadStateFromCloud();
+      if (!ok) showToast('Berhasil masuk waiting list, tapi gagal memuat data.', 'warn');
     } else if (status === 'closed') {
       const t = 'Pendaftaran ditutup. Hanya member yang bisa join.';
       msg.textContent = t; msg.className = 'text-xs text-amber-600 dark:text-amber-400';
@@ -483,7 +485,8 @@ async function submitJoinForm(){
 function findJoinedPlayerByUid(uid){
   if (!uid) return null;
   try{
-    for (const n of players||[]){
+    const names = ([]).concat(players||[], waitingList||[]);
+    for (const n of names){
       const meta = playerMeta?.[n] || {};
       if (meta.uid && meta.uid === uid) return { name: n, meta };
     }
@@ -775,6 +778,8 @@ let scoreCtx = {
 // ================== Access Control ================== //
 // role: 'editor' (full access) | 'viewer' (read-only)
 let accessRole = 'editor';
+// waiting list container (shared)
+var waitingList = window.waitingList || [];
 function isViewer(){ return accessRole !== 'editor'; }
 function setAccessRole(role){ accessRole = (role === 'viewer') ? 'viewer' : 'editor'; applyAccessMode(); renderAll?.(); renderPlayersList?.(); renderViewerPlayersList?.(); }
 function applyAccessMode(){
@@ -953,10 +958,6 @@ function renderFilterSummary(){
             <div class="mt-1 font-medium">${r || '-'}</div>
           </div>
         </div>
-        <div class="mt-4 p-3 rounded-2xl border dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-200 shadow-sm">
-          <span id="unsavedDot" class="hidden inline-block w-2 h-2 rounded-full bg-amber-500 mr-2 align-middle"></span>
-          <span id="lastSaved" class="align-middle">Saved -</span>
-        </div>
       </div>
     </div>
   `;
@@ -1121,6 +1122,14 @@ function applyPayload(payload) {
   // 2) Pemain & meta
   const list = (payload.players || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean);
   players.splice(0, players.length, ...list);   // overwrite players array
+  // waiting list
+  try{
+    const wait = (payload.waitingList || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+    if (Array.isArray(wait)) {
+      if (typeof waitingList === 'undefined') { window.waitingList = []; }
+      waitingList.splice(0, waitingList.length, ...wait);
+    }
+  }catch{}
   // asumsi playerMeta adalah object { [nama]: {gender,level,...} }
   if (payload.playerMeta && typeof payload.playerMeta === 'object') {
     // copy aman
@@ -1367,6 +1376,38 @@ function renderPlayersList() {
     " | Menit/ronde: " +
     (byId("minutesPerRound").value || 12);
   try { if (isViewer()) renderViewerPlayersList?.(); } catch {}
+  // render waiting list (editor panel)
+  try {
+    let wrap = byId('waitingListWrap');
+    if (!wrap) {
+      wrap = document.createElement('div');
+      wrap.id = 'waitingListWrap';
+      wrap.className = 'mt-3';
+      const h = document.createElement('div');
+      h.className = 'text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1';
+      h.textContent = 'Waiting List';
+      const ulw = document.createElement('ul');
+      ulw.id = 'waitingList';
+      ulw.className = 'min-h-[32px] grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2';
+      wrap.append(h, ulw);
+      const container = byId('playerListContainer')?.parentElement || byId('playersPanel');
+      container && container.appendChild(wrap);
+    }
+    const ulw = byId('waitingList');
+    if (ulw) {
+      ulw.innerHTML = '';
+      (waitingList||[]).forEach((name) => {
+        const li = document.createElement('li');
+        li.className = 'flex items-center gap-2 px-3 py-2 rounded-lg border bg-white dark:bg-gray-900 dark:border-gray-700';
+        const meta = playerMeta[name] || { gender:'', level:'' };
+        const badge = (txt, cls) => `<span class="text-[10px] px-1.5 py-0.5 rounded ${cls}">${escapeHtml(String(txt))}</span>`;
+        const g = meta.gender||''; const lv = meta.level||'';
+        const badges = [ g?badge(g,'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200'):'' , lv?badge(lv,'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200'):'' ].filter(Boolean).join('');
+        li.innerHTML = `<span class='flex-1'>${escapeHtml(name)}</span><span class='flex gap-1'>${badges}</span>`;
+        ulw.appendChild(li);
+      });
+    }
+  } catch {}
 }
 // Ensure a viewer-only players panel exists; return wrapper element
 function ensureViewerPlayersPanel(){
@@ -1384,6 +1425,7 @@ function ensureViewerPlayersPanel(){
   const ul = document.createElement('ul');
   ul.id = 'viewerPlayersList';
   ul.className = 'min-h-[44px] grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2';
+  // waiting list holder (created later if needed)
   wrap.append(h3, ul);
   parent.appendChild(wrap);
   return wrap;
@@ -1410,6 +1452,33 @@ function renderViewerPlayersList(){
     li.innerHTML = `<span class='flex-1'>${escapeHtml(name)}</span><span class='flex gap-1'>${badges}</span>`;
     ul.appendChild(li);
   });
+  // waiting list for viewer
+  try {
+    let wwrap = byId('viewerWaitingWrap');
+    if (!wwrap){
+      wwrap = document.createElement('div');
+      wwrap.id = 'viewerWaitingWrap';
+      wwrap.className = 'mt-3';
+      const h = document.createElement('div'); h.className='text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1'; h.textContent='Waiting List';
+      const ulw = document.createElement('ul'); ulw.id='viewerWaitingList'; ulw.className='min-h-[32px] grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2';
+      wwrap.append(h, ulw);
+      wrap.appendChild(wwrap);
+    }
+    const ulw = byId('viewerWaitingList');
+    if (ulw){
+      ulw.innerHTML = '';
+      (waitingList || []).forEach((name)=>{
+        const li = document.createElement('li');
+        li.className = 'flex items-center gap-2 px-3 py-2 rounded-lg border bg-white dark:bg-gray-900 dark:border-gray-700';
+        const meta = (playerMeta && playerMeta[name]) ? playerMeta[name] : {};
+        const g = meta.gender || ''; const lv = meta.level || '';
+        const badge = (txt, cls) => `<span class="text-[10px] px-1.5 py-0.5 rounded ${cls}">${escapeHtml(String(txt))}</span>`;
+        const badges = [ g?badge(g,'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200'):'' , lv?badge(lv,'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200'):'' ].filter(Boolean).join('');
+        li.innerHTML = `<span class='flex-1'>${escapeHtml(name)}</span><span class='flex gap-1'>${badges}</span>`;
+        ulw.appendChild(li);
+      });
+    }
+  } catch {}
 }
 
 // ================== Max Players (Editor) ================== //
@@ -1463,7 +1532,12 @@ function addPlayer(name) {
   if (isViewer()) return;
   name = (name || '').trim();
   if (!name || players.includes(name)) return; // tolak kosong/duplikat
-  players.push(name);
+  if (Number.isInteger(currentMaxPlayers) && currentMaxPlayers > 0 && players.length >= currentMaxPlayers) {
+    waitingList.push(name);
+    showToast('List sudah penuh, Anda masuk ke waiting list', 'warn');
+  } else {
+    players.push(name);
+  }
   renderPlayersList?.();
   renderAll?.();                // kalau tabel ronde ikut tergantung daftar pemain
   markDirty();                  // ← simpan otomatis
@@ -2815,11 +2889,12 @@ byId("btnPasteText").addEventListener("click", () => {
 });
 byId("btnApplyText").addEventListener("click", () => {
   const newList = parsePlayersText(byId("playersText").value);
-  if (Number.isInteger(currentMaxPlayers) && currentMaxPlayers > 0 && newList.length > currentMaxPlayers) {
-    alert('Daftar melebihi batas maksimal pemain (' + currentMaxPlayers + '). Kurangi jumlah nama.');
-    return;
+  const cap = (Number.isInteger(currentMaxPlayers) && currentMaxPlayers > 0) ? currentMaxPlayers : Infinity;
+  players = newList.slice(0, cap);
+  waitingList = newList.slice(players.length);
+  if (waitingList.length > 0 && cap !== Infinity) {
+    showToast('Beberapa nama masuk waiting list karena list penuh', 'warn');
   }
-  players = newList;
   hideTextModal();
   markDirty();
   renderPlayersList();
@@ -2923,6 +2998,7 @@ function seedDefaultIfEmpty(){
     ];
   }
   window.playerMeta = window.playerMeta || {};
+  window.waitingList = window.waitingList || [];
   if (!Array.isArray(window.roundsByCourt) || window.roundsByCourt.length === 0) {
     const R = parseInt(byId('roundCount')?.value || '10', 10);
     window.roundsByCourt = [
