@@ -2954,11 +2954,15 @@ byId("newPlayer").addEventListener("keydown", (e) => {
   }
 });
 byId("btnClearPlayers").addEventListener("click", () => {
-  if (!confirm("Kosongkan semua pemain?")) return;
+  if (!confirm("Kosongkan semua pemain dan waiting list?")) return;
   players = [];
+  try{ if (typeof waitingList !== 'undefined') waitingList = []; }catch{}
+  try{ Object.keys(playerMeta||{}).forEach(k => delete playerMeta[k]); }catch{}
   markDirty();
-  renderPlayersList();
-  validateNames();
+  renderPlayersList?.();
+  try{ renderViewerPlayersList?.(); }catch{}
+  validateNames?.();
+  showToast?.('Semua pemain dan waiting list telah dikosongkan','success');
 });
 byId("btnPasteText").addEventListener("click", () => {
   showTextModal();
