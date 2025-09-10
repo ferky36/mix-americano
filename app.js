@@ -714,14 +714,24 @@ function subscribeRealtimeForState(){
           const nowWaiting = Array.isArray(waitingList) ? waitingList : [];
           const added = nowPlayers.filter(p => !prevPlayers.some(x => norm(x) === norm(p)));
           const removedPlayers = prevPlayers.filter(p => !nowPlayers.some(x => norm(x) === norm(p)));
-          const waitingDelta = (prevWaiting.length - nowWaiting.length);
-          // Heuristik auto-promote:
-          // - ada tepat satu nama baru di players, dan
-          //   (waiting list berkurang) atau (ada tepat satu yang keluar dari players)
-          if (added.length === 1 && (waitingDelta >= 1 || removedPlayers.length === 1)) {
-            const promotedName = added[0];
-            try{ showToast(`Auto-promote: ${promotedName} masuk dari waiting list`, 'info'); }catch{}
-            try{ highlightPlayer(promotedName); }catch{}
+          const waitingDelta = (prevWaiting.length - nowWaiting.length); // >0 means waiting reduced
+          const playersDelta = (nowPlayers.length - prevPlayers.length);
+
+          // Kandidat paling mungkin yang dipromosikan: nama yang hilang dari waiting list
+          const removedFromWaiting = prevWaiting.filter(n => !nowWaiting.some(x => norm(x) === norm(n)));
+          const candidate = removedFromWaiting.length > 0 ? removedFromWaiting[0] : (added[0] || null);
+
+          // Heuristik auto-promote (lebih longgar dan deterministik):
+          // - waiting berkurang (>=1) DAN
+          //   (ada 1 nama baru di players ATAU ada 1 nama keluar dari players → netral (leave+promote))
+          if (waitingDelta >= 1 && (added.length >= 1 || removedPlayers.length >= 1)) {
+            const promotedName = candidate || added[0];
+            if (promotedName) {
+              try{ showToast(`Auto-promote: ${promotedName} masuk dari waiting list`, 'info'); }catch{}
+              try{ highlightPlayer(promotedName); }catch{}
+            } else {
+              try{ showToast('Auto-promote: 1 pemain masuk dari waiting list', 'info'); }catch{}
+            }
           }
         }catch(e){ /* noop */ }
       })();
