@@ -1556,7 +1556,9 @@ async function loadMaxPlayersFromDB(){
 function addPlayer(name) {
   if (isViewer()) return;
   name = (name || '').trim();
-  if (!name || players.includes(name)) return; // tolak kosong/duplikat
+  if (!name) return;
+  if (players.includes(name)) { showToast('Nama sudah ada di daftar pemain', 'info'); return; }
+  if ((typeof waitingList !== 'undefined') && Array.isArray(waitingList) && waitingList.includes(name)) { showToast('Nama sudah ada di waiting list', 'info'); return; }
   if (Number.isInteger(currentMaxPlayers) && currentMaxPlayers > 0 && players.length >= currentMaxPlayers) {
     waitingList.push(name);
     showToast('List sudah penuh, Anda masuk ke waiting list', 'warn');
@@ -2965,9 +2967,18 @@ byId("btnPasteText").addEventListener("click", () => {
 byId("btnApplyText").addEventListener("click", () => {
   const newList = parsePlayersText(byId("playersText").value);
   const cap = (Number.isInteger(currentMaxPlayers) && currentMaxPlayers > 0) ? currentMaxPlayers : Infinity;
-  players = newList.slice(0, cap);
-  waitingList = newList.slice(players.length);
-  if (waitingList.length > 0 && cap !== Infinity) {
+  const newActive = newList.slice(0, cap);
+  const overflow = newList.slice(newActive.length);
+  // start from existing waitingList, drop those that moved to active
+  let newWaiting = Array.isArray(waitingList) ? waitingList.slice() : [];
+  newWaiting = newWaiting.filter(n => !newActive.includes(n));
+  // append overflow that aren't already in active or waiting
+  for (const n of overflow){
+    if (!newActive.includes(n) && !newWaiting.includes(n)) newWaiting.push(n);
+  }
+  players = newActive;
+  waitingList = newWaiting;
+  if (overflow.length > 0 && cap !== Infinity) {
     showToast('Beberapa nama masuk waiting list karena list penuh', 'warn');
   }
   hideTextModal();
