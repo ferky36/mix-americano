@@ -246,11 +246,11 @@ function ensureTitleEditor(){
   if (!wrap){
     wrap = document.createElement('span');
     wrap.id = 'titleEditWrap';
-    wrap.className = 'inline-flex items-center gap-1 ml-2';
+    wrap.className = 'inline-flex items-center gap-1 ml-2 align-middle';
     const btn = document.createElement('button');
     btn.id = 'btnTitleEdit';
     btn.title = 'Rename Event';
-    btn.className = 'px-1 py-0.5 text-xs rounded border dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700';
+    btn.className = 'px-1.5 py-0.5 text-xs rounded border dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700';
     btn.textContent = '✎';
     btn.addEventListener('click', startTitleEdit);
     h.after(wrap);
@@ -264,29 +264,38 @@ function startTitleEdit(){
   const h = byId('appTitle');
   const wrap = byId('titleEditWrap');
   if (!h || !wrap) return;
+  // If already editing, focus the existing input
+  const existed = byId('titleEditForm');
+  if (existed){ const inp = existed.querySelector('input'); try{ inp?.focus(); inp?.select(); }catch{} return; }
   const orig = (h.textContent || '').trim();
   h.classList.add('hidden');
+  wrap.classList.add('hidden');
   const edit = document.createElement('span');
   edit.id = 'titleEditForm';
-  edit.className = 'inline-flex items-center gap-1 ml-2';
+  edit.className = 'inline-flex items-center gap-1 ml-2 align-middle';
   const input = document.createElement('input');
   input.type = 'text';
   input.value = orig;
-  input.className = 'border rounded px-2 py-0.5 text-sm dark:bg-gray-900 dark:border-gray-700';
+  // responsive width: cukup nyaman di mobile/desktop
+  input.className = 'border rounded px-2 py-1 text-sm dark:bg-gray-900 dark:border-gray-700 w-[60vw] max-w-[18rem] sm:max-w-[20rem]';
   input.placeholder = 'Nama event';
   const btnOk = document.createElement('button');
   btnOk.title = 'Simpan';
-  btnOk.className = 'px-2 py-0.5 text-xs rounded bg-emerald-600 text-white';
+  btnOk.className = 'px-2 py-1 text-xs rounded bg-emerald-600 text-white';
   btnOk.textContent = '✓';
   const btnCancel = document.createElement('button');
   btnCancel.title = 'Batal';
-  btnCancel.className = 'px-2 py-0.5 text-xs rounded border dark:border-gray-600';
+  btnCancel.className = 'px-2 py-1 text-xs rounded border dark:border-gray-600';
   btnCancel.textContent = '✕';
   edit.append(input, btnOk, btnCancel);
   wrap.after(edit);
 
-  const cleanup = () => { edit.remove(); h.classList.remove('hidden'); };
+  const cleanup = () => { edit.remove(); h.classList.remove('hidden'); wrap.classList.remove('hidden'); };
   btnCancel.addEventListener('click', cleanup);
+  input.addEventListener('keydown', (e)=>{
+    if (e.key === 'Enter') btnOk.click();
+    if (e.key === 'Escape') btnCancel.click();
+  });
   btnOk.addEventListener('click', async ()=>{
     const val = (input.value||'').trim();
     if (!val){ showToast?.('Nama event tidak boleh kosong','warn'); return; }
@@ -1570,12 +1579,29 @@ function renderPlayersList() {
         li.innerHTML = `<span class='flex-1'>${escapeHtml(name)}</span><span class='flex gap-1'>${badges}</span>`;
         if (!isViewer()){
           const promote = document.createElement('button');
-          promote.className = 'px-2 py-0.5 text-xs rounded bg-emerald-600 text-white';
-          promote.textContent = 'Promote';
+          promote.className = 'px-2 py-0.5 text-xs rounded bg-emerald-600 text-white flex items-center gap-1';
+          promote.title = 'Promote dari waiting list';
+          promote.innerHTML = '
+            <span class="sm:hidden" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4">
+                <path d="M5 15l7-7 7 7" />
+              </svg>
+            </span>
+            <span class="hidden sm:inline">Promote</span>';
           promote.addEventListener('click', ()=> promoteFromWaiting(name));
           const del = document.createElement('button');
-          del.className = 'px-2 py-0.5 text-xs rounded border dark:border-gray-700';
-          del.textContent = 'hapus';
+          del.className = 'px-2 py-0.5 text-xs rounded border dark:border-gray-700 flex items-center gap-1';
+          del.title = 'Hapus dari waiting list';
+          del.innerHTML = '
+            <span class="sm:hidden" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4">
+                <path d="M3 6h18" />
+                <path d="M8 6V4h8v2" />
+                <path d="M19 6l-1 14H6L5 6" />
+                <path d="M10 10v8M14 10v8" />
+              </svg>
+            </span>
+            <span class="hidden sm:inline">hapus</span>';
           del.addEventListener('click', ()=> removeFromWaiting(name));
           li.appendChild(promote);
           li.appendChild(del);
@@ -3555,8 +3581,9 @@ async function loadSearchEventsForDate(dateStr){
     if (!evSel.value && evSel.options.length > 0) evSel.value = evSel.options[0].value;
     btnOpen && (btnOpen.disabled = false);
     if (delBtn) delBtn.disabled = !(evSel.value && evSel.value.length > 0);
+    try{ evSel.dispatchEvent(new Event('change')); }catch{}
   }catch{
-    evSel.innerHTML = '<option value="">– Gagal memuat –</option>';
+    evSel.innerHTML = '<option value="">- Gagal memuat -</option>';
   } finally { hideLoading(); }
 }
 
@@ -3891,12 +3918,9 @@ async function onDeleteSelectedEvent(){
       return;
     }
     showToast?.('Event dihapus.', 'success');
-    if (currentEventId && ev === currentEventId){
-      try{ leaveEventMode?.(true); }catch{}
-      currentEventId = null;
-    }
-    await loadSearchEventsForDate(d);
-    const delBtn = byId('deleteEventBtn'); if (delBtn) delBtn.disabled = true;
+    // Reload penuh agar UI bersih dari sisa state
+    try{ leaveEventMode?.(true); }catch{}
+    window.location.reload();
   }catch(e){ console.error(e); showToast?.('Gagal menghapus event: ' + (e?.message||''), 'error'); }
   finally { hideLoading(); }
 }
