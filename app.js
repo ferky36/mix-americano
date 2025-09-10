@@ -327,7 +327,10 @@ function ensureJoinControls(){
       if (!confirm('Keluar dari event (hapus nama Anda dari daftar pemain)?')) return;
       try{
         showLoading('Leaving…');
-        await requestLeaveEventRPC();
+        const res = await requestLeaveEventRPC();
+        if (res && res.promoted) {
+          try{ showToast('Slot Anda digantikan oleh '+ res.promoted, 'info'); }catch{}
+        }
         await loadStateFromCloud();
         renderPlayersList?.(); renderAll?.();
       }catch(e){ alert('Gagal leave: ' + (e?.message||'')); }
