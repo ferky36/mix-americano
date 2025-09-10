@@ -1,9 +1,9 @@
 "use strict";
 // ================== Helpers ================== //
 // bisa disesuaikan urutannya
-const DEFAULT_PLAYERS_12 = [
+const DEFAULT_PLAYERS_10 = [
   'Della','Rangga','Fai','Gizla','Abdi','Diana',
-  'Kris','Ichsan','Marchel','Altundri','Ferdi','Tyas'
+  'Ichsan','Marchel','Altundri','Ferdi'
 ];
 const pad = (n) => String(n).padStart(2, "0");
 const toHM = (d) => pad(d.getHours()) + ":" + pad(d.getMinutes());
@@ -2093,13 +2093,13 @@ function validateAll(){
 }
 
 function applyDefaultPlayersTemplate() {
-  players.splice(0, players.length, ...DEFAULT_PLAYERS_12);
+  players.splice(0, players.length, ...DEFAULT_PLAYERS_10);
 
   // reset meta yang tidak ada di template
-  Object.keys(playerMeta).forEach(n => { if (!DEFAULT_PLAYERS_12.includes(n)) delete playerMeta[n]; });
+  Object.keys(playerMeta).forEach(n => { if (!DEFAULT_PLAYERS_10.includes(n)) delete playerMeta[n]; });
 
   // bersihkan ronde dari nama yang tak ada di template
-  const set = new Set(DEFAULT_PLAYERS_12);
+  const set = new Set(DEFAULT_PLAYERS_10);
   (roundsByCourt || []).forEach(court =>
     (court || []).forEach(r =>
       ['a1','a2','b1','b2'].forEach(k => { if (r && r[k] && !set.has(r[k])) r[k] = ''; })
