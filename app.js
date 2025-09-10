@@ -805,8 +805,9 @@ let scoreCtx = {
 // ================== Access Control ================== //
 // role: 'editor' (full access) | 'viewer' (read-only)
 let accessRole = 'editor';
-// waiting list container (shared)
-var waitingList = window.waitingList || [];
+// waiting list container (shared) – ensure single shared array reference
+if (!Array.isArray(window.waitingList)) window.waitingList = [];
+var waitingList = window.waitingList;
 function isViewer(){ return accessRole !== 'editor'; }
 function setAccessRole(role){ accessRole = (role === 'viewer') ? 'viewer' : 'editor'; applyAccessMode(); renderAll?.(); renderPlayersList?.(); renderViewerPlayersList?.(); }
 function applyAccessMode(){
@@ -1597,8 +1598,9 @@ function addPlayer(name) {
   if (isViewer()) return;
   name = (name || '').trim();
   if (!name) return;
-  if (players.includes(name)) { showToast('Nama sudah ada di daftar pemain', 'info'); return; }
-  if ((typeof waitingList !== 'undefined') && Array.isArray(waitingList) && waitingList.includes(name)) { showToast('Nama sudah ada di waiting list', 'info'); return; }
+  const norm = s => String(s||'').trim().toLowerCase();
+  if ((players||[]).some(n => norm(n) === norm(name))) { showToast('Nama sudah ada di daftar pemain', 'info'); return; }
+  if ((waitingList||[]).some(n => norm(n) === norm(name))) { showToast('Nama sudah ada di waiting list', 'info'); return; }
   if (Number.isInteger(currentMaxPlayers) && currentMaxPlayers > 0 && players.length >= currentMaxPlayers) {
     waitingList.push(name);
     showToast('List sudah penuh, Anda masuk ke waiting list', 'warn');
@@ -1666,11 +1668,20 @@ function promoteFromWaiting(name){
 }
 
 function removeFromWaiting(name){
-  const idx = (waitingList||[]).indexOf(name);
-  if (idx < 0) return;
+  const target = String(name||'').trim().toLowerCase();
   if (!confirm('Hapus '+name+' dari waiting list?')) return;
-  waitingList.splice(idx,1);
-  delete playerMeta[name];
+  if (!Array.isArray(waitingList)) waitingList = [];
+  for (let i = waitingList.length - 1; i >= 0; i--) {
+    if (String(waitingList[i]||'').trim().toLowerCase() === target) {
+      waitingList.splice(i, 1);
+    }
+  }
+  window.waitingList = waitingList;
+  // Hapus meta hanya jika meta tidak dipakai di daftar active
+  try{
+    if (!players.some(n => String(n||'').trim().toLowerCase() === target))
+      delete playerMeta[name];
+  }catch{}
   markDirty();
   renderPlayersList();
   try{ maybeAutoSaveCloud(); }catch{}
