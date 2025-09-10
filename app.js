@@ -2910,10 +2910,6 @@ byId('sessionDate')?.addEventListener('change', async (e) => {
 byId("btnAddPlayer").addEventListener("click", () => {
   const v = byId("newPlayer").value;
   byId("newPlayer").value = "";
-  if (Number.isInteger(currentMaxPlayers) && currentMaxPlayers > 0 && players.length >= currentMaxPlayers) {
-    alert('Batas maksimal pemain (' + currentMaxPlayers + ') telah tercapai.');
-    return;
-  }
   addPlayer(v);
 });
 byId("newPlayer").addEventListener("keydown", (e) => {
