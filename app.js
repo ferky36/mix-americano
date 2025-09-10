@@ -456,6 +456,7 @@ async function submitJoinForm(){
       showToast(t, 'warn');
       const ok = await loadStateFromCloud();
       if (!ok) showToast('Berhasil masuk waiting list, tapi gagal memuat data.', 'warn');
+      renderPlayersList?.(); renderAll?.(); validateNames?.();
     } else if (status === 'closed') {
       const t = 'Pendaftaran ditutup. Hanya member yang bisa join.';
       msg.textContent = t; msg.className = 'text-xs text-amber-600 dark:text-amber-400';
