@@ -427,6 +427,13 @@ async function submitJoinForm(){
   const msg = byId('joinMsg');
   if (!currentEventId){ msg.textContent='Tidak ada event aktif.'; return; }
   if (!name){ msg.textContent='Nama wajib diisi.'; return; }
+  // disallow same name if already in waiting list (client-side friendly check)
+  try{
+    if (Array.isArray(waitingList)){
+      const existsByName = waitingList.some(n => String(n||'').trim().toLowerCase() === name.toLowerCase());
+      if (existsByName){ msg.textContent='Nama sudah ada di waiting list.'; return; }
+    }
+  }catch{}
   // prevent duplicate join
   try{
     const { data } = await sb.auth.getUser();
@@ -1009,12 +1016,14 @@ async function saveStateToCloudWithLoading(){
 }
 
 // Autosave helper: save to cloud if enabled; else save to local storage silently
-function maybeAutoSaveCloud(){
+// useLoading=true will show overlay (for big changes like Apply Teks)
+function maybeAutoSaveCloud(useLoading=false){
   try{
     if (isCloudMode()) {
-      saveStateToCloud(); // no overlay
+      if (useLoading) return saveStateToCloudWithLoading();
+      return saveStateToCloud(); // silent
     } else {
-      saveToStoreSilent?.();
+      return saveToStoreSilent?.();
     }
   }catch(e){ console.warn('Auto-save failed', e); }
 }
@@ -2979,7 +2988,7 @@ byId("btnAddPlayer").addEventListener("click", () => {
   const v = byId("newPlayer").value;
   byId("newPlayer").value = "";
   addPlayer(v);
-  try{ maybeAutoSaveCloud(); }catch{}
+  try{ maybeAutoSaveCloud(true); }catch{}
 });
 byId("newPlayer").addEventListener("keydown", (e) => {
   if (e.key === "Enter") {
