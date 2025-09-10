@@ -640,3 +640,38 @@ $$;
 -- Grants
 grant execute on function public.request_join_event(uuid, date, text, text, text) to authenticated;
 grant execute on function public.request_leave_event(uuid, date) to authenticated;
+
+-- Delete event RPC (owner-only)
+create or replace function public.delete_event(
+  p_event_id uuid
+) returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid;
+  v_owner uuid;
+begin
+  select auth.uid() into v_uid;
+  if v_uid is null then
+    return jsonb_build_object('status','unauthorized');
+  end if;
+
+  select owner_id into v_owner from public.events where id = p_event_id;
+  if not found then
+    return jsonb_build_object('status','not_found');
+  end if;
+
+  -- Only the direct owner (events.owner_id) may delete
+  if v_owner <> v_uid then
+    return jsonb_build_object('status','forbidden');
+  end if;
+
+  delete from public.events where id = p_event_id;
+  -- cascades to event_states, event_members, event_invites via FK ON DELETE CASCADE
+  return jsonb_build_object('status','deleted');
+end;
+$$;
+
+grant execute on function public.delete_event(uuid) to authenticated;

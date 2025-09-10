@@ -3461,6 +3461,7 @@ async function loadSearchEventsForDate(dateStr){
   if (!evSel) return;
   evSel.innerHTML = '<option value="">Memuat…</option>';
   btnOpen && (btnOpen.disabled = true);
+  const delBtn = byId('deleteEventBtn'); if (delBtn) delBtn.disabled = true;
   const ids = await getMyEventIds();
   if (!ids.length || !dateStr){ evSel.innerHTML = '<option value="">– Tidak ada –</option>'; return; }
   try{
@@ -3479,6 +3480,7 @@ async function loadSearchEventsForDate(dateStr){
       const o = document.createElement('option'); o.value = id; o.textContent = titleMap.get(id) || id; evSel.appendChild(o);
     });
     btnOpen && (btnOpen.disabled = false);
+    if (delBtn) delBtn.disabled = !evSel.value;
   }catch{
     evSel.innerHTML = '<option value="">– Gagal memuat –</option>';
   } finally { hideLoading(); }
@@ -3507,8 +3509,9 @@ function openSearchEventModal(){ setEventModalTab('search');
   const m = byId('eventModal'); if (!m) return;
   m.classList.remove('hidden');
   // reset
-  const evSel = byId('searchEventSelect'); if (evSel) { evSel.innerHTML = '<option value="">– Pilih tanggal dulu –</option>'; }
+  const evSel = byId('searchEventSelect'); if (evSel) { evSel.innerHTML = '<option value="">- Pilih tanggal dulu -</option>'; }
   const btn = byId('openEventBtn'); if (btn) btn.disabled = true;
+  ensureDeleteEventButton();
   // load dates then events for initial selection
   (async ()=>{
     await loadSearchDates();
@@ -3761,6 +3764,7 @@ byId('searchCancelBtn')?.addEventListener('click', ()=> byId('eventModal')?.clas
 byId('searchDateSelect')?.addEventListener('change', async ()=>{
   const d = byId('searchDateSelect')?.value || '';
   await loadSearchEventsForDate(d);
+  const delBtn = byId('deleteEventBtn'); if (delBtn) delBtn.disabled = true;
 });
 byId('openEventBtn')?.addEventListener('click', async ()=>{
   const d = byId('searchDateSelect')?.value || '';
@@ -3769,6 +3773,59 @@ byId('openEventBtn')?.addEventListener('click', async ()=>{
   byId('eventModal')?.classList.add('hidden');
   await switchToEvent(ev, d);
 });
+
+// Enable delete button on select change
+byId('searchEventSelect')?.addEventListener('change', ()=>{
+  const ev = byId('searchEventSelect')?.value || '';
+  const delBtn = byId('deleteEventBtn'); if (delBtn) delBtn.disabled = !ev;
+});
+
+// Ensure Delete Event button exists under Open button in Search tab
+function ensureDeleteEventButton(){
+  const container = byId('eventSearchForm') || byId('eventModal');
+  if (!container) return;
+  if (byId('deleteEventBtn')) return;
+  const openBtn = byId('openEventBtn');
+  const del = document.createElement('button');
+  del.id = 'deleteEventBtn';
+  del.textContent = 'Hapus Event';
+  del.className = 'mt-2 w-full px-3 py-2 rounded-lg bg-red-600 text-white disabled:opacity-50';
+  del.disabled = true;
+  if (openBtn && openBtn.parentElement){
+    openBtn.parentElement.appendChild(del);
+  } else {
+    container.appendChild(del);
+  }
+  del.addEventListener('click', onDeleteSelectedEvent);
+}
+
+async function onDeleteSelectedEvent(){
+  const d = byId('searchDateSelect')?.value || '';
+  const ev = byId('searchEventSelect')?.value || '';
+  if (!d || !ev) return;
+  if (!confirm('Hapus event ini secara permanen? Tindakan ini tidak bisa dibatalkan.')) return;
+  try{
+    showLoading('Menghapus event…');
+    const { data: ud } = await sb.auth.getUser();
+    if (!ud?.user){ alert('Silakan login terlebih dahulu.'); return; }
+    const { data, error } = await sb.rpc('delete_event', { p_event_id: ev });
+    if (error) throw error;
+    const status = (data && data.status) || '';
+    if (status !== 'deleted'){
+      const msg = status==='forbidden' ? 'Anda bukan owner event ini.' : status==='not_found' ? 'Event tidak ditemukan.' : 'Gagal menghapus event.';
+      showToast?.(msg, 'error');
+      return;
+    }
+    showToast?.('Event dihapus.', 'success');
+    if (currentEventId && ev === currentEventId){
+      try{ leaveEventMode?.(true); }catch{}
+      currentEventId = null;
+    }
+    await loadSearchEventsForDate(d);
+    const delBtn = byId('deleteEventBtn'); if (delBtn) delBtn.disabled = true;
+  }catch(e){ console.error(e); showToast?.('Gagal menghapus event: ' + (e?.message||''), 'error'); }
+  finally { hideLoading(); }
+}
 
 byId('btnLeaveEvent')?.addEventListener('click', ()=>{
   if (confirm('Keluar event dan hapus data lokal?')) {
