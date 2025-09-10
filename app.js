@@ -1581,18 +1581,18 @@ function renderPlayersList() {
           const promote = document.createElement('button');
           promote.className = 'px-2 py-0.5 text-xs rounded bg-emerald-600 text-white flex items-center gap-1';
           promote.title = 'Promote dari waiting list';
-          promote.innerHTML = '
+          promote.innerHTML = `
             <span class="sm:hidden" aria-hidden="true">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4">
                 <path d="M5 15l7-7 7 7" />
               </svg>
             </span>
-            <span class="hidden sm:inline">Promote</span>';
+            <span class="hidden sm:inline">Promote</span>`;
           promote.addEventListener('click', ()=> promoteFromWaiting(name));
           const del = document.createElement('button');
           del.className = 'px-2 py-0.5 text-xs rounded border dark:border-gray-700 flex items-center gap-1';
           del.title = 'Hapus dari waiting list';
-          del.innerHTML = '
+          del.innerHTML = `
             <span class="sm:hidden" aria-hidden="true">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4">
                 <path d="M3 6h18" />
@@ -1601,7 +1601,7 @@ function renderPlayersList() {
                 <path d="M10 10v8M14 10v8" />
               </svg>
             </span>
-            <span class="hidden sm:inline">hapus</span>';
+            <span class="hidden sm:inline">hapus</span>`;
           del.addEventListener('click', ()=> removeFromWaiting(name));
           li.appendChild(promote);
           li.appendChild(del);
