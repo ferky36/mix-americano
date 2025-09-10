@@ -717,11 +717,30 @@ function subscribeRealtimeForState(){
           // Heuristik auto-promote: ada tepat satu nama baru di players dan ada pengurangan di waiting list
           if (added.length === 1 && removedFromWaiting.length >= 1) {
             try{ showToast(`Auto-promote: ${added[0]} masuk dari waiting list`, 'info'); }catch{}
+            try{ highlightPlayer(added[0]); }catch{}
           }
         }catch(e){ /* noop */ }
       })();
     })
     .subscribe();
+}
+
+// Highlight helper untuk menyorot pemain tertentu di daftar editor
+function highlightPlayer(name){
+  const norm = s => String(s||'').trim().toLowerCase();
+  const list = byId('playersList');
+  if (!list) return;
+  const items = list.querySelectorAll('li');
+  for (const li of items){
+    const span = li.querySelector('.player-name');
+    if (!span) continue;
+    if (norm(span.textContent) === norm(name)){
+      li.classList.add('ring-2','ring-amber-400');
+      try{ li.scrollIntoView({ behavior:'smooth', block:'nearest' }); }catch{}
+      setTimeout(()=>{ li.classList.remove('ring-2','ring-amber-400'); }, 1800);
+      break;
+    }
+  }
 }
 
 
