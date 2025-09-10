@@ -1385,16 +1385,27 @@ function renderPlayersList() {
       wrap = document.createElement('div');
       wrap.id = 'waitingListWrap';
       wrap.className = 'mt-3';
+      const header = document.createElement('div');
+      header.className = 'flex items-center justify-between mb-1';
       const h = document.createElement('div');
-      h.className = 'text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1';
+      h.className = 'text-xs font-semibold text-gray-600 dark:text-gray-300';
       h.textContent = 'Waiting List';
+      const btnAll = document.createElement('button');
+      btnAll.id = 'btnPromoteAllWL';
+      btnAll.className = 'px-2 py-0.5 text-xs rounded bg-emerald-600 text-white hidden';
+      btnAll.textContent = 'Promote semua';
+      btnAll.addEventListener('click', promoteAllFromWaiting);
+      header.append(h, btnAll);
       const ulw = document.createElement('ul');
       ulw.id = 'waitingList';
       ulw.className = 'min-h-[32px] grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2';
-      wrap.append(h, ulw);
+      wrap.append(header, ulw);
       const container = byId('playerListContainer')?.parentElement || byId('playersPanel');
       container && container.appendChild(wrap);
     }
+    // toggle button visibility for editor only
+    const btnAll = byId('btnPromoteAllWL');
+    if (btnAll) btnAll.classList.toggle('hidden', isViewer());
     const ulw = byId('waitingList');
     if (ulw) {
       ulw.innerHTML = '';
@@ -1575,6 +1586,28 @@ function autoPromoteIfSlot(){
   const nm = waitingList.shift();
   if (!players.includes(nm)) players.push(nm);
   showToast('Memindahkan '+ nm +' dari waiting list', 'info');
+}
+
+// Promote sebanyak slot kosong yang tersedia
+function promoteAllFromWaiting(){
+  const cap = (Number.isInteger(currentMaxPlayers) && currentMaxPlayers > 0) ? currentMaxPlayers : Infinity;
+  let moved = 0;
+  while (waitingList.length > 0 && players.length < cap){
+    const nm = waitingList.shift();
+    if (!players.includes(nm)){
+      players.push(nm);
+      moved++;
+    }
+  }
+  if (moved > 0){
+    showToast('Promote '+moved+' pemain dari waiting list', 'success');
+    markDirty();
+    renderPlayersList();
+    renderAll?.();
+  } else {
+    if (players.length >= cap) showToast('List aktif penuh. Hapus/geser pemain dulu.', 'warn');
+    else showToast('Tidak ada pemain di waiting list.', 'info');
+  }
 }
 
 function promoteFromWaiting(name){
