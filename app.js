@@ -277,7 +277,7 @@ function startTitleEdit(){
   input.type = 'text';
   input.value = orig;
   // responsive width: cukup nyaman di mobile/desktop
-  input.className = 'border rounded px-2 py-1 text-sm dark:bg-gray-900 dark:border-gray-700 w-[60vw] max-w-[18rem] sm:max-w-[20rem]';
+  input.className = 'border rounded px-2 py-1 text-sm bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100 dark:border-gray-700 placeholder-gray-400 dark:placeholder-gray-400 w-[60vw] max-w-[18rem] sm:max-w-[20rem]';
   input.placeholder = 'Nama event';
   const btnOk = document.createElement('button');
   btnOk.title = 'Simpan';
