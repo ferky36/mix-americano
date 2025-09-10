@@ -713,11 +713,15 @@ function subscribeRealtimeForState(){
           const nowPlayers = Array.isArray(players) ? players : [];
           const nowWaiting = Array.isArray(waitingList) ? waitingList : [];
           const added = nowPlayers.filter(p => !prevPlayers.some(x => norm(x) === norm(p)));
-          const removedFromWaiting = prevWaiting.filter(n => !nowWaiting.some(x => norm(x) === norm(n)));
-          // Heuristik auto-promote: ada tepat satu nama baru di players dan ada pengurangan di waiting list
-          if (added.length === 1 && removedFromWaiting.length >= 1) {
-            try{ showToast(`Auto-promote: ${added[0]} masuk dari waiting list`, 'info'); }catch{}
-            try{ highlightPlayer(added[0]); }catch{}
+          const removedPlayers = prevPlayers.filter(p => !nowPlayers.some(x => norm(x) === norm(p)));
+          const waitingDelta = (prevWaiting.length - nowWaiting.length);
+          // Heuristik auto-promote:
+          // - ada tepat satu nama baru di players, dan
+          //   (waiting list berkurang) atau (ada tepat satu yang keluar dari players)
+          if (added.length === 1 && (waitingDelta >= 1 || removedPlayers.length === 1)) {
+            const promotedName = added[0];
+            try{ showToast(`Auto-promote: ${promotedName} masuk dari waiting list`, 'info'); }catch{}
+            try{ highlightPlayer(promotedName); }catch{}
           }
         }catch(e){ /* noop */ }
       })();
