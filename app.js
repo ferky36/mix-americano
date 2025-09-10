@@ -697,10 +697,29 @@ function subscribeRealtimeForState(){
     }, (payload) => {
       const row = payload.new || payload.old;
       if (!row) return;
-      // hanya tarik ulang bila tanggal yang aktif
-      if (row.session_date === currentSessionDate) {
-        loadStateFromCloud();
-      }
+      if (row.session_date !== currentSessionDate) return;
+
+      // Snapshot sebelum reload untuk mendeteksi auto-promote dari server
+      const prevPlayers = (Array.isArray(players) ? players.slice() : []);
+      const prevWaiting = (Array.isArray(waitingList) ? waitingList.slice() : []);
+
+      (async () => {
+        try{
+          const ok = await loadStateFromCloud();
+          if (!ok) return;
+          // Deteksi hanya untuk editor (viewer tidak perlu notifikasi ini)
+          if (isViewer && isViewer()) return;
+          const norm = s => String(s||'').trim().toLowerCase();
+          const nowPlayers = Array.isArray(players) ? players : [];
+          const nowWaiting = Array.isArray(waitingList) ? waitingList : [];
+          const added = nowPlayers.filter(p => !prevPlayers.some(x => norm(x) === norm(p)));
+          const removedFromWaiting = prevWaiting.filter(n => !nowWaiting.some(x => norm(x) === norm(n)));
+          // Heuristik auto-promote: ada tepat satu nama baru di players dan ada pengurangan di waiting list
+          if (added.length === 1 && removedFromWaiting.length >= 1) {
+            try{ showToast(`Auto-promote: ${added[0]} masuk dari waiting list`, 'info'); }catch{}
+          }
+        }catch(e){ /* noop */ }
+      })();
     })
     .subscribe();
 }
