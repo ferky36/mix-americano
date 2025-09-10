@@ -1362,6 +1362,7 @@ function renderPlayersList() {
       players.splice(idx, 1);
       removePlayerFromRounds(name);
       delete playerMeta[name];
+      try{ autoPromoteIfSlot(); }catch{}
       markDirty();
       renderPlayersList();
       renderAll();
@@ -1564,6 +1565,16 @@ function removePlayerFromRounds(name) {
       });
     });
   });
+}
+
+// Jika ada slot kosong dan waiting list berisi, otomatis promosikan 1 teratas
+function autoPromoteIfSlot(){
+  const cap = (Number.isInteger(currentMaxPlayers) && currentMaxPlayers > 0) ? currentMaxPlayers : Infinity;
+  if (players.length >= cap) return;
+  if (!Array.isArray(waitingList) || waitingList.length === 0) return;
+  const nm = waitingList.shift();
+  if (!players.includes(nm)) players.push(nm);
+  showToast('Memindahkan '+ nm +' dari waiting list', 'info');
 }
 
 function promoteFromWaiting(name){
