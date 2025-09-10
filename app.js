@@ -1404,6 +1404,18 @@ function renderPlayersList() {
         const g = meta.gender||''; const lv = meta.level||'';
         const badges = [ g?badge(g,'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200'):'' , lv?badge(lv,'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200'):'' ].filter(Boolean).join('');
         li.innerHTML = `<span class='flex-1'>${escapeHtml(name)}</span><span class='flex gap-1'>${badges}</span>`;
+        if (!isViewer()){
+          const promote = document.createElement('button');
+          promote.className = 'px-2 py-0.5 text-xs rounded bg-emerald-600 text-white';
+          promote.textContent = 'Promote';
+          promote.addEventListener('click', ()=> promoteFromWaiting(name));
+          const del = document.createElement('button');
+          del.className = 'px-2 py-0.5 text-xs rounded border dark:border-gray-700';
+          del.textContent = 'hapus';
+          del.addEventListener('click', ()=> removeFromWaiting(name));
+          li.appendChild(promote);
+          li.appendChild(del);
+        }
         ulw.appendChild(li);
       });
     }
@@ -1551,6 +1563,28 @@ function removePlayerFromRounds(name) {
       });
     });
   });
+}
+
+function promoteFromWaiting(name){
+  const cap = (Number.isInteger(currentMaxPlayers) && currentMaxPlayers > 0) ? currentMaxPlayers : Infinity;
+  if (players.includes(name)) return;
+  if (players.length >= cap){ showToast('List aktif penuh. Hapus/geser pemain dulu.', 'warn'); return; }
+  const idx = (waitingList||[]).indexOf(name);
+  if (idx >= 0) waitingList.splice(idx,1);
+  players.push(name);
+  markDirty();
+  renderPlayersList();
+  renderAll?.();
+}
+
+function removeFromWaiting(name){
+  const idx = (waitingList||[]).indexOf(name);
+  if (idx < 0) return;
+  if (!confirm('Hapus '+name+' dari waiting list?')) return;
+  waitingList.splice(idx,1);
+  delete playerMeta[name];
+  markDirty();
+  renderPlayersList();
 }
 
 function upsertPlayerMeta(name, key, value) {
