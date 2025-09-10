@@ -652,25 +652,7 @@ async function loadStateFromCloud() {
 async function saveStateToCloud() {
   try {
     const payload = currentPayload();       // ← fungsi kamu yg sudah ada
-    // Merge waitingList secara hati-hati: jika lokal kosong (belum terset), pakai server; jika tidak, anggap lokal otoritatif
-    try{
-      if (isCloudMode() && window.sb?.from && currentEventId && currentSessionDate){
-        const localWL = (payload.waitingList || '')
-          .split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-        if (localWL.length === 0){
-          const { data: cur } = await sb.from('event_states')
-            .select('state')
-            .eq('event_id', currentEventId)
-            .eq('session_date', currentSessionDate)
-            .maybeSingle();
-          const serverWL = (cur?.state?.waitingList || '')
-            .split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-          payload.waitingList = serverWL.join('\n');
-        } else {
-          payload.waitingList = localWL.join('\n');
-        }
-      }
-    }catch{}
+    // Gunakan waitingList lokal apa adanya (lokal otoritatif).
     const { data, error } = await sb.from('event_states')
       .upsert({
         event_id: currentEventId,                 // UUID
@@ -910,6 +892,7 @@ function currentPayload(){
     minutesPerRound: byId('minutesPerRound').value,
     roundCount: byId('roundCount').value,
     players: players.join('\n'),
+    waitingList: (Array.isArray(waitingList) ? waitingList : []).join('\n'),
     playerMeta,             // <<< tambahkan ini
     // simpan limit pemain dalam state juga (null = tak terbatas)
     maxPlayers: (Number.isInteger(currentMaxPlayers) && currentMaxPlayers > 0) ? currentMaxPlayers : null,
@@ -3010,7 +2993,11 @@ byId("newPlayer").addEventListener("keydown", (e) => {
 byId("btnClearPlayers").addEventListener("click", () => {
   if (!confirm("Kosongkan semua pemain dan waiting list?")) return;
   players = [];
-  try{ if (typeof waitingList !== 'undefined') waitingList = []; }catch{}
+  try{
+    if (!Array.isArray(waitingList)) waitingList = [];
+    waitingList.splice(0, waitingList.length);
+    window.waitingList = waitingList;
+  }catch{}
   try{ Object.keys(playerMeta||{}).forEach(k => delete playerMeta[k]); }catch{}
   markDirty();
   renderPlayersList?.();
@@ -3036,7 +3023,9 @@ byId("btnApplyText").addEventListener("click", () => {
     if (!newActive.includes(n) && !newWaiting.includes(n)) newWaiting.push(n);
   }
   players = newActive;
-  waitingList = newWaiting;
+  if (!Array.isArray(waitingList)) waitingList = [];
+  waitingList.splice(0, waitingList.length, ...newWaiting);
+  window.waitingList = waitingList;
   if (overflow.length > 0 && cap !== Infinity) {
     showToast('Beberapa nama masuk waiting list karena list penuh', 'warn');
   }
