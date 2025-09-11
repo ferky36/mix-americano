@@ -191,7 +191,7 @@ function refreshEventButtonLabel(){
 function updateAdminButtonsVisibility(){
   try{
     const p = getUrlParams?.() || {};
-    const isAdmin = String(p.admin||'').toLowerCase() === 'yes';
+    const isAdmin = String(p.owner||'').toLowerCase() === 'yes';
     const hasEvent = !!currentEventId;
     const btnCreate = byId('btnMakeEventLink');
     const btnSave = byId('btnSave');
