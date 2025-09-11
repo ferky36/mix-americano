@@ -187,6 +187,19 @@ function refreshEventButtonLabel(){
   btn.textContent = 'Buat/Cari Event';
 }
 
+// Show/Hide admin-only buttons based on URL flags and event context
+function updateAdminButtonsVisibility(){
+  try{
+    const p = getUrlParams?.() || {};
+    const isAdmin = String(p.admin||'').toLowerCase() === 'yes';
+    const hasEvent = !!currentEventId;
+    const btnCreate = byId('btnMakeEventLink');
+    const btnSave = byId('btnSave');
+    if (btnCreate) btnCreate.classList.toggle('hidden', !isAdmin);
+    if (btnSave) btnSave.classList.toggle('hidden', !(isAdmin || hasEvent));
+  }catch{}
+}
+
 function leaveEventMode(clearLS = true) {
   // 1. Hapus parameter event & date dari URL
   const u = new URL(location.href);
@@ -1175,6 +1188,7 @@ function initCloudFromUrl() {
   } else {
     applyAccessMode();
   }
+  try{ updateAdminButtonsVisibility?.(); }catch{}
 
   // Jika link undangan (invite=token) dibuka: terima undangan setelah login
   if (p.invite && currentEventId){
@@ -3863,6 +3877,7 @@ byId('eventCreateBtn')?.addEventListener('click', async () => {
   } finally {
     if (btnCreate) { btnCreate.disabled = false; btnCreate.textContent = oldText || 'Create & Buat Link'; }
   }
+  try{ updateAdminButtonsVisibility?.(); }catch{}
 });
 
 // Klik Copy Link
