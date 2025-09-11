@@ -753,6 +753,13 @@ async function saveStateToCloud() {
     return true;
   } catch (e) {
     console.error(e);
+    const msg = String(e?.message||'');
+    if (msg.includes('event_states_event_id_fkey') || msg.includes('Key is not present in table "events"') || e?.code==='23503'){
+      showToast?.('Event tidak ditemukan / sudah dihapus. Keluar dari mode event.', 'error');
+      try{ leaveEventMode?.(true); }catch{}
+      try{ openSearchEventModal?.(); }catch{}
+      return false;
+    }
     alert('Gagal menyimpan ke Cloud. Coba lagi.');
     return false;
   }
@@ -1164,7 +1171,7 @@ function initCloudFromUrl() {
 
   // Load access role if in cloud mode (skip elevation if forced viewer)
   if (currentEventId && !_forceViewer) {
-    loadAccessRoleFromCloud?.();
+    (async ()=>{ const ok = await ensureEventExistsOrReset(); if (ok) loadAccessRoleFromCloud?.(); else applyAccessMode(); })();
   } else {
     applyAccessMode();
   }
@@ -1756,6 +1763,21 @@ function removePlayerFromRounds(name) {
       });
     });
   });
+}
+
+// Pastikan event masih ada. Jika sudah dihapus/tidak ada, reset ke mode lokal dan buka modal Cari Event.
+async function ensureEventExistsOrReset(){
+  try{
+    if (!isCloudMode() || !currentEventId) return true;
+    const { data, error } = await sb.from('events').select('id').eq('id', currentEventId).maybeSingle();
+    if (error || !data?.id){
+      showToast?.('Event tidak ditemukan atau sudah dihapus.', 'warn');
+      try{ leaveEventMode?.(true); }catch{}
+      try{ openSearchEventModal?.(); }catch{}
+      return false;
+    }
+    return true;
+  }catch(e){ console.warn('ensureEventExistsOrReset failed', e); return true; }
 }
 
 // Jika ada slot kosong dan waiting list berisi, otomatis promosikan 1 teratas
