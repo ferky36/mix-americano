@@ -198,7 +198,6 @@ function ensureEventLocationHeader(){
 
 function renderEventLocation(text, url){
   const el = ensureEventLocationHeader();
-  if (!el) return;
   const t = (text||'').trim();
   const u = (url||'').trim();
   if (el){
@@ -216,7 +215,7 @@ function renderEventLocation(text, url){
     }
   }
 
-  // Also update chipLoc
+  // Also update chipLoc (primary UI)
   try{
     const chip = byId('chipLoc');
     const link = byId('chipLocLink');
@@ -4039,8 +4038,6 @@ function openShareEventModal(){
 byId('btnShareEvent')?.addEventListener('click', openShareEventModal);
 // Enhance players toolbar icons on startup
 try{ setupPlayersToolbarUI?.(); }catch{}
-// Lihat Jadwal
-try{ byId('btnSeeSchedule')?.addEventListener('click', openSchedulePanelAndScroll); }catch{}
 // Tab handlers for Event modal
 byId('tabCreateEvent')?.addEventListener('click', ()=>{ setEventModalTab('create'); });
 byId('tabSearchEvent')?.addEventListener('click', async ()=>{ setEventModalTab('search'); await loadSearchDates(); const d = byId('searchDateSelect')?.value || ''; if (d) await loadSearchEventsForDate(d); });
