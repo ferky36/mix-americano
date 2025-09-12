@@ -43,6 +43,19 @@ body { font-size: clamp(14px, calc(14px * var(--ui-zoom) / 100), 20px); }
 @media (min-width:768px){ #hdrControls > button { width:auto; } }
 .filter-slide { animation:slideDown .18s ease-out; }
 
+/* Header Location pill */
+#eventLocationView .event-loc{
+  display:flex; align-items:center; gap:8px;
+  color:#fff; font-weight:600;
+  text-shadow: 0 1px 1px rgba(0,0,0,.15);
+}
+#eventLocationView .event-loc .pin{ width:18px; height:18px; opacity:.95; }
+#eventLocationView .event-loc a{ color:#fff; text-decoration:underline; text-underline-offset:2px; }
+@media (min-width:768px){
+  #eventLocationView .event-loc{ font-size:1rem; }
+  #eventLocationView .event-loc .pin{ width:20px; height:20px; }
+}
+
 /* Modal overlay fix */
 #reportModal { display:none; }
 #reportModal:not(.hidden) { display:block; }

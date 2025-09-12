@@ -197,7 +197,7 @@ function ensureEventLocationHeader(){
     if (!titleParent) return null;
     holder = document.createElement('div');
     holder.id = 'eventLocationView';
-    holder.className = 'text-xs md:text-sm text-white/90 mt-1';
+    holder.className = 'mt-1';
     // Insert as last child within the block containing the title
     titleParent.appendChild(holder);
     return holder;
@@ -211,12 +211,13 @@ function renderEventLocation(text, url){
   const u = (url||'').trim();
   if (!t && !u){ el.textContent = ''; el.classList.add('hidden'); return; }
   el.classList.remove('hidden');
+  const icon = '<svg class="pin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 1 1 18 0Z"/><circle cx="12" cy="10" r="3"/></svg>';
   if (t && u){
-    el.innerHTML = `<span class="opacity-90">Lokasi:</span> <a href="${u}" target="_blank" class="underline font-medium">${t}</a>`;
+    el.innerHTML = `<div class="event-loc">${icon}<a href="${u}" target="_blank" rel="noopener noreferrer">${escapeHtml(t)}</a></div>`;
   } else if (t){
-    el.innerHTML = `<span class="opacity-90">Lokasi:</span> <span class="font-medium">${t}</span>`;
+    el.innerHTML = `<div class="event-loc">${icon}<span>${escapeHtml(t)}</span></div>`;
   } else {
-    el.innerHTML = `<a href="${u}" target="_blank" class="underline font-medium">Lihat lokasi</a>`;
+    el.innerHTML = `<div class="event-loc">${icon}<a href="${u}" target="_blank" rel="noopener noreferrer">Lihat lokasi</a></div>`;
   }
 }
 
@@ -3679,7 +3680,7 @@ window.addEventListener('beforeunload', saveToLocalSilent);
 // });
 
 byId('btnApplyPlayerTemplate')?.addEventListener('click', () => {
-  if (confirm('Terapkan template pemain 12 orang? Daftar sekarang akan diganti.')) {
+  if (confirm('Terapkan template pemain 10 orang? Daftar sekarang akan diganti.')) {
     applyDefaultPlayersTemplate();
   }
 });
