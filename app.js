@@ -1665,7 +1665,10 @@ function renderPlayersList() {
       players.splice(idx, 1);
       removePlayerFromRounds(name);
       delete playerMeta[name];
-      try{ autoPromoteIfSlot(); }catch{}
+      try{
+        const promoted = autoPromoteIfSlot?.();
+        if (promoted) replaceNameInRounds(name, promoted);
+      }catch{}
       markDirty();
       renderPlayersList();
       renderAll();
@@ -2027,6 +2030,16 @@ function removePlayerFromRounds(name) {
   });
 }
 
+// Gantikan nama pemain di semua match (semua lapangan & ronde)
+function replaceNameInRounds(oldName, newName){
+  if (!oldName || !newName) return;
+  roundsByCourt.forEach(arr => {
+    arr.forEach(r => {
+      ["a1","a2","b1","b2"].forEach(k=>{ if (r && r[k] === oldName) r[k] = newName; });
+    });
+  });
+}
+
 // Pastikan event masih ada. Jika sudah dihapus/tidak ada, reset ke mode lokal dan buka modal Cari Event.
 async function ensureEventExistsOrReset(){
   try{
@@ -2050,6 +2063,7 @@ function autoPromoteIfSlot(){
   const nm = waitingList.shift();
   if (!players.includes(nm)) players.push(nm);
   showToast('Memindahkan '+ nm +' dari waiting list', 'info');
+  return nm;
 }
 
 // Promote sebanyak slot kosong yang tersedia
