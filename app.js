@@ -1074,6 +1074,13 @@ function applyAccessMode(){
     const wrap = byId('titleEditWrap');
     if (wrap) wrap.classList.toggle('hidden', isViewer() || !currentEventId || !isCloudMode());
   } catch {}
+
+  // Move editor players panel out of filter grid into its own section
+  try {
+    if (!isViewer()) relocateEditorPlayersPanel();
+    const host = document.getElementById('editorPlayersSection');
+    if (host) host.classList.toggle('hidden', isViewer());
+  } catch {}
 }
 
 
@@ -1723,6 +1730,40 @@ function ensureViewerPlayersPanel(){
   wrap.append(h3, ul);
   parent.appendChild(wrap);
   return wrap;
+}
+
+// ================== Editor Players Panel Relocation ================== //
+function ensureEditorPlayersSection(){
+  let host = document.getElementById('editorPlayersSection');
+  if (host) return host;
+  const main = document.querySelector('main');
+  if (!main) return null;
+  host = document.createElement('section');
+  host.id = 'editorPlayersSection';
+  host.className = 'bg-white dark:bg-gray-800 p-4 rounded-2xl shadow';
+  // place at top of main
+  if (main.firstElementChild) main.insertBefore(host, main.firstElementChild);
+  else main.appendChild(host);
+  return host;
+}
+
+function relocateEditorPlayersPanel(){
+  const pp = document.getElementById('playersPanel');
+  if (!pp) return;
+  const box = pp.parentElement; // the rounded border box containing header and panel
+  if (!box) return;
+  const host = ensureEditorPlayersSection();
+  if (!host) return;
+  // Clean up spacing from original context
+  try { box.classList.remove('mt-2'); box.classList.add('mt-0'); } catch {}
+  if (!host.contains(box)) host.appendChild(box);
+  // Remove the empty grid cell container to avoid gap in filter grid
+  try {
+    const gridCell = box.parentElement; // col-span-2 md:col-span-6
+    if (gridCell && gridCell !== host && gridCell.parentElement && gridCell.id !== 'editorPlayersSection') {
+      gridCell.remove();
+    }
+  } catch {}
 }
 
 // Render players for viewer mode into the viewer-only panel
