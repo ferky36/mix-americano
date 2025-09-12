@@ -38,6 +38,11 @@ body { font-size: clamp(14px, calc(14px * var(--ui-zoom) / 100), 20px); }
   #hdrControls { background: rgba(255,255,255,.08); padding:.5rem; border-radius: .75rem; }
 }
 
+/* Hide racket icon on mobile; keep title + chips aligned */
+@media (max-width: 767px){
+  header .bg-gradient-to-r .mx-auto > .flex > .flex.items-start > div:first-child{ display:none !important; }
+}
+
 /* Make header action buttons full-width on mobile without changing HTML */
 #hdrControls > button { width:100%; }
 @media (min-width:768px){ #hdrControls > button { width:auto; } }
