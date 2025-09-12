@@ -42,6 +42,10 @@ body { font-size: clamp(14px, calc(14px * var(--ui-zoom) / 100), 20px); }
 #hdrControls > button { width:100%; }
 @media (min-width:768px){ #hdrControls > button { width:auto; } }
 .filter-slide { animation:slideDown .18s ease-out; }
+/* Make controls look like soft pills */
+@media (min-width:768px){
+  #hdrControls{ background:rgba(255,255,255,.15); padding:.5rem; border-radius:16px; backdrop-filter:saturate(140%) blur(2px); }
+}
 
 /* Header Location pill */
 #eventLocationView .event-loc{
@@ -55,6 +59,17 @@ body { font-size: clamp(14px, calc(14px * var(--ui-zoom) / 100), 20px); }
   #eventLocationView .event-loc{ font-size:1rem; }
   #eventLocationView .event-loc .pin{ width:20px; height:20px; }
 }
+
+/* Chips row under title */
+.chip{
+  display:inline-flex; align-items:center; gap:8px;
+  padding:4px 10px; border-radius:12px;
+  background:rgba(255,255,255,.18); color:#fff;
+  font-weight:600; font-size:.9rem;
+}
+.chip .chip-icon{ width:18px; height:18px; opacity:.95; }
+.chip a{ color:#fff; text-decoration:underline; text-underline-offset:2px; }
+@media (min-width:768px){ .chip{ padding:6px 12px; } .chip .chip-icon{ width:20px; height:20px; } }
 
 /* Modal overlay fix */
 #reportModal { display:none; }

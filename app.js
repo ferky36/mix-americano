@@ -190,17 +190,9 @@ function refreshEventButtonLabel(){
 // ===== Event Location (simple) =====
 function ensureEventLocationHeader(){
   try{
-    let holder = document.getElementById('eventLocationView');
-    if (holder) return holder;
-    // Prefer to insert under the small description below title
-    const titleParent = document.getElementById('appTitle')?.parentElement;
-    if (!titleParent) return null;
-    holder = document.createElement('div');
-    holder.id = 'eventLocationView';
-    holder.className = 'mt-1';
-    // Insert as last child within the block containing the title
-    titleParent.appendChild(holder);
-    return holder;
+    const holder = document.getElementById('eventLocationView');
+    // Do not create fallback anymore; chips are primary UI
+    return holder || null;
   }catch{ return null; }
 }
 
@@ -209,16 +201,67 @@ function renderEventLocation(text, url){
   if (!el) return;
   const t = (text||'').trim();
   const u = (url||'').trim();
-  if (!t && !u){ el.textContent = ''; el.classList.add('hidden'); return; }
-  el.classList.remove('hidden');
-  const icon = '<svg class="pin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 1 1 18 0Z"/><circle cx="12" cy="10" r="3"/></svg>';
-  if (t && u){
-    el.innerHTML = `<div class="event-loc">${icon}<a href="${u}" target="_blank" rel="noopener noreferrer">${escapeHtml(t)}</a></div>`;
-  } else if (t){
-    el.innerHTML = `<div class="event-loc">${icon}<span>${escapeHtml(t)}</span></div>`;
-  } else {
-    el.innerHTML = `<div class="event-loc">${icon}<a href="${u}" target="_blank" rel="noopener noreferrer">Lihat lokasi</a></div>`;
+  if (el){
+    if (!t && !u){ el.textContent = ''; el.classList.add('hidden'); }
+    else {
+      el.classList.remove('hidden');
+      const icon = '<svg class="pin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 1 1 18 0Z"/><circle cx="12" cy="10" r="3"/></svg>';
+      if (t && u){
+        el.innerHTML = `<div class="event-loc">${icon}<a href="${u}" target="_blank" rel="noopener noreferrer">${escapeHtml(t)}</a></div>`;
+      } else if (t){
+        el.innerHTML = `<div class="event-loc">${icon}<span>${escapeHtml(t)}</span></div>`;
+      } else {
+        el.innerHTML = `<div class="event-loc">${icon}<a href="${u}" target="_blank" rel="noopener noreferrer">Lihat lokasi</a></div>`;
+      }
+    }
   }
+
+  // Also update chipLoc
+  try{
+    const chip = byId('chipLoc');
+    const link = byId('chipLocLink');
+    const txt  = byId('chipLocText');
+    if (chip){
+      const has = !!(t || u);
+      chip.classList.toggle('hidden', !has);
+      if (u && link){ link.href = u; link.textContent = t || 'Lihat lokasi'; link.classList.remove('hidden'); if (txt) txt.textContent = ''; }
+      else if (txt){ txt.textContent = t || ''; if (link) link.removeAttribute('href'); }
+    }
+  }catch{}
+}
+
+function renderHeaderChips(){
+  try{
+    // Date chip: lengkap + jam, contoh: "Jum, 07 Okt 2025 19.00"
+    const rawDate = byId('sessionDate')?.value || '';
+    const rawTime = byId('startTime')?.value || '';
+    let label = '—';
+    if (rawDate){
+      let d = new Date(rawDate + (rawTime ? 'T' + rawTime : 'T00:00'));
+      if (!isNaN(d)){
+        const dt = d.toLocaleDateString('id-ID', { weekday:'short', day:'2-digit', month:'short', year:'numeric' });
+        const tm = d.toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit', hour12:false });
+        label = `${dt} ${tm}`;
+      }
+    }
+    const cd = byId('chipDateText'); if (cd) cd.textContent = label;
+  }catch{}
+  try{
+    // Players count chip
+    const n = Array.isArray(players) ? players.length : 0;
+    const cc = byId('chipCountText'); if (cc) cc.textContent = `${n} pemain`;
+  }catch{}
+}
+
+function openSchedulePanelAndScroll(){
+  try{
+    const panel = byId('filterPanel');
+    if (panel){
+      panel.classList.add('open');
+      try{ localStorage.setItem('ui.filter.expanded','1'); }catch{}
+      setTimeout(()=>{ try{ panel.scrollIntoView({ behavior:'smooth', block:'start' }); }catch{} }, 20);
+    }
+  }catch{}
 }
 
 async function fetchEventMetaFromDB(eventId){
@@ -1265,6 +1308,7 @@ function initCloudFromUrl() {
         if (meta?.title) setAppTitle(meta.title);
         renderEventLocation(meta?.location_text || '', meta?.location_url || '');
         try{ ensureLocationFields(); await loadLocationFromDB(); }catch{}
+        try{ renderHeaderChips(); }catch{}
       }catch{}
     })();
   }
@@ -1435,6 +1479,7 @@ function applyPayload(payload) {
 
   // 7) Judul event
   if (payload.eventTitle) setAppTitle(payload.eventTitle);
+  try{ renderHeaderChips(); }catch{}
 }
 
 
@@ -1638,6 +1683,7 @@ function renderPlayersList() {
     " | Menit/ronde: " +
     (byId("minutesPerRound").value || 12);
   try { if (isViewer()) renderViewerPlayersList?.(); } catch {}
+  try{ renderHeaderChips(); }catch{}
   // render waiting list (editor panel)
   try {
     let wrap = byId('waitingListWrap');
@@ -3632,8 +3678,11 @@ byId('btnResetScore').addEventListener('click', ()=>{
     markDirty();
     renderAll();          // waktu & baris jeda ikut update
     validateAll();
+    try{ renderHeaderChips(); }catch{}
   });
 });
+// Update chips on date change as well
+try{ byId('sessionDate')?.addEventListener('change', ()=>{ try{ renderHeaderChips(); }catch{} }); }catch{}
 // ===== Expand/Collapse "Filter / Jadwal" =====
 (function(){
   const KEY = 'ui.filter.expanded';
@@ -3990,6 +4039,8 @@ function openShareEventModal(){
 byId('btnShareEvent')?.addEventListener('click', openShareEventModal);
 // Enhance players toolbar icons on startup
 try{ setupPlayersToolbarUI?.(); }catch{}
+// Lihat Jadwal
+try{ byId('btnSeeSchedule')?.addEventListener('click', openSchedulePanelAndScroll); }catch{}
 // Tab handlers for Event modal
 byId('tabCreateEvent')?.addEventListener('click', ()=>{ setEventModalTab('create'); });
 byId('tabSearchEvent')?.addEventListener('click', async ()=>{ setEventModalTab('search'); await loadSearchDates(); const d = byId('searchDateSelect')?.value || ''; if (d) await loadSearchEventsForDate(d); });
