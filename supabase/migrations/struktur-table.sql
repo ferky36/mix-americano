@@ -64,6 +64,13 @@ create table if not exists public.events (
 
 create index IF not exists events_owner_id_idx on public.events using btree (owner_id) TABLESPACE pg_default;
 
+-- Simple location fields for events (idempotent)
+alter table if exists public.events
+  add column if not exists location_text text;
+
+alter table if exists public.events
+  add column if not exists location_url text;
+
 do $$ begin
   if not exists (
     select 1 from pg_trigger where tgname = 'trg_set_event_owner'

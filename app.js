@@ -187,6 +187,53 @@ function refreshEventButtonLabel(){
   btn.textContent = 'Buat/Cari Event';
 }
 
+// ===== Event Location (simple) =====
+function ensureEventLocationHeader(){
+  try{
+    let holder = document.getElementById('eventLocationView');
+    if (holder) return holder;
+    // Prefer to insert under the small description below title
+    const titleParent = document.getElementById('appTitle')?.parentElement;
+    if (!titleParent) return null;
+    holder = document.createElement('div');
+    holder.id = 'eventLocationView';
+    holder.className = 'text-xs md:text-sm text-white/90 mt-1';
+    // Insert as last child within the block containing the title
+    titleParent.appendChild(holder);
+    return holder;
+  }catch{ return null; }
+}
+
+function renderEventLocation(text, url){
+  const el = ensureEventLocationHeader();
+  if (!el) return;
+  const t = (text||'').trim();
+  const u = (url||'').trim();
+  if (!t && !u){ el.textContent = ''; el.classList.add('hidden'); return; }
+  el.classList.remove('hidden');
+  if (t && u){
+    el.innerHTML = `<span class="opacity-90">Lokasi:</span> <a href="${u}" target="_blank" class="underline font-medium">${t}</a>`;
+  } else if (t){
+    el.innerHTML = `<span class="opacity-90">Lokasi:</span> <span class="font-medium">${t}</span>`;
+  } else {
+    el.innerHTML = `<a href="${u}" target="_blank" class="underline font-medium">Lihat lokasi</a>`;
+  }
+}
+
+async function fetchEventMetaFromDB(eventId){
+  try{
+    showLoading('Memuat info event…');
+    const { data, error } = await sb
+      .from('events')
+      .select('title, location_text, location_url')
+      .eq('id', eventId)
+      .maybeSingle();
+    if (error) return null;
+    return data || null;
+  }catch{ return null; }
+  finally { hideLoading(); }
+}
+
 // Show/Hide admin-only buttons based on URL flags and event context
 function updateAdminButtonsVisibility(){
   try{
@@ -1189,6 +1236,17 @@ function initCloudFromUrl() {
     applyAccessMode();
   }
   try{ updateAdminButtonsVisibility?.(); }catch{}
+
+  // Load event title + location for header (viewer/editor)
+  if (currentEventId){
+    (async ()=>{
+      try{
+        const meta = await fetchEventMetaFromDB(currentEventId);
+        if (meta?.title) setAppTitle(meta.title);
+        renderEventLocation(meta?.location_text || '', meta?.location_url || '');
+      }catch{}
+    })();
+  }
 
   // Jika link undangan (invite=token) dibuka: terima undangan setelah login
   if (p.invite && currentEventId){
@@ -3540,6 +3598,28 @@ function openCreateEventModal(){
   setEventModalTab("create"); byId('eventDateInput').value = byId('sessionDate').value || new Date().toISOString().slice(0,10);
   byId('eventNameInput').value = document.querySelector('h1')?.textContent?.trim() || '';
   byId('eventModal').classList.remove('hidden');
+  // Ensure optional location fields exist in form
+  try{
+    const form = byId('eventForm');
+    if (form && !byId('eventLocationInput')){
+      const wrap = document.createElement('div');
+      wrap.innerHTML = `
+        <div>
+          <label class="block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Lokasi (opsional)</label>
+          <input id="eventLocationInput" type="text" placeholder="Mis. Lapangan A, GBK"
+                class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" />
+        </div>
+        <div>
+          <label class="block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Link Maps (opsional)</label>
+          <input id="eventLocationUrlInput" type="url" placeholder="https://maps.app.goo.gl/..."
+                class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" />
+        </div>`;
+      // insert before create button
+      const btn = byId('eventCreateBtn');
+      if (btn) form.insertBefore(wrap, btn);
+      else form.appendChild(wrap);
+    }
+  }catch{}
 }
 
 // Helpers for Search Event modal
@@ -3628,7 +3708,9 @@ async function switchToEvent(eventId, dateStr){
     showLoading('Membuka event…');
     currentEventId = eventId; currentSessionDate = normalizeDateKey(dateStr);
     const url = new URL(location.href); url.searchParams.set('event', eventId); url.searchParams.set('date', currentSessionDate); history.replaceState({}, '', url);
-    const t = await fetchEventTitleFromDB(eventId); if (t) setAppTitle(t);
+    const meta = await fetchEventMetaFromDB(eventId);
+    if (meta?.title) setAppTitle(meta.title);
+    renderEventLocation(meta?.location_text || '', meta?.location_url || '');
     const ok = await loadStateFromCloud();
     if (!ok){ seedDefaultIfEmpty?.(); }
     renderPlayersList?.(); renderAll?.(); validateNames?.();
@@ -3768,6 +3850,18 @@ byId('eventCreateBtn')?.addEventListener('click', async () => {
     currentEventId = id;
     currentSessionDate = date;
     byId('sessionDate').value = date;
+
+    // save optional location to events table
+    try{
+      const locText = (byId('eventLocationInput')?.value || '').trim();
+      const locUrl  = (byId('eventLocationUrlInput')?.value || '').trim();
+      if (locText || locUrl){
+        await sb.from('events').update({ location_text: locText || null, location_url: locUrl || null }).eq('id', id);
+        renderEventLocation(locText, locUrl);
+      } else {
+        renderEventLocation('', '');
+      }
+    }catch(e){ console.warn('Gagal menyimpan lokasi event:', e); }
 
     const url = new URL(location.href);
     url.searchParams.set('event', id);
