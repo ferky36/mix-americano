@@ -475,3 +475,14 @@ body { font-size: clamp(14px, calc(14px * var(--ui-zoom) / 100), 20px); }
   background: #ffffff;
 }
 .dark #playersToolbar{ background: #0f172a; } /* warna latar saat dark */
+
+/* Iconified buttons for compact mobile portrait */
+.icon { width: 18px; height: 18px; }
+.icon-btn { display:inline-flex; align-items:center; gap:6px; }
+
+@media (max-width: 480px) and (orientation: portrait){
+  .btn-label{ display:none !important; }
+  .helper-hint{ display:none !important; }
+  #playersPanel .icon{ width:18px; height:18px; }
+  #playersPanel .icon-btn{ padding:6px 8px !important; }
+}

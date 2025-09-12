@@ -1764,6 +1764,33 @@ function relocateEditorPlayersPanel(){
       gridCell.remove();
     }
   } catch {}
+  try{ setupPlayersToolbarUI?.(); }catch{}
+}
+
+// Replace players toolbar texts with icon+label; labels hidden on mobile portrait via CSS
+function setupPlayersToolbarUI(){
+  try{
+    const collapse = byId('btnCollapsePlayers');
+    if (collapse && !collapse.dataset.iconified){
+      collapse.dataset.iconified = '1';
+      collapse.classList.add('icon-btn');
+      collapse.innerHTML = '<svg class="icon inline-block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg><span class="btn-label">Pemain</span>';
+      const hint = collapse.parentElement?.querySelector('span');
+      if (hint) hint.classList.add('helper-hint');
+    }
+    const map = [
+      ['btnPasteText', '<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>', 'Edit sebagai teks'],
+      ['btnApplyPlayerTemplate', '<path d="M5 12l5 5L20 7"/>', 'Apply Template'],
+      ['btnClearPlayers', '<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 10v8M14 10v8"/><path d="M8 6V4h8v2"/>', 'Kosongkan']
+    ];
+    map.forEach(([id, svgPath, label])=>{
+      const btn = byId(id);
+      if (!btn || btn.dataset.iconified) return;
+      btn.dataset.iconified = '1';
+      btn.classList.add('icon-btn');
+      btn.innerHTML = `<svg class="icon inline-block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${svgPath}</svg><span class="btn-label">${label}</span>`;
+    });
+  }catch{}
 }
 
 // Render players for viewer mode into the viewer-only panel
@@ -3960,6 +3987,8 @@ function openShareEventModal(){
   })();
 }
 byId('btnShareEvent')?.addEventListener('click', openShareEventModal);
+// Enhance players toolbar icons on startup
+try{ setupPlayersToolbarUI?.(); }catch{}
 // Tab handlers for Event modal
 byId('tabCreateEvent')?.addEventListener('click', ()=>{ setEventModalTab('create'); });
 byId('tabSearchEvent')?.addEventListener('click', async ()=>{ setEventModalTab('search'); await loadSearchDates(); const d = byId('searchDateSelect')?.value || ''; if (d) await loadSearchEventsForDate(d); });
