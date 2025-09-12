@@ -3669,6 +3669,30 @@ function setEventModalTab(mode){
   // If editor link row exists from previous share, show it back in create/search context
   const ed = document.getElementById('eventEditorLinkOutput');
   if (ed && ed.parentElement) ed.parentElement.classList.remove('hidden');
+
+  // When switching to Create tab, ensure optional location inputs exist
+  if (isCreate) {
+    try{
+      const form = byId('eventForm');
+      if (form && !byId('eventLocationInput')){
+        const wrap = document.createElement('div');
+        wrap.innerHTML = `
+          <div>
+            <label class="block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Lokasi (opsional)</label>
+            <input id="eventLocationInput" type="text" placeholder="Mis. Lapangan A, GBK"
+                  class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" />
+          </div>
+          <div>
+            <label class="block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Link Maps (opsional)</label>
+            <input id="eventLocationUrlInput" type="url" placeholder="https://maps.app.goo.gl/..."
+                  class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" />
+          </div>`;
+        const btn = byId('eventCreateBtn');
+        if (btn) form.insertBefore(wrap, btn);
+        else form.appendChild(wrap);
+      }
+    }catch{}
+  }
 }
 function openCreateEventModal(){
   setEventModalTab("create"); byId('eventDateInput').value = byId('sessionDate').value || new Date().toISOString().slice(0,10);
