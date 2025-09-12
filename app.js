@@ -1414,6 +1414,10 @@ function saveToStore() {
 function applyPayload(payload) {
   if (!payload) return;
 
+  // Keep previous players/waiting for diff-based handling (e.g., viewer leave + auto-promote)
+  const prevPlayers = Array.isArray(players) ? players.slice() : [];
+  const prevWaitingCopy = Array.isArray(window.waitingList) ? window.waitingList.slice() : [];
+
   // 1) Inputs dasar
   if (byId('sessionDate'))      byId('sessionDate').value      = payload.date || '';
   if (byId('startTime'))        byId('startTime').value        = payload.startTime || '19:00';
@@ -1471,6 +1475,24 @@ function applyPayload(payload) {
   validateAll?.();
   computeStandings?.();
   refreshFairness?.();
+
+  // 5b) If exactly one player left and exactly one promoted from waiting joined,
+  // replace old name with new in all rounds to keep schedule consistent.
+  try{
+    const added = players.filter(p => !prevPlayers.includes(p));
+    const removed = prevPlayers.filter(p => !players.includes(p));
+    if (added.length === 1 && removed.length === 1) {
+      const wasInWaiting = prevWaitingCopy.includes(added[0]);
+      const nowInWaiting = (Array.isArray(waitingList) ? waitingList : []).includes(added[0]);
+      if (wasInWaiting && !nowInWaiting && typeof replaceNameInRounds === 'function') {
+        replaceNameInRounds(removed[0], added[0]);
+        // Re-render after replacement
+        renderAll?.();
+        validateAll?.();
+        computeStandings?.();
+      }
+    }
+  }catch{}
 
   // 6) Tandai saved
   if (payload.ts) markSaved(payload.ts);
@@ -2038,6 +2060,65 @@ function replaceNameInRounds(oldName, newName){
       ["a1","a2","b1","b2"].forEach(k=>{ if (r && r[k] === oldName) r[k] = newName; });
     });
   });
+}
+
+// ===== Rename helpers (robust mapping for multi-rename) =====
+function _normName(s){ return String(s||'').trim().toLowerCase(); }
+function _lev(a,b){
+  a = String(a||''); b = String(b||'');
+  const m=a.length, n=b.length; if (m===0) return n; if (n===0) return m;
+  const dp=new Array(n+1); for(let j=0;j<=n;j++) dp[j]=j;
+  for(let i=1;i<=m;i++){
+    let prev=dp[0]; dp[0]=i;
+    for(let j=1;j<=n;j++){
+      const tmp=dp[j];
+      dp[j]=Math.min(
+        dp[j]+1,
+        dp[j-1]+1,
+        prev + (a[i-1]===b[j-1]?0:1)
+      );
+      prev=tmp;
+    }
+  }
+  return dp[n];
+}
+function _normalizedLev(a,b){
+  const d=_lev(a,b); const L=Math.max(String(a||'').length, String(b||'').length) || 1;
+  return d / L;
+}
+// Compute robust rename pairs between two active lists
+function computeRenamePairs(oldActive, newActive){
+  const pairs=[];
+  const oldN = oldActive.map(_normName);
+  const newN = newActive.map(_normName);
+  const oldSet = new Set(oldN), newSet = new Set(newN);
+
+  // Pair same position but different casing/value
+  const usedNewIdx = new Set();
+  const usedOldIdx = new Set();
+  for(let i=0;i<Math.min(oldActive.length,newActive.length);i++){
+    if (oldN[i]===newN[i] && oldActive[i] !== newActive[i]){
+      pairs.push([oldActive[i], newActive[i]]);
+      usedOldIdx.add(i); usedNewIdx.add(i);
+    }
+  }
+
+  // Candidates: present only on one side
+  const oldCandIdx=[]; const newCandIdx=[];
+  for(let i=0;i<oldActive.length;i++) if(!usedOldIdx.has(i) && !newSet.has(oldN[i])) oldCandIdx.push(i);
+  for(let j=0;j<newActive.length;j++) if(!usedNewIdx.has(j) && !oldSet.has(newN[j])) newCandIdx.push(j);
+
+  // Greedy match by minimal normalized Levenshtein (threshold 0.45)
+  const takenNew=new Set();
+  for(const oi of oldCandIdx){
+    let bestJ=-1, bestScore=1e9;
+    for(const nj of newCandIdx){ if(takenNew.has(nj)) continue;
+      const s=_normalizedLev(oldActive[oi], newActive[nj]);
+      if (s<bestScore){ bestScore=s; bestJ=nj; }
+    }
+    if (bestJ>=0 && bestScore<=0.45){ pairs.push([oldActive[oi], newActive[bestJ]]); takenNew.add(bestJ); }
+  }
+  return pairs;
 }
 
 // Pastikan event masih ada. Jika sudah dihapus/tidak ada, reset ke mode lokal dan buka modal Cari Event.
@@ -3463,6 +3544,7 @@ byId("btnPasteText").addEventListener("click", () => {
 });
 byId("btnApplyText").addEventListener("click", () => {
   const newList = parsePlayersText(byId("playersText").value);
+  const oldActive = Array.isArray(players) ? players.slice() : [];
   const cap = (Number.isInteger(currentMaxPlayers) && currentMaxPlayers > 0) ? currentMaxPlayers : Infinity;
   const newActive = newList.slice(0, cap);
   const overflow = newList.slice(newActive.length);
@@ -3473,6 +3555,13 @@ byId("btnApplyText").addEventListener("click", () => {
   for (const n of overflow){
     if (!newActive.includes(n) && !newWaiting.includes(n)) newWaiting.push(n);
   }
+  // Robust multi-rename detection (LVS-based)
+  try{
+    const pairs = computeRenamePairs(oldActive, newActive) || [];
+    if (typeof replaceNameInRounds === 'function'){
+      pairs.forEach(([o,n])=>{ if (o && n) replaceNameInRounds(o,n); });
+    }
+  }catch{}
   players = newActive;
   if (!Array.isArray(waitingList)) waitingList = [];
   waitingList.splice(0, waitingList.length, ...newWaiting);
