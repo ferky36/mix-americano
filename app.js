@@ -3572,6 +3572,7 @@ byId("btnApplyText").addEventListener("click", () => {
   hideTextModal();
   markDirty();
   renderPlayersList();
+  renderAll?.();
   validateNames();
   try{ maybeAutoSaveCloud(); }catch{}
 });
