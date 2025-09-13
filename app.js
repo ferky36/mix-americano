@@ -770,7 +770,8 @@ async function loadAccessRoleFromCloud(){
     // 1) event owner shortcut (optional)
     try{
       const { data: ev } = await sb.from('events').select('owner_id').eq('id', currentEventId).maybeSingle();
-      if (ev?.owner_id && ev.owner_id === uid) { setAccessRole('editor'); return; }
+      _isOwnerUser = !!(ev?.owner_id && ev.owner_id === uid);
+      if (_isOwnerUser) { setAccessRole('editor'); return; }
     }catch{}
 
     // 2) membership check
@@ -1040,6 +1041,8 @@ let scoreCtx = {
 // ================== Access Control ================== //
 // role: 'editor' (full access) | 'viewer' (read-only)
 let accessRole = 'editor';
+// flag owner event (true jika user saat ini adalah owner dari event aktif)
+let _isOwnerUser = false;
 // waiting list container (shared) – ensure single shared array reference
 if (!Array.isArray(window.waitingList)) window.waitingList = [];
 var waitingList = window.waitingList;
@@ -1083,6 +1086,9 @@ function applyAccessMode(){
   // 2) Score controls container: sembunyikan untuk viewer biasa, TAPI tampilkan untuk view=1
   const hideScoreIds = [ 'scoreControlsLeft', 'btnFinishScore', 'btnRecalc', 'scoreButtonsA', 'scoreButtonsB' ];
   hideScoreIds.forEach(id=>{ const el = byId(id); if (el) el.classList.toggle('hidden', isViewer() && !isScoreOnlyMode()); });
+
+  // 3) Khusus tombol Recalc di modal: hanya pemilik event yang boleh melihat
+  try{ const rbtn = byId('btnRecalc'); if (rbtn) rbtn.classList.toggle('hidden', !window._isOwnerUser); }catch{}
 
   // courts toolbar: hide add-court button if exists
   const addBtn = byId('btnAddCourt'); if (addBtn) addBtn.classList.toggle('hidden', isViewer());
@@ -2547,7 +2553,7 @@ function renderCourt(container, arr) {
     tr.appendChild(tdSB);
 
     // Viewer mode: tampilkan baris tanpa kolom aksi
-    if (isViewer()) {
+    if (isViewer() && !isScoreOnlyMode()) {
       tbody.appendChild(tr);
       // Tambahkan baris jeda juga di mode viewer (agar waktu jeda terlihat)
       const _showBreakEl = byId('showBreakRows');
@@ -2583,6 +2589,19 @@ function renderCourt(container, arr) {
     try { btnCalc.textContent = (r.scoreA || r.scoreB) ? 'Hitung Ulang' : 'Mulai Main'; } catch {}
     tdCalc.appendChild(btnCalc);
     tr.appendChild(tdCalc);
+    // Override visibility/label for table action button based on role and view mode
+    try {
+      const hasScore = (r.scoreA !== undefined && r.scoreA !== null && r.scoreA !== '') || (r.scoreB !== undefined && r.scoreB !== null && r.scoreB !== '');
+      const allowStart = (typeof canEditScore === 'function') ? canEditScore() : !isViewer();
+      const allowRecalc = !!window._isOwnerUser; // only owner can recalc
+      if (hasScore) {
+        btnCalc.textContent = 'Hitung Ulang';
+        if (!allowRecalc) btnCalc.classList.add('hidden');
+      } else {
+        btnCalc.textContent = 'Mulai Main';
+        if (!allowStart) btnCalc.classList.add('hidden');
+      }
+    } catch {}
 
     tbody.appendChild(tr);
 
