@@ -58,6 +58,16 @@ body { font-size: clamp(14px, calc(14px * var(--ui-zoom) / 100), 20px); }
   color:#fff; font-weight:600;
   text-shadow: 0 1px 1px rgba(0,0,0,.15);
 }
+
+/* Animations for score modal controls */
+.fade-in { opacity: 0; transform: translateY(4px); animation: fadeIn .18s ease-out forwards; }
+.fade-out { opacity: 1; transform: translateY(0); animation: fadeOut .15s ease-in forwards; }
+@keyframes fadeIn { to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeOut { to { opacity: 0; transform: translateY(4px); } }
+
+/* Subtle pulse for running timer */
+.timer-running { animation: timerPulse 1s ease-in-out infinite; }
+@keyframes timerPulse { 0%,100%{ opacity:1 } 50%{ opacity:.6 } }
 #eventLocationView .event-loc .pin{ width:18px; height:18px; opacity:.95; }
 #eventLocationView .event-loc a{ color:#fff; text-decoration:underline; text-underline-offset:2px; }
 @media (min-width:768px){
