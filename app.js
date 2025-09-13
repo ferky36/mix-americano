@@ -81,6 +81,13 @@ function debounce(fn, wait = 120){
 }
 // panggilan ringan untuk refresh fairness
 const refreshFairness = debounce(() => renderFairnessInfo(), 120);
+// Debounce autosave untuk skor live di popup (agar realtime tanpa spam)
+const saveLiveScoreDebounced = debounce(() => {
+  try{
+    if (typeof maybeAutoSaveCloud === 'function') maybeAutoSaveCloud();
+    else if (typeof saveStateToCloud === 'function' && isCloudMode && isCloudMode()) saveStateToCloud();
+  }catch{}
+}, 700);
 function parseHM(str){ // "19:00" -> minutes since midnight
   const [h,m] = (str||'00:00').split(':').map(n=>parseInt(n||'0',10));
   return (h*60 + m) % (24*60);
@@ -3434,6 +3441,28 @@ function commitScoreToRound(auto=false){
 function updateScoreDisplay(){
   byId('scoreAVal').textContent = scoreCtx.a;
   byId('scoreBVal').textContent = scoreCtx.b;
+
+  // Sinkronkan skor ke state ronde yang sedang dibuka agar tabel match ikut terupdate
+  try{
+    const r = (roundsByCourt[scoreCtx.court] || [])[scoreCtx.round];
+    if (r){
+      r.scoreA = String(scoreCtx.a);
+      r.scoreB = String(scoreCtx.b);
+      markDirty();
+
+      // Update tampilan skor di tabel secara langsung tanpa renderAll
+      try{
+        const row = document.querySelector(`.rnd-table tbody tr[data-index="${scoreCtx.round}"]`);
+        const aInp = row?.querySelector('.rnd-scoreA input');
+        const bInp = row?.querySelector('.rnd-scoreB input');
+        if (aInp) aInp.value = String(scoreCtx.a);
+        if (bInp) bInp.value = String(scoreCtx.b);
+      }catch{}
+
+      // Autosave debounced ke Cloud supaya viewer lain melihat realtime
+      saveLiveScoreDebounced();
+    }
+  }catch{}
 }
 
 // EVENTS
