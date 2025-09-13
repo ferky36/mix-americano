@@ -281,12 +281,16 @@ async function fetchEventMetaFromDB(eventId){
 function updateAdminButtonsVisibility(){
   try{
     const p = getUrlParams?.() || {};
-    const isAdmin = String(p.owner||'').toLowerCase() === 'yes';
+    const forceViewer = String(p.view||'') === '1';
     const hasEvent = !!currentEventId;
+    const adminFlag = String(p.owner||'').toLowerCase() === 'yes';
+    const viewerNow = (typeof isViewer === 'function') ? isViewer() : false;
+    const isAdmin = adminFlag && !forceViewer && !viewerNow;
     const btnCreate = byId('btnMakeEventLink');
     const btnSave = byId('btnSave');
+    // In any viewer mode (including view=1), hide admin-centric buttons
     if (btnCreate) btnCreate.classList.toggle('hidden', !isAdmin);
-    if (btnSave) btnSave.classList.toggle('hidden', !(isAdmin || hasEvent));
+    if (btnSave) btnSave.classList.toggle('hidden', viewerNow || ! (isAdmin || hasEvent));
   }catch{}
 }
 
@@ -958,16 +962,25 @@ function randomSlug(len = 6){
 }
 
 function buildEventUrl(eventId, dateStr){
-  const u = new URL(location.href);
+  // Bangun URL dari APP_BASE_URL agar bersih dari param lain (owner, view, role, invite)
+  const base = (typeof APP_BASE_URL === 'string' && APP_BASE_URL) ? APP_BASE_URL : (location.origin + location.pathname);
+  const u = new URL(base);
   u.searchParams.set('event', eventId);
   if (dateStr) u.searchParams.set('date', dateStr);
   return u.toString();
 }
 
 function buildViewerUrl(eventId, dateStr){
+  // Viewer dengan aturan khusus (view=1) untuk hitung skor saja
   const u = new URL(buildEventUrl(eventId, dateStr));
   u.searchParams.set('view', '1');
   return u.toString();
+}
+
+function buildPublicViewerUrl(eventId, dateStr){
+  // Link viewer standar tanpa parameter owner/view/role/invite
+  // Hanya event dan date agar clean
+  return buildEventUrl(eventId, dateStr);
 }
 
 function buildInviteUrl(eventId, dateStr, token){
@@ -1031,11 +1044,17 @@ let accessRole = 'editor';
 if (!Array.isArray(window.waitingList)) window.waitingList = [];
 var waitingList = window.waitingList;
 function isViewer(){ return accessRole !== 'editor'; }
+function isScoreOnlyMode(){ return !!window._viewerScoreOnly; }
+function canEditScore(){ return !isViewer() || isScoreOnlyMode(); }
 function setAccessRole(role){ accessRole = (role === 'viewer') ? 'viewer' : 'editor'; applyAccessMode(); renderAll?.(); renderPlayersList?.(); renderViewerPlayersList?.(); }
 function applyAccessMode(){
   document.documentElement.setAttribute('data-readonly', String(isViewer()));
-  const disableIds = ['btnAddCourt','btnMakeEventLink','btnShareEvent','btnStartTimer','btnFinishScore','btnResetScore','btnAPlus','btnAMinus','btnBPlus','btnBMinus','btnApplyPlayersActive','btnResetActive','btnClearScoresActive','btnClearScoresAll'];
+  const disableIds = ['btnAddCourt','btnMakeEventLink','btnShareEvent','btnApplyPlayersActive','btnResetActive','btnClearScoresActive','btnClearScoresAll'];
   disableIds.forEach(id=>{ const el = byId(id); if (el) el.disabled = isViewer(); });
+
+  // Kontrol skor: boleh aktif jika editor ATAU viewer score-only
+  const scoreIds = ['btnStartTimer','btnFinishScore','btnResetScore','btnAPlus','btnAMinus','btnBPlus','btnBMinus'];
+  scoreIds.forEach(id=>{ const el = byId(id); if (el) el.disabled = !canEditScore(); });
 
   // Hide edit-centric UI in viewer mode
   const hideIds = [
@@ -1289,6 +1308,8 @@ function initCloudFromUrl() {
   }
   // Force viewer from link (?view=1 or role=viewer)
   _forceViewer = (String(p.view||'') === '1') || (String(p.role||'').toLowerCase() === 'viewer');
+  // Mode khusus: viewer boleh hitung skor jika ?view=1
+  window._viewerScoreOnly = (String(p.view||'') === '1');
   if (_forceViewer) setAccessRole('viewer');
 
   // Load access role if in cloud mode (skip elevation if forced viewer)
@@ -3292,7 +3313,7 @@ function openScoreModal(courtIdx, roundIdx){
   }
 
   // Read-only mode: selalu terkunci
-  if (isViewer()) setScoreModalLocked(true);
+  if (isViewer() && !isScoreOnlyMode()) setScoreModalLocked(true);
 
   byId('scoreModal').classList.remove('hidden');
 }
@@ -3305,7 +3326,7 @@ function closeScoreModal(){
 }
 
 function startScoreTimer(){
-  if (isViewer()) return;
+  if (!canEditScore()) return;
   if (scoreCtx.running) return;
   // jika sudah 0: reset ke durasi default lagi
   if (scoreCtx.remainMs <= 0){
@@ -3745,10 +3766,10 @@ byId('btnApplyPlayersActive').addEventListener('click', ()=>{
 // Modal Hitung Skor
 byId('btnCloseScore').addEventListener('click', closeScoreModal);
 
-byId('btnAPlus').addEventListener('click', ()=>{ if (isViewer()) return; scoreCtx.a = Math.min(999, scoreCtx.a + 1); updateScoreDisplay(); });
-byId('btnAMinus').addEventListener('click', ()=>{ if (isViewer()) return; scoreCtx.a = Math.max(0,   scoreCtx.a - 1); updateScoreDisplay(); });
-byId('btnBPlus').addEventListener('click', ()=>{ if (isViewer()) return; scoreCtx.b = Math.min(999, scoreCtx.b + 1); updateScoreDisplay(); });
-byId('btnBMinus').addEventListener('click', ()=>{ if (isViewer()) return; scoreCtx.b = Math.max(0,   scoreCtx.b - 1); updateScoreDisplay(); });
+byId('btnAPlus').addEventListener('click', ()=>{ if (!canEditScore()) return; scoreCtx.a = Math.min(999, scoreCtx.a + 1); updateScoreDisplay(); });
+byId('btnAMinus').addEventListener('click', ()=>{ if (!canEditScore()) return; scoreCtx.a = Math.max(0,   scoreCtx.a - 1); updateScoreDisplay(); });
+byId('btnBPlus').addEventListener('click', ()=>{ if (!canEditScore()) return; scoreCtx.b = Math.min(999, scoreCtx.b + 1); updateScoreDisplay(); });
+byId('btnBMinus').addEventListener('click', ()=>{ if (!canEditScore()) return; scoreCtx.b = Math.max(0,   scoreCtx.b - 1); updateScoreDisplay(); });
 // Set skor seri (rata-rata, dibulatkan ke bawah)
 // byId('btnTie').addEventListener('click', ()=>{
 //   const avg = Math.max(scoreCtx.a, scoreCtx.b);
@@ -3765,13 +3786,13 @@ byId('btnStartTimer').addEventListener('click', startScoreTimer);
 
 // Finish manual (tetap dengan konfirmasi)
 byId('btnFinishScore').addEventListener('click', ()=>{
-  if (isViewer()) return;
+  if (!canEditScore()) return;
   commitScoreToRound(/*auto*/false);
   closeScoreModal();
 });
 
 byId('btnRecalc').addEventListener('click', ()=>{
-  if (isViewer()) return;
+  if (!canEditScore()) return;
   setScoreModalLocked(false);                  // munculkan semua kontrol
   const start = byId('btnStartTimer'); if (start) start.disabled = true;   // tidak boleh start ulang
   const t = byId('scoreTimer');     if (t)     t.textContent = 'Permainan Selesai';
@@ -3779,7 +3800,7 @@ byId('btnRecalc').addEventListener('click', ()=>{
 
 // Reset skor & timer (tapi tidak menghapus skor di ronde)
 byId('btnResetScore').addEventListener('click', ()=>{
-  if (isViewer()) return;
+  if (!canEditScore()) return;
   scoreCtx.a = 0; scoreCtx.b = 0;
   updateScoreDisplay();
   // opsional: reset timer tampilan juga
@@ -4101,10 +4122,37 @@ function openShareEventModal(){
     const info = sb?.querySelector('.p-3');
     if (info) info.textContent = 'Bagikan Link Event';
   })();
-  // ensure viewer link
+  // ensure viewer link (public viewer, clean params)
   const d = byId('sessionDate')?.value || currentSessionDate || new Date().toISOString().slice(0,10);
-  const viewerLink = buildViewerUrl(currentEventId, d);
+  const viewerLink = buildPublicViewerUrl(currentEventId, d);
   const out = byId('eventLinkOutput'); if (out) out.value = viewerLink;
+
+  // ensure extra field: Viewer (Hitung Skor) dengan ?view=1
+  (function ensureScoreViewerField(){
+    const successBox = byId('eventSuccess'); if (!successBox) return;
+    let row = byId('eventViewerCalcRow');
+    if (!row){
+      row = document.createElement('div');
+      row.id = 'eventViewerCalcRow';
+      row.className = 'space-y-1';
+      row.innerHTML = `
+        <div class="text-xs text-gray-600 dark:text-gray-300">Link Viewer (boleh hitung skor)</div>
+        <div class="flex items-center gap-2">
+          <input id="eventViewerCalcLinkOutput" readonly class="flex-1 border rounded-lg px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100" />
+          <button id="eventViewerCalcCopyBtn" class="px-3 py-2 rounded-lg bg-green-600 text-white text-sm">Copy</button>
+        </div>`;
+      successBox.appendChild(row);
+      try{
+        byId('eventViewerCalcCopyBtn').addEventListener('click', async ()=>{
+          const v = byId('eventViewerCalcLinkOutput')?.value || '';
+          await copyToClipboard(v);
+          const btn = byId('eventViewerCalcCopyBtn'); if (btn){ btn.textContent='Copied!'; setTimeout(()=>btn.textContent='Copy', 1200); }
+        });
+      }catch{}
+    }
+    const v2 = buildViewerUrl(currentEventId, d);
+    const o2 = byId('eventViewerCalcLinkOutput'); if (o2) o2.value = v2;
+  })();
   // hide editor link row in Share view to keep only viewer link and Invite
   (function hideEditorLinkInShare(){
     const inp = byId('eventEditorLinkOutput');
@@ -4214,7 +4262,7 @@ byId('eventCreateBtn')?.addEventListener('click', async () => {
     updateEventActionButtons?.();
 
     // tampilkan UI success: share link default = viewer (readonly) + embed owner
-    const link = buildViewerUrl(id, date);
+    const link = buildPublicViewerUrl(id, date);
     byId('eventForm').classList.add('hidden');
     byId('eventSuccess').classList.remove('hidden');
     // reset info text to creation success wording in create flow
@@ -4224,6 +4272,30 @@ byId('eventCreateBtn')?.addEventListener('click', async () => {
       if (info) info.textContent = 'Event berhasil dibuat! Bagikan link berikut:';
     })();
     byId('eventLinkOutput').value = link;
+    // Set also the score-only viewer link
+    try{
+      (function ensureScoreViewerField(){
+        const successBox = byId('eventSuccess'); if (!successBox) return;
+        let row = byId('eventViewerCalcRow');
+        if (!row){
+          row = document.createElement('div'); row.id='eventViewerCalcRow'; row.className='space-y-1';
+          row.innerHTML = `
+            <div class="text-xs text-gray-600 dark:text-gray-300">Link Viewer (boleh hitung skor)</div>
+            <div class="flex items-center gap-2">
+              <input id="eventViewerCalcLinkOutput" readonly class="flex-1 border rounded-lg px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100" />
+              <button id="eventViewerCalcCopyBtn" class="px-3 py-2 rounded-lg bg-green-600 text-white text-sm">Copy</button>
+            </div>`;
+          successBox.appendChild(row);
+          byId('eventViewerCalcCopyBtn').addEventListener('click', async ()=>{
+            const v = byId('eventViewerCalcLinkOutput')?.value || '';
+            await copyToClipboard(v);
+            const btn = byId('eventViewerCalcCopyBtn'); if (btn){ btn.textContent='Copied!'; setTimeout(()=>btn.textContent='Copy', 1200); }
+          });
+        }
+        const v2 = buildViewerUrl(id, date);
+        const o2 = byId('eventViewerCalcLinkOutput'); if (o2) o2.value = v2;
+      })();
+    }catch{}
 
     // tambahkan Editor link box bila belum ada
     (function ensureEditorLinkBox(){
@@ -4315,12 +4387,8 @@ byId('eventCreateBtn')?.addEventListener('click', async () => {
 
 // Klik Copy Link
 byId('eventCopyBtn')?.addEventListener('click', async () => {
-  // Pastikan yang disalin adalah viewer link
-  let link = byId('eventLinkOutput').value;
-  try{
-    const u = new URL(link, location.href);
-    if (!u.searchParams.get('view')){ u.searchParams.set('view','1'); link = u.toString(); }
-  }catch{}
+  // Salin apa adanya dari field viewer publik (tanpa owner/view)
+  const link = byId('eventLinkOutput').value;
   try {
     await navigator.clipboard.writeText(link);
     byId('eventCopyBtn').textContent = 'Copied!';
@@ -4410,7 +4478,7 @@ function updateEventActionButtons(){
   const hasEvent = !!currentEventId;
   ['btnShareEvent','btnLeaveEvent'].forEach(id=>{
     const el = byId(id);
-    if (el) el.classList.toggle('hidden', !hasEvent);
+    if (el) el.classList.toggle('hidden', !hasEvent || isViewer());
   });
 }
 
