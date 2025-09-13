@@ -2595,6 +2595,17 @@ function renderCourt(container, arr) {
     const tdCalc = document.createElement('td');
     tdCalc.dataset.label = 'Aksi';
     tdCalc.className = 'rnd-col-actions';
+    // Live & Done badges
+    const live = document.createElement('span');
+    live.className = 'inline-flex items-center gap-1 mr-2 px-2 py-0.5 rounded-full text-xs bg-red-600 text-white live-badge';
+    live.textContent = 'Live';
+    if (!(r.startedAt && !r.finishedAt)) live.classList.add('hidden');
+    tdCalc.appendChild(live);
+    const done = document.createElement('span');
+    done.className = 'inline-flex items-center gap-1 mr-2 px-2 py-0.5 rounded-full text-xs bg-gray-600 text-white done-badge';
+    done.textContent = 'Selesai';
+    if (!r.finishedAt) done.classList.add('hidden');
+    tdCalc.appendChild(done);
     const btnCalc = document.createElement('button');
     btnCalc.className = 'px-3 py-1.5 rounded-lg border dark:border-gray-700 text-sm w-full sm:w-auto';
     btnCalc.textContent = (r.scoreA || r.scoreB) ? '🔁 Hitung Ulang' : '🧮 Mulai Main';
@@ -3375,6 +3386,24 @@ function startScoreTimer(){
     const minutes = parseInt(byId('minutesPerRound').value || '12', 10);
     scoreCtx.remainMs = minutes * 60 * 1000;
   }
+  // Set started flag once (and persist) to lock others realtime
+  try {
+    const r = (roundsByCourt[scoreCtx.court] || [])[scoreCtx.round] || {};
+    if (r.startedAt){ showToast?.('Permainan sudah dimulai untuk match ini', 'warn'); const _btn=byId('btnStartTimer'); if(_btn) _btn.classList.add('hidden'); return; }
+    r.startedAt = new Date().toISOString();
+    markDirty();
+    try{ if (typeof maybeAutoSaveCloud === 'function') maybeAutoSaveCloud(); else if (typeof saveStateToCloud === 'function') saveStateToCloud(); }catch{}
+    // Update live badge and action button inline
+    try{
+      const row = document.querySelector('.rnd-table tbody tr[data-index="'+scoreCtx.round+'"]');
+      const actions = row?.querySelector('.rnd-col-actions');
+      const live = actions?.querySelector('.live-badge');
+      if (live) live.classList.remove('hidden');
+      const startBtn = actions?.querySelector('button');
+      if (startBtn && /mulai/i.test(startBtn.textContent||'')) startBtn.classList.add('hidden');
+    }catch{}
+  } catch {}
+
   scoreCtx.running = true;
   const btn = byId('btnStartTimer'); if (btn) btn.disabled = true;
 
@@ -3416,6 +3445,7 @@ function commitScoreToRound(auto=false){
   }
   r.scoreA = String(scoreCtx.a);
   r.scoreB = String(scoreCtx.b);
+  try{ r.finishedAt = new Date().toISOString(); }catch{}
 
   markDirty();
   renderAll();
@@ -3435,6 +3465,16 @@ function commitScoreToRound(auto=false){
   } catch (e) {
     console.warn('Autosave cloud setelah commit skor gagal:', e);
   }
+
+  // Inline update badges for quick feedback
+  try{
+    const row = document.querySelector('.rnd-table tbody tr[data-index="'+scoreCtx.round+'"]');
+    const actions = row?.querySelector('.rnd-col-actions');
+    const live = actions?.querySelector('.live-badge');
+    const done = actions?.querySelector('.done-badge');
+    if (live) live.classList.add('hidden');
+    if (done) done.classList.remove('hidden');
+  }catch{}
 }
 
 
@@ -4587,6 +4627,7 @@ byId('btnLogout')?.addEventListener('click', async ()=>{
   try{ await sb.auth.signOut(); }catch{}
   location.reload();
 });
+
 
 
 
