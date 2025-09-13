@@ -47,7 +47,7 @@ function setScoreModalLocked(locked){
   if (scoreButtonsB)   scoreButtonsB.classList.toggle('hidden', locked);
   if (left)   left.classList.toggle('hidden', locked);
   if (finish) finish.classList.toggle('hidden', locked);
-  if (recalc) recalc.classList.toggle('hidden', !locked);
+  if (recalc) recalc.classList.toggle('hidden', !locked || (typeof isOwnerNow==='function' ? !isOwnerNow() : !window._isOwnerUser));
 
   // Start aktif hanya ketika BELUM ada skor (mode unlocked saat fresh open)
   if (start) start.disabled = locked;
@@ -1049,6 +1049,13 @@ var waitingList = window.waitingList;
 function isViewer(){ return accessRole !== 'editor'; }
 function isScoreOnlyMode(){ return !!window._viewerScoreOnly; }
 function canEditScore(){ return !isViewer() || isScoreOnlyMode(); }
+function isOwnerNow(){
+  try{
+    const p = (typeof getUrlParams === 'function') ? getUrlParams() : {};
+    if (String(p.owner||'').toLowerCase() === 'yes') return true;
+  }catch{}
+  return !!window._isOwnerUser;
+}
 function setAccessRole(role){ accessRole = (role === 'viewer') ? 'viewer' : 'editor'; applyAccessMode(); renderAll?.(); renderPlayersList?.(); renderViewerPlayersList?.(); }
 function applyAccessMode(){
   document.documentElement.setAttribute('data-readonly', String(isViewer()));
@@ -1088,7 +1095,7 @@ function applyAccessMode(){
   hideScoreIds.forEach(id=>{ const el = byId(id); if (el) el.classList.toggle('hidden', isViewer() && !isScoreOnlyMode()); });
 
   // 3) Khusus tombol Recalc di modal: hanya pemilik event yang boleh melihat
-  try{ const rbtn = byId('btnRecalc'); if (rbtn) rbtn.classList.toggle('hidden', !window._isOwnerUser); }catch{}
+  try{ const rbtn = byId('btnRecalc'); if (rbtn) rbtn.classList.toggle('hidden', !isOwnerNow()); }catch{}
 
   // courts toolbar: hide add-court button if exists
   const addBtn = byId('btnAddCourt'); if (addBtn) addBtn.classList.toggle('hidden', isViewer());
@@ -2593,7 +2600,7 @@ function renderCourt(container, arr) {
     try {
       const hasScore = (r.scoreA !== undefined && r.scoreA !== null && r.scoreA !== '') || (r.scoreB !== undefined && r.scoreB !== null && r.scoreB !== '');
       const allowStart = (typeof canEditScore === 'function') ? canEditScore() : !isViewer();
-      const allowRecalc = !!window._isOwnerUser; // only owner can recalc
+      const allowRecalc = (typeof isOwnerNow==="function") ? isOwnerNow() : !!window._isOwnerUser; // only owner can recalc
       if (hasScore) {
         btnCalc.textContent = 'Hitung Ulang';
         if (!allowRecalc) btnCalc.classList.add('hidden');
