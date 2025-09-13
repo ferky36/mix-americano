@@ -1069,7 +1069,7 @@ function applyAccessMode(){
   const addBtn = byId('btnAddCourt'); if (addBtn) addBtn.classList.toggle('hidden', isViewer());
 
   // fairness info box (if present): hide in viewer
-  const fair = byId('fairnessInfo'); if (fair) fair.classList.toggle('hidden', isViewer());
+  // const fair = byId('fairnessInfo'); if (fair) fair.classList.toggle('hidden', isViewer());
 
   // Filter summary labels in viewer mode
   try {
@@ -3357,6 +3357,21 @@ function commitScoreToRound(auto=false){
   markDirty();
   renderAll();
   computeStandings();
+
+  // Auto-simpan ke Cloud setelah skor dimasukkan (Finish atau waktu habis)
+  try {
+    if (typeof isCloudMode === 'function' && isCloudMode()) {
+      // simpan tanpa overlay agar cepat
+      if (typeof maybeAutoSaveCloud === 'function') {
+        maybeAutoSaveCloud();
+      } else if (typeof saveStateToCloud === 'function') {
+        // fallback langsung
+        saveStateToCloud();
+      }
+    }
+  } catch (e) {
+    console.warn('Autosave cloud setelah commit skor gagal:', e);
+  }
 }
 
 
