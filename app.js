@@ -2606,7 +2606,8 @@ function renderCourt(container, arr) {
         if (!allowRecalc) btnCalc.classList.add('hidden');
       } else {
         btnCalc.textContent = 'Mulai Main';
-        if (!allowStart) btnCalc.classList.add('hidden');
+        const started = !!r.startedAt;
+        if (!allowStart || started) btnCalc.classList.add('hidden');
       }
     } catch {}
 
@@ -3340,6 +3341,14 @@ function openScoreModal(courtIdx, roundIdx){
 
   // Read-only mode: selalu terkunci
   if (isViewer() && !isScoreOnlyMode()) setScoreModalLocked(true);
+
+  // Jika match sudah pernah dimulai (flag pada round), sembunyikan tombol Start dan beritahu pengguna
+  try{
+    const startBtn = byId('btnStartTimer');
+    const alreadyStarted = !!r.startedAt;
+    if (startBtn) startBtn.classList.toggle('hidden', alreadyStarted);
+    if (alreadyStarted){ try{ showToast('Permainan sudah dimulai untuk match ini', 'info'); }catch{} }
+  }catch{}
 
   byId('scoreModal').classList.remove('hidden');
 }
@@ -4549,3 +4558,6 @@ byId('btnLogout')?.addEventListener('click', async ()=>{
   try{ await sb.auth.signOut(); }catch{}
   location.reload();
 });
+
+
+
