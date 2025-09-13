@@ -3378,6 +3378,63 @@ function closeScoreModal(){
   byId('scoreModal').classList.add('hidden');
 }
 
+// Handler dengan konfirmasi: bila match sudah dimulai namun belum selesai,
+// tutup = batalkan permainan (hapus startedAt) dan kembalikan tombol Mulai.
+function onCloseScoreClick(){
+  try{
+    const r = (roundsByCourt[scoreCtx.court] || [])[scoreCtx.round] || {};
+    const isStarted = !!r.startedAt;
+    const isFinished = !!r.finishedAt;
+    if (isStarted && !isFinished){
+      const ok = confirm('Permainan untuk match ini sedang berjalan. Menutup akan membatalkan permainan. Lanjutkan?');
+      if (!ok) return; // batal menutup
+      try{ delete r.startedAt; }catch{}
+      // pulihkan skor semula jika ada cadangan
+      try{
+        const hadPrev = (typeof r._prevScoreA !== 'undefined') || (typeof r._prevScoreB !== 'undefined');
+        if (hadPrev){
+          r.scoreA = (typeof r._prevScoreA !== 'undefined') ? r._prevScoreA : '';
+          r.scoreB = (typeof r._prevScoreB !== 'undefined') ? r._prevScoreB : '';
+          try{ delete r._prevScoreA; delete r._prevScoreB; }catch{}
+          // sinkronkan tampilan popup & tabel
+          scoreCtx.a = Number(r.scoreA || 0);
+          scoreCtx.b = Number(r.scoreB || 0);
+          try{
+            const row = document.querySelector('.rnd-table tbody tr[data-index="'+scoreCtx.round+'"]');
+            const aInp = row?.querySelector('.rnd-scoreA input');
+            const bInp = row?.querySelector('.rnd-scoreB input');
+            if (aInp) aInp.value = String(r.scoreA || '');
+            if (bInp) bInp.value = String(r.scoreB || '');
+          }catch{}
+        }
+      }catch{}
+      // reset timer state agar siap mulai lagi
+      try{
+        const minutes = parseInt(byId('minutesPerRound').value || '12', 10);
+        scoreCtx.remainMs = minutes * 60 * 1000;
+        const t = byId('scoreTimer'); if (t) t.textContent = fmtMMSS(scoreCtx.remainMs);
+      }catch{}
+      // update UI baris tabel: sembunyikan badge Live, tampilkan tombol Mulai jika boleh
+      try{
+        const row = document.querySelector('.rnd-table tbody tr[data-index="'+scoreCtx.round+'"]');
+        const actions = row?.querySelector('.rnd-col-actions');
+        const live = actions?.querySelector('.live-badge'); if (live) live.classList.add('hidden');
+        const btn = actions?.querySelector('button');
+        const allowStart = (typeof canEditScore === 'function') ? canEditScore() : !isViewer();
+        if (btn){
+          btn.textContent = 'Mulai Main';
+          if (allowStart) btn.classList.remove('hidden');
+        }
+      }catch{}
+      try{ showToast('Permainan dibatalkan. Skor direset.', 'warn'); }catch{}
+      // simpan pembatalan ke Cloud (realtime)
+      markDirty();
+      try{ if (typeof maybeAutoSaveCloud === 'function') maybeAutoSaveCloud(); else if (typeof saveStateToCloud === 'function') saveStateToCloud(); }catch{}
+    }
+  }catch{}
+  closeScoreModal();
+}
+
 function startScoreTimer(){
   if (!canEditScore()) return;
   if (scoreCtx.running) return;
@@ -3389,10 +3446,11 @@ function startScoreTimer(){
   // Set started flag once (and persist) to lock others realtime
   try {
     const r = (roundsByCourt[scoreCtx.court] || [])[scoreCtx.round] || {};
-    if (r.startedAt){ showToast?.('Permainan sudah dimulai untuk match ini', 'warn'); const _btn=byId('btnStartTimer'); if(_btn) _btn.classList.add('hidden'); return; }
+    if (r.startedAt){ showToast?.("Permainan sudah dimulai untuk match ini", "warn"); const _btn=byId("btnStartTimer"); if(_btn) _btn.classList.add("hidden"); return; }
+    // backup skor awal untuk pemulihan jika dibatalkan
+    if (typeof r._prevScoreA === "undefined") r._prevScoreA = (typeof r.scoreA !== "undefined") ? r.scoreA : "";
+    if (typeof r._prevScoreB === "undefined") r._prevScoreB = (typeof r.scoreB !== "undefined") ? r.scoreB : "";
     r.startedAt = new Date().toISOString();
-    markDirty();
-    try{ if (typeof maybeAutoSaveCloud === 'function') maybeAutoSaveCloud(); else if (typeof saveStateToCloud === 'function') saveStateToCloud(); }catch{}
     // Update live badge and action button inline
     try{
       const row = document.querySelector('.rnd-table tbody tr[data-index="'+scoreCtx.round+'"]');
@@ -3402,6 +3460,9 @@ function startScoreTimer(){
       const startBtn = actions?.querySelector('button');
       if (startBtn && /mulai/i.test(startBtn.textContent||'')) startBtn.classList.add('hidden');
     }catch{}
+    // persist startedAt to Cloud
+    markDirty();
+    try{ if (typeof maybeAutoSaveCloud === 'function') maybeAutoSaveCloud(); else if (typeof saveStateToCloud === 'function') saveStateToCloud(); }catch{}
   } catch {}
 
   scoreCtx.running = true;
@@ -3868,7 +3929,7 @@ byId('btnApplyPlayersActive').addEventListener('click', ()=>{
   renderPlayersList();
 });
 // Modal Hitung Skor
-byId('btnCloseScore').addEventListener('click', closeScoreModal);
+byId('btnCloseScore').addEventListener('click', onCloseScoreClick);
 
 byId('btnAPlus').addEventListener('click', ()=>{ if (!canEditScore()) return; scoreCtx.a = Math.min(999, scoreCtx.a + 1); updateScoreDisplay(); });
 byId('btnAMinus').addEventListener('click', ()=>{ if (!canEditScore()) return; scoreCtx.a = Math.max(0,   scoreCtx.a - 1); updateScoreDisplay(); });
@@ -3882,9 +3943,7 @@ byId('btnBMinus').addEventListener('click', ()=>{ if (!canEditScore()) return; s
 // });
 
 // tutup modal jika klik backdrop
-byId('scoreModal').addEventListener('click', (e)=>{
-  if(e.target.id === 'scoreModal') closeScoreModal();
-});
+byId('scoreModal').addEventListener('click', (e)=>{ if(e.target.id === 'scoreModal') onCloseScoreClick(); });
 // Start timer
 byId('btnStartTimer').addEventListener('click', startScoreTimer);
 
@@ -4627,6 +4686,10 @@ byId('btnLogout')?.addEventListener('click', async ()=>{
   try{ await sb.auth.signOut(); }catch{}
   location.reload();
 });
+
+
+
+
 
 
 
