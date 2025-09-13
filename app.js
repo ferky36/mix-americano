@@ -1057,7 +1057,8 @@ function applyAccessMode(){
   scoreIds.forEach(id=>{ const el = byId(id); if (el) el.disabled = !canEditScore(); });
 
   // Hide edit-centric UI in viewer mode
-  const hideIds = [
+  // 1) Non-score editor UI: selalu disembunyikan untuk viewer (termasuk view=1)
+  const hideGeneralIds = [
     'playersPanel',           // panel daftar pemain
     'btnCollapsePlayers',     // tombol collapsible pemain
     'btnPasteText',           // tools pemain
@@ -1071,18 +1072,17 @@ function applyAccessMode(){
     'btnFilterToggle',        // toggle filter
     'filterPanel',            // panel filter input tanggal/waktu/durasi
     'globalInfo',             // ringkasan global pemain/match
-    'scoreControlsLeft',      // start/reset
-    'btnFinishScore',         // finish & isi match
-    'btnRecalc',              // hitung ulang
-    'scoreButtonsA',          // +/- skor A
-    'scoreButtonsB',          // +/- skor B
-    'btnApplyPlayersActive',           // +/- skor B
-    'pairMode',           // +/- skor B
-    'btnResetActive',           // +/- skor B
-    'btnClearScoresActive',           // +/- skor B
-    'btnClearScoresAll'           // +/- skor B
+    'btnApplyPlayersActive',
+    'pairMode',
+    'btnResetActive',
+    'btnClearScoresActive',
+    'btnClearScoresAll'
   ];
-  hideIds.forEach(id=>{ const el = byId(id); if (el) el.classList.toggle('hidden', isViewer()); });
+  hideGeneralIds.forEach(id=>{ const el = byId(id); if (el) el.classList.toggle('hidden', isViewer()); });
+
+  // 2) Score controls container: sembunyikan untuk viewer biasa, TAPI tampilkan untuk view=1
+  const hideScoreIds = [ 'scoreControlsLeft', 'btnFinishScore', 'btnRecalc', 'scoreButtonsA', 'scoreButtonsB' ];
+  hideScoreIds.forEach(id=>{ const el = byId(id); if (el) el.classList.toggle('hidden', isViewer() && !isScoreOnlyMode()); });
 
   // courts toolbar: hide add-court button if exists
   const addBtn = byId('btnAddCourt'); if (addBtn) addBtn.classList.toggle('hidden', isViewer());
