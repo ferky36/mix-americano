@@ -638,11 +638,13 @@ async function submitJoinForm(){
     const n = norm(name);
 
     if (Array.isArray(waitingList) && waitingList.some(x => norm(x) === n)) {
-      msg.textContent = 'Nama sudah ada di waiting list.'; 
+      const t = 'Nama sudah ada di waiting list.'; 
+      msg.textContent = t; msg.className = 'text-xs text-amber-600 dark:text-amber-400';
       return;
     }
     if (Array.isArray(players) && players.some(x => norm(x) === n)) {
-      msg.textContent = 'Nama sudah ada di daftar pemain.'; 
+      const t = 'Nama sudah ada di daftar pemain.';
+      msg.textContent = t; msg.className = 'text-xs text-amber-600 dark:text-amber-400';
       return;
     }
   } catch {}
@@ -676,6 +678,7 @@ async function submitJoinForm(){
       const ok = await loadStateFromCloud();
       if (!ok) showToast('Berhasil masuk waiting list, tapi gagal memuat data.', 'warn');
       renderPlayersList?.(); renderAll?.(); validateNames?.();
+      byId('joinModal')?.classList.add('hidden');
     } else if (status === 'closed') {
       const t = 'Pendaftaran ditutup. Hanya member yang bisa join.';
       msg.textContent = t; msg.className = 'text-xs text-amber-600 dark:text-amber-400';
