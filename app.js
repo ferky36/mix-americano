@@ -4421,7 +4421,6 @@ function openShareEventModal(){
       <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
         <input id="inviteEmail" type="email" placeholder="email@example.com" class="flex-1 border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100" />
         <select id="inviteRole" class="border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100">
-          <option value="viewer">viewer</option>
           <option value="editor">editor</option>
         </select>
         <button id="btnInviteMember" class="px-3 py-2 rounded-lg bg-emerald-600 text-white text-sm">Buat Link Undangan</button>
@@ -4435,7 +4434,7 @@ function openShareEventModal(){
     byId('btnInviteMember').addEventListener('click', async ()=>{
       const btn = byId('btnInviteMember');
       const email = (byId('inviteEmail').value||'').trim();
-      const role = byId('inviteRole').value||'viewer';
+      const role = byId('inviteRole').value||'editor';
       const msg = byId('inviteMsg'); msg.textContent='';
       if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { msg.textContent='Email tidak valid.'; return; }
       if (!isCloudMode() || !currentEventId){ msg.textContent='Mode Cloud belum aktif. Buat event dulu.'; return; }
@@ -4548,29 +4547,7 @@ byId('eventCreateBtn')?.addEventListener('click', async () => {
       })();
     }catch{}
 
-    // tambahkan Editor link box bila belum ada
-    (function ensureEditorLinkBox(){
-      const successBox = byId('eventSuccess');
-      if (!successBox) return;
-      let inp = byId('eventEditorLinkOutput');
-      let btn = byId('eventCopyEditorBtn');
-      if (!inp || !btn){
-        const wrap = document.createElement('div');
-        wrap.className = 'flex items-center gap-2';
-        inp = document.createElement('input');
-        inp.id='eventEditorLinkOutput'; inp.readOnly = true;
-        inp.className='flex-1 border rounded-lg px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100';
-        btn = document.createElement('button'); btn.id='eventCopyEditorBtn';
-        btn.className='px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm'; btn.textContent='Copy Editor Link';
-        wrap.appendChild(inp); wrap.appendChild(btn);
-        successBox.appendChild(wrap);
-        btn.addEventListener('click', async ()=>{
-          try{ await navigator.clipboard.writeText(inp.value); btn.textContent='Copied!'; setTimeout(()=>btn.textContent='Copy Editor Link',2000);}catch{}
-        });
-      }
-      const editorURL = buildEventUrl(id, date);
-      inp.value = editorURL;
-    })();
+    // HAPUS: tidak ada lagi editor link copy
 
     // tambahkan form invite sederhana bila belum ada
     (function ensureInviteForm(){
@@ -4584,7 +4561,6 @@ byId('eventCreateBtn')?.addEventListener('click', async () => {
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
           <input id="inviteEmail" type="email" placeholder="email@example.com" class="flex-1 border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100" />
           <select id="inviteRole" class="border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100">
-            <option value="viewer">viewer</option>
             <option value="editor">editor</option>
           </select>
           <button id="btnInviteMember" class="px-3 py-2 rounded-lg bg-emerald-600 text-white text-sm">Buat Link Undangan</button>
@@ -4598,7 +4574,7 @@ byId('eventCreateBtn')?.addEventListener('click', async () => {
       byId('btnInviteMember').addEventListener('click', async ()=>{
         const btn = byId('btnInviteMember');
         const email = (byId('inviteEmail').value||'').trim();
-        const role = byId('inviteRole').value||'viewer';
+        const role = byId('inviteRole').value||'editor';
         const msg = byId('inviteMsg'); msg.textContent='';
         if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { msg.textContent='Email tidak valid.'; return; }
         if (!isCloudMode() || !currentEventId){ msg.textContent='Mode Cloud belum aktif. Buat event dulu.'; return; }
