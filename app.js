@@ -2257,7 +2257,7 @@ function addPlayer(name) {
 
   if (Number.isInteger(currentMaxPlayers) && currentMaxPlayers > 0 && players.length >= currentMaxPlayers) {
     waitingList.push(name);
-    showToast('List sudah penuh, Anda masuk ke waiting list', 'warn');
+    showToast('List sudah penuh, Pemain masuk ke waiting list', 'warn');
   } else {
     players.push(name);
   }
