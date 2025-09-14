@@ -925,7 +925,15 @@ function subscribeRealtimeForState(){
               if (applied) return; // cukup update ringan
             }
           }catch{}
-          const ok = await loadStateFromCloud();
+          // Guard untuk perubahan list pemain saja (tanpa full reload)
+          try{
+            if (payload?.new?.state){
+              const applied2 = applyMinorPlayersDelta(payload.new.state);
+              if (applied2) return;
+            }
+          }catch{}
+
+          const ok = await loadStateFromCloudSilent();
           if (!ok) return;
           // Deteksi hanya untuk editor (viewer tidak perlu notifikasi ini)
           if (isViewer && isViewer()) return;
@@ -957,6 +965,25 @@ function subscribeRealtimeForState(){
       })();
     })
     .subscribe();
+}
+
+// Versi tanpa overlay/loading untuk panggilan realtime agar tidak "flash" satu halaman
+async function loadStateFromCloudSilent() {
+  const { data, error } = await sb.from('event_states')
+    .select('state, version, updated_at')
+    .eq('event_id', currentEventId)
+    .eq('session_date', currentSessionDate)
+    .maybeSingle();
+  if (error) { console.error(error); return false; }
+  if (data && data.state) {
+    _serverVersion = data.version || 0;
+    applyPayload(data.state);
+    if (data.state.eventTitle) setAppTitle(data.state.eventTitle);
+    markSaved?.(data.updated_at);
+    try{ refreshJoinUI?.(); }catch{}
+    return true;
+  }
+  return false;
 }
 
 function unsubscribeRealtimeForState(){
@@ -1034,6 +1061,34 @@ function applyMinorRoundDelta(newState){
       }
     }catch{}
 
+    return true;
+  }catch(e){ return false; }
+}
+
+// Minor delta for players list only: update players/waitingList without full payload
+function applyMinorPlayersDelta(newState){
+  try{
+    const newPlayersArr = String(newState?.players||'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+    const curPlayersArr = Array.isArray(players) ? players.slice() : [];
+    const newWaitingArr = String(newState?.waitingList||'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+    const curWaitingArr = Array.isArray(window.waitingList) ? window.waitingList.slice() : [];
+
+    const roundsSame = JSON.stringify(newState?.roundsByCourt||[]) === JSON.stringify(roundsByCourt||[]);
+    const playersChanged = JSON.stringify(newPlayersArr)!==JSON.stringify(curPlayersArr);
+    const waitingChanged = JSON.stringify(newWaitingArr)!==JSON.stringify(curWaitingArr);
+    if (!(playersChanged || waitingChanged)) return false;
+    if (!roundsSame) return false; // kalau jadwal berubah, jangan pakai delta ringan
+
+    // apply
+    players.splice(0, players.length, ...newPlayersArr);
+    if (!Array.isArray(window.waitingList)) window.waitingList = [];
+    window.waitingList.splice(0, window.waitingList.length, ...newWaitingArr);
+
+    // re-render list pemain saja (editor + viewer), hindari overlay
+    try{ renderPlayersList?.(); }catch{}
+    try{ renderViewerPlayersList?.(); }catch{}
+    try{ renderHeaderChips?.(); }catch{}
+    try{ refreshJoinUI?.(); }catch{}
     return true;
   }catch(e){ return false; }
 }
