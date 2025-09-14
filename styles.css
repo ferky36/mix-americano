@@ -529,3 +529,16 @@ body { font-size: clamp(14px, calc(14px * var(--ui-zoom) / 100), 20px); }
   #playersPanel .icon{ width:18px; height:18px; }
   #playersPanel .icon-btn{ padding:6px 8px !important; }
 }
+
+/* Live badge animation (subtle ripple dot) */
+.live-badge{ position: relative; overflow: visible; }
+.live-badge::before{
+  content:""; display:inline-block; width:.5em; height:.5em; border-radius:999px;
+  background:#fff; margin-right:6px; box-shadow:0 0 0 0 rgba(255,255,255,.85);
+  animation: liveDot 1.2s ease-out infinite;
+}
+@keyframes liveDot{
+  0%{ box-shadow:0 0 0 0 rgba(255,255,255,.85); opacity:1; }
+  70%{ box-shadow:0 0 0 8px rgba(255,255,255,0); opacity:1; }
+  100%{ box-shadow:0 0 0 0 rgba(255,255,255,0); opacity:1; }
+}
