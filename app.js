@@ -1688,19 +1688,7 @@ function applyPayload(payload) {
   }
 
   // 4) Terapkan ke roundsByCourt global milik app
-  // Snapshot ronde SEBELUM diganti, untuk bantu isi sel yang jadi kosong
-  const _prevRoundsCopy = Array.isArray(roundsByCourt)
-    ? roundsByCourt.map(c => (c||[]).map(r => ({...r})))
-    : [];
-
   roundsByCourt.splice(0, roundsByCourt.length, ...restored);
-
-  // Setelah rounds diganti, isi sel kosong pakai pasangan rename (old->new)
-  try {
-    const newActive = Array.isArray(players) ? players : [];
-    const pairs = computeRenamePairs((typeof prevPlayers!=='undefined' && Array.isArray(prevPlayers)) ? prevPlayers : [], newActive) || [];
-    pairs.forEach(([o, n]) => { if (o && n) fillEmptiesFromPrev(_prevRoundsCopy, o, n); });
-  } catch {}
 
   // 4b) Max pemain dari payload (jika ada)
   try {
@@ -2316,24 +2304,6 @@ function replaceNameInRounds(oldName, newName){
     });
   });
 }
-
-function fillEmptiesFromPrev(prevRounds, oldName, newName){
-  try{
-    if (!Array.isArray(prevRounds)) return;
-    for (let ci = 0; ci < prevRounds.length; ci++){
-      const prevArr = prevRounds[ci] || [];
-      const curArr  = roundsByCourt[ci] || [];
-      for (let ri = 0; ri < prevArr.length; ri++){
-        const pr = prevArr[ri] || {};
-        const cr = curArr[ri]  || {};
-        ["a1","a2","b1","b2"].forEach(k=>{
-          if (pr && pr[k] === oldName && (!cr[k] || cr[k] === "")) cr[k] = newName;
-        });
-      }
-    }
-  }catch{}
-}
-
 
 // ===== Rename helpers (robust mapping for multi-rename) =====
 function _normName(s){ return String(s||'').trim().toLowerCase(); }
