@@ -1084,6 +1084,14 @@ function applyMinorPlayersDelta(newState){
     if (!Array.isArray(window.waitingList)) window.waitingList = [];
     window.waitingList.splice(0, window.waitingList.length, ...newWaitingArr);
 
+    // 🔧 NEW: sinkronkan playerMeta agar UID/atribut tidak hilang
+    const newMeta = newState?.playerMeta;
+    if (newMeta && typeof newMeta === 'object') {
+      // ganti isi object tetap (jaga referensi)
+      Object.keys(playerMeta).forEach(k => delete playerMeta[k]);
+      Object.assign(playerMeta, newMeta);
+    }
+    
     // re-render list pemain saja (editor + viewer), hindari overlay
     try{ renderPlayersList?.(); }catch{}
     try{ renderViewerPlayersList?.(); }catch{}
@@ -2223,22 +2231,33 @@ async function loadMaxPlayersFromDB(){
   }catch{}
 }
 function addPlayer(name) {
-  if (isViewer()) return;
+  if (isViewer()) return false;
   name = (name || '').trim();
-  if (!name) return;
+  if (!name) return false;
+
   const norm = s => String(s||'').trim().toLowerCase();
-  if ((players||[]).some(n => norm(n) === norm(name))) { showToast('Nama sudah ada di daftar pemain', 'info'); return; }
-  if ((waitingList||[]).some(n => norm(n) === norm(name))) { showToast('Nama sudah ada di waiting list', 'info'); return; }
+  if ((players||[]).some(n => norm(n) === norm(name))) {
+    showToast('Nama sudah ada di daftar pemain', 'info');
+    return false;
+  }
+  if ((waitingList||[]).some(n => norm(n) === norm(name))) {
+    showToast('Nama sudah ada di waiting list', 'info');
+    return false;
+  }
+
   if (Number.isInteger(currentMaxPlayers) && currentMaxPlayers > 0 && players.length >= currentMaxPlayers) {
     waitingList.push(name);
     showToast('List sudah penuh, Anda masuk ke waiting list', 'warn');
   } else {
     players.push(name);
   }
+
   renderPlayersList?.();
-  renderAll?.();                // kalau tabel ronde ikut tergantung daftar pemain
-  markDirty();                  // ← simpan otomatis
+  renderAll?.();
+  markDirty();
+  return true;
 }
+
 
 function removePlayerFromRounds(name) {
   roundsByCourt.forEach(arr => {
@@ -3917,9 +3936,8 @@ byId('sessionDate')?.addEventListener('change', async (e) => {
 
 byId("btnAddPlayer").addEventListener("click", () => {
   const v = byId("newPlayer").value;
-  byId("newPlayer").value = "";
-  addPlayer(v);
-  try{ maybeAutoSaveCloud(true); }catch{}
+  const changed = addPlayer(v);
+  if (changed) { try { maybeAutoSaveCloud(true); } catch {} }
 });
 byId("newPlayer").addEventListener("keydown", (e) => {
   if (e.key === "Enter") {
