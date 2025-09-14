@@ -3511,7 +3511,26 @@ function startScoreTimer(){
       const __t = byId('scoreTimer'); if (__t) __t.textContent = 'Permainan Selesai';
       setScoreModalLocked(true);
       // auto commit skor → sama seperti Finish tapi TANPA konfirmasi tambahan
-      commitScoreToRound(/*auto*/true);
+      {
+        const zero = (Number(scoreCtx.a)===0 && Number(scoreCtx.b)===0);
+        if (zero){
+          alert('Skor masih 0-0. Skor tidak akan disimpan.');
+          try{ const r = (roundsByCourt[scoreCtx.court] || [])[scoreCtx.round] || {}; delete r.startedAt; delete r.finishedAt; }catch{}
+          try{ setScoreModalPreStart(true); }catch{}
+          try{
+            const row = document.querySelector('.rnd-table tbody tr[data-index="'+scoreCtx.round+'"]');
+            const actions = row?.querySelector('.rnd-col-actions');
+            const live = actions?.querySelector('.live-badge'); if (live){ live.classList.add('fade-out'); setTimeout(()=>{ live.classList.add('hidden'); live.classList.remove('fade-out'); },150); }
+            const done = actions?.querySelector('.done-badge'); if (done){ done.classList.add('fade-out'); setTimeout(()=>{ done.classList.add('hidden'); done.classList.remove('fade-out'); },150); }
+            const startBtn = actions?.querySelector('button'); if (startBtn){ startBtn.textContent='Mulai Main'; startBtn.classList.remove('hidden'); startBtn.classList.add('fade-in'); setTimeout(()=>startBtn.classList.remove('fade-in'),200); }
+          }catch{}
+          markDirty();
+          try{ if (typeof maybeAutoSaveCloud === 'function') maybeAutoSaveCloud(); else if (typeof saveStateToCloud === 'function') saveStateToCloud(); }catch{}
+          closeScoreModal();
+        } else {
+          commitScoreToRound(/*auto*/true);
+        }
+      }
       // Jangan tutup modal; biarkan pengguna melihat status dan klik "Hitung Ulang"
     }
   }, 250);
@@ -3973,7 +3992,21 @@ byId('btnStartTimer').addEventListener('click', startScoreTimer);
 // Finish manual (tetap dengan konfirmasi)
 byId('btnFinishScore').addEventListener('click', ()=>{
   if (!canEditScore()) return;
-  commitScoreToRound(/*auto*/false);
+  // Blokir finish jika skor 0-0
+  if (Number(scoreCtx.a)===0 && Number(scoreCtx.b)===0){
+    alert('Skor masih 0-0. Skor belum disimpan.');
+    return;
+  }
+  // Konfirmasi di sini agar Cancel tidak menutup popup
+  try{
+    const r = (roundsByCourt[scoreCtx.court] || [])[scoreCtx.round] || {};
+    const msg = 'Simpan skor untuk Lap '+(scoreCtx.court+1)+' - Match '+(scoreCtx.round+1)+'\n'
+      + 'A ('+(r.a1||'-')+' & '+(r.a2||'-')+') : '+scoreCtx.a+'\n'
+      + 'B ('+(r.b1||'-')+' & '+(r.b2||'-')+') : '+scoreCtx.b;
+    if (!confirm(msg)) return; // jangan tutup popup jika batal
+  }catch{}
+  // Simpan tanpa prompt lagi, lalu tutup
+  commitScoreToRound(/*auto*/true);
   closeScoreModal();
 });
 
