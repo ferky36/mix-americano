@@ -2413,7 +2413,7 @@ function renderCourt(container, arr) {
   table.classList.add("rnd-table"); // ⬅️ aktifkan card-mode di HP
   table.innerHTML = `
     <thead>
-      <tr class="text-left border-b border-gray-200 dark:border-gray-700">
+      <tr class="border-b border-gray-200 dark:border-gray-700">
         <th class="py-2 pr-4"></th>
         <th class="py-2 pr-4">Jadwal</th>
         <th class="py-2 pr-4">Waktu</th>

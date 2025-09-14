@@ -18,7 +18,7 @@ body { font-size: clamp(14px, calc(14px * var(--ui-zoom) / 100), 20px); }
 
 /* Court table wrapper (desktop default) */
 .court-wrapper { overflow-x:auto; -webkit-overflow-scrolling:touch; }
-.court-wrapper table { min-width:640px; width:100%; }
+.court-wrapper table { min-width:640px; width:100%; text-align: center;}
 .court-wrapper td, .court-wrapper th { white-space:nowrap; }
 
 /* Drag indicators */
@@ -181,7 +181,7 @@ body { font-size: clamp(14px, calc(14px * var(--ui-zoom) / 100), 20px); }
    Court table fixes for mobile
    =============================== */
 @media (max-width:640px){
-  .court-wrapper table { min-width:0!important; width:100%!important; }
+  .court-wrapper table { min-width:0!important; width:100%!important; text-align: center !important; }
   .court-wrapper td, .court-wrapper th { white-space:normal!important; }
 }
 
