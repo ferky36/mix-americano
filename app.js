@@ -145,6 +145,7 @@ let currentSessionDate = null;      // 'YYYY-MM-DD'
 let _serverVersion = 0;             // versi terakhir dari DB
 let _forceViewer = false;           // true jika URL memaksa readonly (share link)
 let _ownerHintFromUrl = null;       // UUID owner yang dibawa di URL (untuk create oleh viewer)
+let _stateRealtimeChannel = null;   // Supabase Realtime channel for event_states
 
 function getUrlParams() {
   const url = new URL(location.href);
@@ -321,6 +322,7 @@ function leaveEventMode(clearLS = true) {
   history.replaceState({}, '', u);
 
   // 2. Reset context cloud
+  try{ unsubscribeRealtimeForState?.(); }catch{}
   currentEventId = null;
   _serverVersion = 0;
 
@@ -896,8 +898,10 @@ async function saveStateToCloud() {
 // Realtime subscribe untuk row event+date aktif
 function subscribeRealtimeForState(){
   if (!isCloudMode()) return;
+  // Pastikan kanal lama dibersihkan agar tidak dobel callback
+  try{ if (_stateRealtimeChannel){ _stateRealtimeChannel.unsubscribe?.(); try{ sb.removeChannel?.(_stateRealtimeChannel); }catch{} _stateRealtimeChannel=null; } }catch{}
 
-  sb.channel(`es:${currentEventId}`)
+  _stateRealtimeChannel = sb.channel(`es:${currentEventId}`)
     .on('postgres_changes', {
       event: '*',
       schema: 'public',
@@ -914,6 +918,13 @@ function subscribeRealtimeForState(){
 
       (async () => {
         try{
+          // Guard ringan: jika perubahan hanya skor/startedAt/finishedAt 1 match, terapkan delta tanpa full reload
+          try{
+            if (payload?.new?.state){
+              const applied = applyMinorRoundDelta(payload.new.state);
+              if (applied) return; // cukup update ringan
+            }
+          }catch{}
           const ok = await loadStateFromCloud();
           if (!ok) return;
           // Deteksi hanya untuk editor (viewer tidak perlu notifikasi ini)
@@ -946,6 +957,85 @@ function subscribeRealtimeForState(){
       })();
     })
     .subscribe();
+}
+
+function unsubscribeRealtimeForState(){
+  try{
+    if (_stateRealtimeChannel){
+      _stateRealtimeChannel.unsubscribe?.();
+      try{ sb.removeChannel?.(_stateRealtimeChannel); }catch{}
+      _stateRealtimeChannel = null;
+    }
+  }catch{}
+}
+
+// ===== Minor delta applier: hindari full render jika hanya 1 match yang berubah skornya
+function applyMinorRoundDelta(newState){
+  try{
+    const nr = Array.isArray(newState?.roundsByCourt) ? newState.roundsByCourt : null;
+    const or = Array.isArray(roundsByCourt) ? roundsByCourt : null;
+    if (!nr || !or) return false;
+
+    let diffCourt=-1, diffRound=-1, diffCount=0, allowedOnly=true;
+    for (let c=0; c<Math.max(or.length, nr.length); c++){
+      const oc = or[c] || []; const nc = nr[c] || [];
+      const len = Math.max(oc.length, nc.length);
+      for (let i=0;i<len;i++){
+        const o = oc[i] || {}; const n = nc[i] || {};
+        const sameTeams = (o.a1===n.a1 && o.a2===n.a2 && o.b1===n.b1 && o.b2===n.b2);
+        if (!sameTeams) { allowedOnly=false; diffCount++; if (diffCount>1) break; continue; }
+        const keys = ['scoreA','scoreB','startedAt','finishedAt'];
+        const otherKeysChanged = Object.keys({...o, ...n}).some(k=>!keys.includes(k) && o[k]!==n[k]);
+        if (otherKeysChanged) { allowedOnly=false; diffCount++; if (diffCount>1) break; continue; }
+        const changed = (o.scoreA!==n.scoreA)||(o.scoreB!==n.scoreB)||(o.startedAt!==n.startedAt)||(o.finishedAt!==n.finishedAt);
+        if (changed){ diffCount++; diffCourt=c; diffRound=i; }
+        if (diffCount>1) break;
+      }
+      if (diffCount>1) break;
+    }
+    if (diffCount!==1 || !allowedOnly) return false;
+
+    const n = (nr[diffCourt]||[])[diffRound] || {};
+    const target = (roundsByCourt[diffCourt]||[])[diffRound];
+    if (!target) return false;
+    target.scoreA = (n.scoreA ?? '');
+    target.scoreB = (n.scoreB ?? '');
+    if ('startedAt' in n) target.startedAt = n.startedAt; else delete target.startedAt;
+    if ('finishedAt' in n) target.finishedAt = n.finishedAt; else delete target.finishedAt;
+
+    try{
+      if (diffCourt === activeCourt){
+        const row = document.querySelector('.rnd-table tbody tr[data-index="'+diffRound+'"]');
+        const aInp = row?.querySelector('.rnd-scoreA input');
+        const bInp = row?.querySelector('.rnd-scoreB input');
+        if (aInp) aInp.value = String(target.scoreA||'');
+        if (bInp) bInp.value = String(target.scoreB||'');
+        const actions = row?.querySelector('.rnd-col-actions');
+        const live = actions?.querySelector('.live-badge');
+        const done = actions?.querySelector('.done-badge');
+        const liveOn = !!(target.startedAt && !target.finishedAt);
+        const doneOn = !!target.finishedAt;
+        if (live) live.classList.toggle('hidden', !liveOn);
+        if (done) done.classList.toggle('hidden', !doneOn);
+      }
+    }catch{}
+
+    try{
+      const modal = byId('scoreModal');
+      const isOpen = modal && !modal.classList.contains('hidden');
+      if (isOpen && scoreCtx.court===diffCourt && scoreCtx.round===diffRound){
+        scoreCtx.a = Number(target.scoreA||0);
+        scoreCtx.b = Number(target.scoreB||0);
+        byId('scoreAVal').textContent = scoreCtx.a;
+        byId('scoreBVal').textContent = scoreCtx.b;
+        const startBtn = byId('btnStartTimer');
+        if (target.startedAt){ if (startBtn) startBtn.classList.add('hidden'); setScoreModalPreStart(false); }
+        if (target.finishedAt){ setScoreModalLocked(true); const t = byId('scoreTimer'); if (t) t.textContent='Permainan Selesai'; }
+      }
+    }catch{}
+
+    return true;
+  }catch(e){ return false; }
 }
 
 // Highlight helper untuk menyorot pemain tertentu di daftar editor
@@ -2578,8 +2668,25 @@ function renderCourt(container, arr) {
     tr.appendChild(tdSA);
     tr.appendChild(tdSB);
 
-    // Viewer mode: tampilkan baris tanpa kolom aksi
+    // Viewer mode: tampilkan kolom indikator (Live/Selesai) saja, tanpa tombol aksi
     if (isViewer() && !isScoreOnlyMode()) {
+      const tdCalcV = document.createElement('td');
+      tdCalcV.dataset.label = 'Aksi';
+      tdCalcV.className = 'rnd-col-actions';
+      // badge Live
+      const liveV = document.createElement('span');
+      liveV.className = 'inline-flex items-center gap-1 mr-2 px-2 py-0.5 rounded-full text-xs bg-red-600 text-white live-badge';
+      liveV.textContent = 'Live';
+      if (!(r.startedAt && !r.finishedAt)) liveV.classList.add('hidden');
+      tdCalcV.appendChild(liveV);
+      // badge Selesai
+      const doneV = document.createElement('span');
+      doneV.className = 'inline-flex items-center gap-1 mr-2 px-2 py-0.5 rounded-full text-xs bg-gray-600 text-white done-badge';
+      doneV.textContent = 'Selesai';
+      if (!r.finishedAt) doneV.classList.add('hidden');
+      tdCalcV.appendChild(doneV);
+
+      tr.appendChild(tdCalcV);
       tbody.appendChild(tr);
       // Tambahkan baris jeda juga di mode viewer (agar waktu jeda terlihat)
       const _showBreakEl = byId('showBreakRows');
@@ -4314,6 +4421,8 @@ async function loadSearchEventsForDate(dateStr){
 async function switchToEvent(eventId, dateStr){
   try{
     showLoading('Membuka event…');
+    // Putuskan channel realtime sebelumnya bila ada
+    try{ unsubscribeRealtimeForState?.(); }catch{}
     currentEventId = eventId; currentSessionDate = normalizeDateKey(dateStr);
     const url = new URL(location.href); url.searchParams.set('event', eventId); url.searchParams.set('date', currentSessionDate); history.replaceState({}, '', url);
     const meta = await fetchEventMetaFromDB(eventId);
