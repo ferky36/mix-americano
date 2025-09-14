@@ -268,7 +268,7 @@ function renderHeaderChips(){
   try{
     // Players count chip
     const n = Array.isArray(players) ? players.length : 0;
-    const cc = byId('chipCountText'); if (cc) cc.textContent = `${n} pemain`;
+    const cc = byId('chipCountText'); if (cc) { const m = (Number.isInteger(currentMaxPlayers) && currentMaxPlayers > 0) ? currentMaxPlayers : null; cc.textContent = m ? `${n}/${m} pemain` : `${n} pemain`; }
   }catch{}
 }
 
@@ -2153,9 +2153,9 @@ function ensureMaxPlayersField(){
   input.addEventListener('input', (e)=>{
     // update nilai lokal + tandai dirty; simpan ke state saat Save
     const raw = String(e.target.value||'').trim();
-    if (raw === '') { currentMaxPlayers = null; markDirty(); return; }
+    if (raw === '') { currentMaxPlayers = null; markDirty(); try{ renderHeaderChips?.(); }catch{} return; }
     const v = parseInt(raw, 10);
-    if (Number.isFinite(v) && v > 0) { currentMaxPlayers = v; markDirty(); }
+    if (Number.isFinite(v) && v > 0) { currentMaxPlayers = v; markDirty(); try{ renderHeaderChips?.(); }catch{} }
   });
   wrap.append(label, input);
   // insert right after the roundCount container
@@ -2237,7 +2237,7 @@ async function loadMaxPlayersFromDB(){
     if (error) return;
     currentMaxPlayers = Number.isInteger(data?.max_players) ? data.max_players : null;
     const input = byId('maxPlayersInput');
-    if (input) input.value = currentMaxPlayers ? String(currentMaxPlayers) : '';
+    if (input) input.value = currentMaxPlayers ? String(currentMaxPlayers) : ''; try{ renderHeaderChips?.(); }catch{}
   }catch{}
 }
 function addPlayer(name) {
