@@ -575,8 +575,8 @@ function ensureJoinModal(){
             <label class="block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Gender</label>
             <select id="joinGenderSelect" class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100">
               <option value="">-</option>
-              <option value="M">M</option>
-              <option value="F">F</option>
+              <option value="M">Male</option>
+              <option value="F">Female</option>
             </select>
           </div>
           <div>
