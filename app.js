@@ -2317,67 +2317,6 @@ function replaceNameInRounds(oldName, newName){
   });
 }
 
-
-// --- NEW: Util untuk isi kekosongan dari daftar pemain aktif ---
-function __getScheduledNameSet() {
-  const set = new Set();
-  try {
-    for (const court of (roundsByCourt || [])) {
-      for (const r of (court || [])) {
-        if (!r) continue;
-        const slots = [r.a1, r.a2, r.b1, r.b2];
-        for (const s of slots) if (s && String(s).trim() !== "") set.add(s);
-      }
-    }
-  } catch {}
-  return set;
-}
-
-// Isi HANYA slot kosong dengan pemain yang belum terjadwal
-// return: true jika ada minimal 1 slot yang terisi
-function tryFillEmptiesOnly() {
-  try {
-    const scheduled = __getScheduledNameSet();
-    const activePlayers = Array.isArray(players) ? players.slice() : [];
-    // kandidat = pemain aktif yang belum ada di tabel match
-    const candidates = activePlayers.filter(p => !scheduled.has(p));
-
-    if (!candidates.length) return false;
-
-    let changed = 0;
-    outer:
-    for (let ci = 0; ci < (roundsByCourt || []).length; ci++) {
-      const arr = roundsByCourt[ci] || [];
-      for (let ri = 0; ri < arr.length; ri) {
-        const r = arr[ri]; if (!r) continue;
-        for (const key of ["a1","a2","b1","b2"]) {
-          if (!r[key] || String(r[key]).trim() === "") {
-            // ambil kandidat berikutnya
-            const nx = candidates.shift();
-            if (!nx) break outer; // habis kandidat
-            r[key] = nx;
-            scheduled.add(nx);
-            changed++;
-          }
-        }
-      }
-    }
-
-    if (changed > 0) {
-      try { renderRounds?.(); } catch {}
-      try { renderHeaderChips?.(); } catch {}
-      markDirty?.();
-      try { maybeAutoSaveCloud?.(true); } catch {}
-      try { showToast?.(`Mengisi ${changed} slot kosong dari daftar pemain`, 'success'); } catch {}
-      return true;
-    }
-    return false;
-  } catch (e) {
-    console.error(e);
-    return false;
-  }
-}
-
 function fillEmptiesFromPrev(prevRounds, oldName, newName){
   try{
     if (!Array.isArray(prevRounds)) return;
@@ -3992,20 +3931,14 @@ byId('btnSave')?.addEventListener('click', async () => {
     if (!ok) alert('Gagal menyimpan ke Local Storage.');
   }
 });
-
-// --- NEW: Intersep tombol TERAPKAN agar hanya isi kekosongan bila memungkinkan ---
-// Catatan: gunakan mode capture agar listener ini dieksekusi lebih awal,
-// dan jika berhasil mengisi slot kosong, hentikan handler "terapkan" yang lama.
-byId("btnApplyPlayersActive")?.addEventListener("click", function (e) {
-  try {
-    const filled = tryFillEmptiesOnly();
-    if (filled) {
-      e?.preventDefault?.();
-      e?.stopImmediatePropagation?.();
-      return false;
-    }
-  } catch {}
-}, { capture: true });
+// byId("btnLoadByDate").addEventListener("click", loadSessionByDate);
+// byId("btnImportJSON").addEventListener("click", () =>
+//   byId("fileInputJSON").click()
+// );
+// byId("fileInputJSON").addEventListener("change", (e) => {
+//   if (e.target.files && e.target.files[0]) loadJSONFromFile(e.target.files[0]);
+//   e.target.value = "";
+// });
 
 byId("startTime").addEventListener("change", () => {
   markDirty();
