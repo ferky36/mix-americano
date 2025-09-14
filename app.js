@@ -3996,7 +3996,7 @@ byId('btnSave')?.addEventListener('click', async () => {
 // --- NEW: Intersep tombol TERAPKAN agar hanya isi kekosongan bila memungkinkan ---
 // Catatan: gunakan mode capture agar listener ini dieksekusi lebih awal,
 // dan jika berhasil mengisi slot kosong, hentikan handler "terapkan" yang lama.
-byId("btnTerapkan")?.addEventListener("click", function (e) {
+byId("btnApplyPlayersActive")?.addEventListener("click", function (e) {
   try {
     const filled = tryFillEmptiesOnly();
     if (filled) {
