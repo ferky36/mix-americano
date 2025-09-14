@@ -2940,7 +2940,7 @@ try {
     const rows = list.map(p=>{
       const n = cnt[p]||0;
       const mark = (n===min ? '↓' : (n===max ? '↑' : '•'));
-      return `<span class="inline-block mr-3">${mark} <b>${p}</b>: ${n}</span>`;
+      return `<span class="inline-block mr-3">${mark} <b>${escapeHtml(p)}</b>: ${n}</span>`;
     }).join('');
     box.innerHTML = `
       <div class="font-semibold mb-1">Fairness Info (semua lapangan): min=${min}, max=${max}, selisih=${spread}</div>
@@ -3078,7 +3078,7 @@ function validateAll(){
   box.innerHTML = problems.length
     ? `<div class="p-3 rounded-xl bg-red-50 text-red-700 border border-red-200 text-sm">
          <div class="font-semibold mb-1">Validasi:</div>
-         <ul class="list-disc pl-5 space-y-1">${problems.map(p=>`<li>${p}</li>`).join('')}</ul>
+         <ul class="list-disc pl-5 space-y-1">${problems.map(p=>`<li>${escapeHtml(p)}</li>`).join('')}</ul>
        </div>`
     : `<div class="p-3 rounded-xl bg-green-50 text-green-700 border border-green-200 text-sm">Tidak ada masalah penjadwalan.</div>`;
   return problems.length===0;
@@ -3229,7 +3229,7 @@ function runReport(){
     tr.className = s.rank===1?'rank-1': s.rank===2?'rank-2': s.rank===3?'rank-3':'';
     tr.innerHTML = `
       <td class="py-2 pr-4 font-semibold">${s.rank}</td>
-      <td class="py-2 pr-4 font-medium">${s.player}</td>
+      <td class="py-2 pr-4 font-medium">${escapeHtml(s.player)}</td>
       <td class="py-2 pr-4">${s.games}</td>
       <td class="py-2 pr-4">${s.total}</td>
       <td class="py-2 pr-4">${s.diff}</td>
