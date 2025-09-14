@@ -632,13 +632,20 @@ async function submitJoinForm(){
   const msg = byId('joinMsg');
   if (!currentEventId){ msg.textContent='Tidak ada event aktif.'; return; }
   if (!name){ msg.textContent='Nama wajib diisi.'; return; }
-  // disallow same name if already in waiting list (client-side friendly check)
-  try{
-    if (Array.isArray(waitingList)){
-      const existsByName = waitingList.some(n => String(n||'').trim().toLowerCase() === name.toLowerCase());
-      if (existsByName){ msg.textContent='Nama sudah ada di waiting list.'; return; }
+  // disallow same name if already in waiting list or players (client-side friendly check)
+  try {
+    const norm = (s) => String(s || '').trim().toLowerCase();
+    const n = norm(name);
+
+    if (Array.isArray(waitingList) && waitingList.some(x => norm(x) === n)) {
+      msg.textContent = 'Nama sudah ada di waiting list.'; 
+      return;
     }
-  }catch{}
+    if (Array.isArray(players) && players.some(x => norm(x) === n)) {
+      msg.textContent = 'Nama sudah ada di daftar pemain.'; 
+      return;
+    }
+  } catch {}
   // prevent duplicate join
   try{
     const { data } = await sb.auth.getUser();
@@ -1091,7 +1098,7 @@ function applyMinorPlayersDelta(newState){
       Object.keys(playerMeta).forEach(k => delete playerMeta[k]);
       Object.assign(playerMeta, newMeta);
     }
-    
+
     // re-render list pemain saja (editor + viewer), hindari overlay
     try{ renderPlayersList?.(); }catch{}
     try{ renderViewerPlayersList?.(); }catch{}
