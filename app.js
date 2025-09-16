@@ -73,6 +73,40 @@ function shuffleInPlace(a){
 }
 const teamKey=(a,b)=>[a,b].sort().join(' & ');
 const vsKey  =(a,b)=>[a,b].sort().join(' vs ');
+// === Join Open Time (Tanggal & Jam terpisah) =========================
+// Menentukan kapan orang boleh mulai "Join" (tidak terkait tanggal/jam event)
+window.joinOpenAt = null; // ISO UTC string atau null
+let __joinTimer = null;
+
+function toLocalDateValue(iso) {
+  try { if (!iso) return ''; const d = new Date(iso);
+    const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), da=String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${da}`; } catch { return ''; }
+}
+function toLocalTimeValue(iso) {
+  try { if (!iso) return ''; const d = new Date(iso);
+    const hh=String(d.getHours()).padStart(2,'0'), mi=String(d.getMinutes()).padStart(2,'0');
+    return `${hh}:${mi}`; } catch { return ''; }
+}
+function combineDateTimeToISO(dateStr, timeStr) {
+  try { if (!dateStr || !timeStr) return null;
+    const dt = new Date(`${dateStr}T${timeStr}`);
+    return isNaN(dt.getTime()) ? null : dt.toISOString(); } catch { return null; }
+}
+function isJoinOpen() {
+  try { if (!window.joinOpenAt) return true;
+    return Date.now() >= new Date(window.joinOpenAt).getTime(); } catch { return true; }
+}
+function scheduleJoinOpenTimer() {
+  try {
+    if (__joinTimer) { clearTimeout(__joinTimer); __joinTimer=null; }
+    if (!window.joinOpenAt) return;
+    const diff = new Date(window.joinOpenAt).getTime() - Date.now();
+    if (diff > 0 && diff < 86400000) {
+      __joinTimer = setTimeout(()=>{ try{ refreshJoinUI?.(); }catch{} }, diff);
+    }
+  } catch {}
+}
 
 // hitung kemunculan pemain di SEMUA lapangan, dengan opsi exclude court tertentu
 function countAppearAll(excludeCourt=-1){
@@ -626,6 +660,17 @@ async function openJoinModal(){
 }
 
 async function submitJoinForm(){
+  // Gate: belum masuk waktu buka join
+  if (!isJoinOpen()) {
+    const msg = byId('joinMessage') || byId('joinError');
+    const t = window.joinOpenAt
+      ? `Belum bisa join. Pendaftaran dibuka pada ${toLocalDateValue(window.joinOpenAt)} ${toLocalTimeValue(window.joinOpenAt)}.`
+      : 'Belum bisa join. Pendaftaran belum dibuka.';
+    if (msg) { msg.textContent = t; msg.className = 'text-xs text-amber-600 dark:text-amber-400'; }
+    try{ showToast?.(t, 'info'); }catch{}
+    return;
+  }
+
   const name = (byId('joinNameInput').value||'').trim();
   const gender = byId('joinGenderSelect').value||'';
   const level = byId('joinLevelSelect').value||'';
@@ -788,6 +833,20 @@ async function refreshJoinUI(){
       joinBtn && joinBtn.classList.remove('hidden');
     }
   }catch{}
+  // UNTUK BONUS: disable tombol Join jika belum waktunya buka pendaftaran
+  // try{
+  //   const joinBtn = byId('btnJoinEvent') || byId('joinSubmitBtn');
+  //   const nameInp = byId('joinNameInput');
+  //   const open = isJoinOpen();
+  //   if (joinBtn) {
+  //     joinBtn.disabled = !open;
+  //     joinBtn.title = (!open && window.joinOpenAt)
+  //       ? ('Pendaftaran dibuka: '+toLocalDateValue(window.joinOpenAt)+' '+toLocalTimeValue(window.joinOpenAt))
+  //       : '';
+  //   }
+  //   if (nameInp) nameInp.disabled = !open;
+  // } catch {}
+
 }
 // Fetch role from Supabase based on current user and event membership
 async function loadAccessRoleFromCloud(){
@@ -817,6 +876,7 @@ async function loadAccessRoleFromCloud(){
     // Load event settings (max_players, location) once role known
     try{ ensureMaxPlayersField(); await loadMaxPlayersFromDB(); }catch{}
     try{ ensureLocationFields(); await loadLocationFromDB(); }catch{}
+    try{ ensureJoinOpenFields();  await loadJoinOpenFromDB(); }catch{}
   }catch{ setAccessRole('viewer'); }
   finally { hideLoading(); }
 }
@@ -2245,6 +2305,119 @@ async function loadLocationFromDB(){
     if (input2) input2.value = data?.location_url || '';
   }catch{}
 }
+
+function ensureJoinOpenFields(){
+  // --- cari anchor lokasi dengan beberapa kemungkinan id/selector ---
+  const findAnchor = () =>
+    byId('locationTextInput') ||
+    byId('locationInput') ||
+    document.querySelector('[data-role="location"], input[name="location"], input[placeholder*="Lokasi"], input[placeholder*="Lapangan"]');
+
+  let anchor = findAnchor();
+  if (!anchor) {
+    // Anchor belum ada (UI editor belum dirender). Pantau sampai muncul.
+    if (!window.__joinOpenAnchorObserver) {
+      window.__joinOpenAnchorObserver = new MutationObserver(() => {
+        const a = findAnchor();
+        if (a) {
+          try { window.__joinOpenAnchorObserver.disconnect(); }catch{}
+          window.__joinOpenAnchorObserver = null;
+          ensureJoinOpenFields();
+        }
+      });
+      try { window.__joinOpenAnchorObserver.observe(document.body, { childList: true, subtree: true }); } catch {}
+    }
+    return null;
+  }
+
+  // --- tentukan parent grid yang tepat agar rapi di desktop/mobile ---
+  const gridParent =
+    anchor.closest('[data-settings-grid], .settings-grid, .grid, .grid-cols-12') ||
+    anchor.parentElement?.closest('.grid, .grid-cols-12') ||
+    anchor.parentElement?.parentElement ||
+    anchor.parentElement;
+
+  if (!gridParent) return null;
+
+  // --- buat / ambil wrap komponen ---
+  let wrap = byId('joinOpenWrap');
+  const creating = !wrap;
+  if (!wrap) {
+    wrap = document.createElement('div');
+    wrap.id = 'joinOpenWrap';
+    wrap.className = 'col-span-12 md:col-span-6 lg:col-span-4 xl:col-span-3';
+    wrap.innerHTML = `
+      <label class="block text-[11px] uppercase tracking-wide font-semibold text-gray-600 dark:text-gray-300 mb-1">
+        Buka Join
+      </label>
+      <div class="join-open-row">
+        <input id="joinOpenDateInput" type="date"  class="join-open-input" />
+        <input id="joinOpenTimeInput" type="time"  class="join-open-input" step="60" />
+      </div>
+    `;
+  }
+
+  // sisip sebagai saudara komponen Lokasi (di grid yang sama)
+  if (creating || !wrap.parentNode) gridParent.appendChild(wrap);
+
+  // set nilai awal dari state
+  const di = byId('joinOpenDateInput');
+  const ti = byId('joinOpenTimeInput');
+  if (di) di.value = toLocalDateValue(window.joinOpenAt);
+  if (ti) ti.value = toLocalTimeValue(window.joinOpenAt);
+
+  // pasang handler SEKALI (hindari duplikasi)
+  if (!wrap.__bound) {
+    const onChange = async () => {
+      const d = di?.value || '';
+      const t = ti?.value || '';
+      window.joinOpenAt = combineDateTimeToISO(d, t);
+      scheduleJoinOpenTimer();
+      try {
+        if (currentEventId && window.sb) {
+          await sb.from('events').update({ join_open_at: window.joinOpenAt }).eq('id', currentEventId);
+          showToast?.('Waktu buka join disimpan', 'success');
+        }
+      } catch (e) { console.warn(e); showToast?.('Gagal menyimpan waktu buka join', 'error'); }
+      try { refreshJoinUI?.(); } catch {}
+    };
+    di && di.addEventListener('change', onChange);
+    ti && ti.addEventListener('change', onChange);
+    wrap.__bound = true;
+  }
+
+  // jika nanti wrap dibuang karena re-render, sisipkan ulang otomatis
+  if (!window.__joinOpenReinsertObserver) {
+    window.__joinOpenReinsertObserver = new MutationObserver(() => {
+      const stillThere = byId('joinOpenWrap');
+      const nowAnchor  = findAnchor();
+      if (!stillThere && nowAnchor) {
+        try { window.__joinOpenReinsertObserver.disconnect(); }catch{}
+        window.__joinOpenReinsertObserver = null;
+        ensureJoinOpenFields();
+      }
+    });
+    try { window.__joinOpenReinsertObserver.observe(gridParent, { childList: true }); } catch {}
+  }
+
+  return wrap;
+}
+
+
+
+async function loadJoinOpenFromDB(){
+  try{
+    if (!isCloudMode() || !window.sb?.from || !currentEventId) return;
+    const { data } = await sb.from('events').select('join_open_at').eq('id', currentEventId).maybeSingle();
+    window.joinOpenAt = data?.join_open_at || null;
+    const di = byId('joinOpenDateInput'), ti = byId('joinOpenTimeInput');
+    if (di) di.value = toLocalDateValue(window.joinOpenAt);
+    if (ti) ti.value = toLocalTimeValue(window.joinOpenAt);
+    scheduleJoinOpenTimer();
+    try{ refreshJoinUI?.(); }catch{}
+  }catch{}
+}
+
 
 async function loadMaxPlayersFromDB(){
   try{
@@ -4929,6 +5102,10 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   try{ updateEventActionButtons?.(); }catch{}
   try{ renderFilterSummary?.(); }catch{}
   try{ ensureJoinControls?.(); refreshJoinUI?.(); }catch{}
+  try{ ensureJoinOpenFields(); }catch{}
+  try{ if (currentEventId && window.sb) await loadJoinOpenFromDB(); }catch{}
+  try{ refreshJoinUI?.(); }catch{}
+
 });
 
 document.addEventListener('DOMContentLoaded', boot);
