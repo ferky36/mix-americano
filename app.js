@@ -877,6 +877,7 @@ async function loadAccessRoleFromCloud(){
     try{ ensureMaxPlayersField(); await loadMaxPlayersFromDB(); }catch{}
     try{ ensureLocationFields(); await loadLocationFromDB(); }catch{}
     try{ ensureJoinOpenFields();  await loadJoinOpenFromDB(); }catch{}
+    try{ getPaidChannel(); }catch{}
   }catch{ setAccessRole('viewer'); }
   finally { hideLoading(); }
 }
@@ -1279,6 +1280,63 @@ let scoreCtx = {
   remainMs: 0,        // ⬅️ baru (millisecond)
   running: false      // ⬅️ baru
 };
+
+// === Paid flag (playerMeta) + realtime =================================
+function isPlayerPaid(name){
+  try { return !!(playerMeta && playerMeta[name] && playerMeta[name].paid); } catch { return false; }
+}
+
+// opts: { silent?:true, noBroadcast?:true }  -> dipakai saat terima dari broadcast agar tidak memicu save & re-broadcast
+function setPlayerPaid(name, val, opts){
+  if (!name) return;
+  if (!playerMeta || typeof playerMeta !== 'object') window.playerMeta = {};
+  playerMeta[name] = playerMeta[name] || {};
+  playerMeta[name].paid = !!val;
+
+  // Selalu refresh UI lokal
+  try { renderPlayersList?.(); renderViewerPlayersList?.(); refreshJoinUI?.(); } catch {}
+
+  // Simpan + broadcast hanya jika bukan update "silent" (datang dari broadcast)
+  if (!opts || !opts.silent) {
+    markDirty?.();
+    try { maybeAutoSaveCloud?.(true); } catch {}
+    if (!(opts && opts.noBroadcast)) {
+      try {
+        const ch = getPaidChannel();
+        ch && ch.send({ type: 'broadcast', event: 'paid', payload: { name, paid: !!val } });
+      } catch {}
+    }
+  }
+}
+function togglePlayerPaid(name){ setPlayerPaid(name, !isPlayerPaid(name)); }
+
+/* --- Realtime channel untuk flag paid --- */
+function getPaidChannel(){
+  try{
+    if (!window.sb || !currentEventId) return null;
+    const key = 'paid:'+currentEventId;
+    if (!window.__paidCh || window.__paidChKey !== key) {
+      // ganti channel lama bila pindah event
+      if (window.__paidCh) { try { sb.removeChannel(window.__paidCh); } catch{} }
+
+      const ch = sb.channel('event-'+currentEventId);
+      ch.on('broadcast', { event: 'paid' }, (msg) => {
+        try {
+          const { name, paid } = (msg && msg.payload) || {};
+          if (!name) return;
+          // Update lokal tanpa save ulang & tanpa re-broadcast
+          setPlayerPaid(name, !!paid, { silent: true, noBroadcast: true });
+        } catch {}
+      });
+      ch.subscribe().catch?.(()=>{});
+      window.__paidCh = ch;
+      window.__paidChKey = key;
+    }
+    return window.__paidCh;
+  }catch{ return null; }
+}
+
+
 
 // ================== Access Control ================== //
 // role: 'editor' (full access) | 'viewer' (read-only)
@@ -1972,7 +2030,26 @@ function renderPlayersList() {
       const nameSpan = li.querySelector('.player-name');
       const delBtn   = li.querySelector('.del');
       if (isViewer()) delBtn.style.display = 'none';
-      nameSpan.after(gSel, lSel);
+      // Tombol toggle "Paid" (khusus editor)
+      const pBtn = document.createElement('button');
+      function _refreshPaidBtn(){
+        const paid = isPlayerPaid(name);
+        pBtn.className = 'px-2 py-0.5 text-xs rounded border flex items-center gap-1 ' +
+                        (paid ? 'bg-emerald-600 text-white border-emerald-600'
+                              : 'bg-transparent border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300');
+        pBtn.title = paid ? 'Tandai belum bayar' : 'Tandai sudah bayar';
+        pBtn.innerHTML = (paid ? '✓ ' : '') + 'Paid';
+      }
+      pBtn.addEventListener('click', () => {
+        if (isViewer()) return;              // safety
+        togglePlayerPaid(name);
+        _refreshPaidBtn();
+      });
+      if (isViewer()) pBtn.style.display = 'none';
+      _refreshPaidBtn();
+
+      nameSpan.after(gSel, lSel, pBtn);
+
 
     li.querySelector(".del").addEventListener("click", () => {
       if (!confirm("Hapus " + name + "?")) return;
@@ -2165,7 +2242,11 @@ function renderViewerPlayersList(){
   ul.innerHTML = '';
   (players || []).forEach((name) => {
     const li = document.createElement('li');
-    li.className = 'flex items-center gap-2 px-3 py-2 rounded-lg border bg-white dark:bg-gray-900 dark:border-gray-700';
+    const paid = isPlayerPaid(name);
+    li.className = 'flex items-center gap-2 px-3 py-2 rounded-lg border ' +
+    (paid
+      ? 'bg-emerald-50 border-emerald-300 dark:bg-emerald-900/20 dark:border-emerald-500'
+      : 'bg-white dark:bg-gray-900 dark:border-gray-700');
     const meta = (playerMeta && playerMeta[name]) ? playerMeta[name] : {};
     const g = meta.gender || '';
     const lv = meta.level || '';
@@ -5103,6 +5184,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   try{ renderFilterSummary?.(); }catch{}
   try{ ensureJoinControls?.(); refreshJoinUI?.(); }catch{}
   try{ ensureJoinOpenFields(); }catch{}
+  try{ if (currentEventId) getPaidChannel(); }catch{}
   try{ if (currentEventId && window.sb) await loadJoinOpenFromDB(); }catch{}
   try{ refreshJoinUI?.(); }catch{}
 

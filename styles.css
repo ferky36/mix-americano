@@ -585,3 +585,13 @@ input[type="time"].join-open-input {
   -webkit-appearance: none;
   appearance: none;
 }
+
+/* Kotak hijau untuk pemain yang sudah bayar (viewer) */
+.player-item.is-paid {
+  background: #ecfdf5;           /* emerald-50 */
+  border-color: #86efac;         /* emerald-300 */
+}
+.dark .player-item.is-paid {
+  background: rgba(16,185,129,.12); /* emerald-500/12% */
+  border-color: #34d399;            /* emerald-400/500 */
+}
