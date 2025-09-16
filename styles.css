@@ -542,3 +542,46 @@ body { font-size: clamp(14px, calc(14px * var(--ui-zoom) / 100), 20px); }
   70%{ box-shadow:0 0 0 8px rgba(255,255,255,0); opacity:1; }
   100%{ box-shadow:0 0 0 0 rgba(255,255,255,0); opacity:1; }
 }
+
+/* ===== Join Open (Buka Join) – layout & responsive ===== */
+.join-open-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  align-items: center;
+}
+
+.join-open-input {
+  display: block;
+  width: 100%;
+  min-width: 140px;
+  padding: 0.5rem 0.6rem;           /* selaras dengan input lain */
+  border: 1px solid var(--border, #d1d5db);
+  border-radius: 0.5rem;            /* sama seperti input lokasi */
+  background: var(--bg, #fff);
+  color: var(--fg, #111827);
+  font-size: 0.875rem;              /* text-sm */
+  line-height: 1.25rem;
+}
+
+/* Desktop: beri lebar nyaman agar tidak mepet */
+@media (min-width: 1024px) {
+  .join-open-row {
+    grid-template-columns: 180px 120px; /* tanggal | jam */
+    gap: 10px;
+  }
+}
+
+/* Dark mode (opsional; sesuaikan variabel/theme kamu) */
+.dark .join-open-input {
+  background: #0f172a;            /* slate-900-ish */
+  color: #e5e7eb;
+  border-color: #334155;          /* slate-700-ish */
+}
+
+/* Kompensasi Safari iOS agar tinggi input date/time konsisten */
+input[type="date"].join-open-input,
+input[type="time"].join-open-input {
+  -webkit-appearance: none;
+  appearance: none;
+}
