@@ -3191,12 +3191,12 @@ function renderCourt(container, arr) {
       if (!r.finishedAt) doneV.classList.add('hidden');
       tdCalcV.appendChild(doneV);
 
-      // tombol "Lihat Skor Live" (viewer-only)
-      const btnLive = document.createElement('button');
-      btnLive.className = 'px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm w-full sm:w-auto hover:bg-indigo-500 focus:outline-none focus:ring focus:ring-indigo-300';
-      btnLive.textContent = 'Lihat Skor Live';
-      btnLive.addEventListener('click', () => openScoreModal(activeCourt, i)); // modal akan terkunci otomatis utk viewer
-      tdCalcV.appendChild(btnLive);
+      // // tombol "Lihat Skor Live" (viewer-only)
+      // const btnLive = document.createElement('button');
+      // btnLive.className = 'px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm w-full sm:w-auto hover:bg-indigo-500 focus:outline-none focus:ring focus:ring-indigo-300';
+      // btnLive.textContent = 'Lihat Skor Live';
+      // btnLive.addEventListener('click', () => openScoreModal(activeCourt, i)); // modal akan terkunci otomatis utk viewer
+      // tdCalcV.appendChild(btnLive);
 
 
       tr.appendChild(tdCalcV);
