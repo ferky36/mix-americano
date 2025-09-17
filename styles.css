@@ -677,3 +677,6 @@ input[type="time"].join-open-input {
 
 /* Dark labels */
 .dark #editorFilterGrid .ef-cell label{ color:#cbd5e1; }
+
+/* dipakai jika kamu set class="hidden-for-viewer" pada elemen kontrol */
+.hidden-for-viewer{ display:none !important; }
