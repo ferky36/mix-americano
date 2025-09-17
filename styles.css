@@ -595,3 +595,48 @@ input[type="time"].join-open-input {
   background: rgba(16,185,129,.12); /* emerald-500/12% */
   border-color: #34d399;            /* emerald-400/500 */
 }
+
+/* ikon server pada scoreModal */
+.serve-badge { 
+  display:inline-block; margin-left:.35rem; font-size: .95em;
+  vertical-align: middle;
+}
+
+/* ==== Serve badge di scoreModal ==== */
+.serve-chip{
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .15rem .5rem;
+  border-radius: 9999px;
+  background: #ecfdf5;           /* emerald-50 */
+  border: 1px solid #86efac;     /* emerald-300 */
+  color: #065f46;                /* emerald-800-ish */
+  font-size: .72rem;             /* ~text-xs */
+  font-weight: 600;
+  vertical-align: middle;
+}
+.dark .serve-chip{
+  background: rgba(16,185,129,.15);
+  border-color: #34d399;
+  color: #a7f3d0;
+}
+.serve-ball{
+  width: 14px; height: 14px;
+  fill: currentColor;             /* bola hijau */
+  stroke: #fff; stroke-width: 1.5;/* garis putih pada bola */
+}
+.serve-chip::after{
+  content:"";
+  position:absolute; inset: -2px;
+  border-radius: inherit;
+  box-shadow: 0 0 0 0 rgba(16,185,129,.55);
+  animation: servePulse 1.6s ease-out infinite;
+}
+@keyframes servePulse{
+  0%   { box-shadow: 0 0 0 0 rgba(16,185,129,.55); }
+  70%  { box-shadow: 0 0 0 6px rgba(16,185,129,0); }
+  100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+}
+.serve-text{ letter-spacing:.02em; text-transform: uppercase; }
