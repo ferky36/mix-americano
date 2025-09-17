@@ -877,7 +877,6 @@ async function loadAccessRoleFromCloud(){
     try{ ensureMaxPlayersField(); await loadMaxPlayersFromDB(); }catch{}
     try{ ensureLocationFields(); await loadLocationFromDB(); }catch{}
     try{ ensureJoinOpenFields();  await loadJoinOpenFromDB(); }catch{}
-    try{ if (!isViewer()) buildEditorFilterGrid(); }catch{}
     try{ getPaidChannel(); }catch{}
   }catch{ setAccessRole('viewer'); }
   finally { hideLoading(); }
@@ -2297,16 +2296,16 @@ function ensureMaxPlayersField(){
   const parent = rc.parentElement.parentElement; // grid container
   wrap = document.createElement('div');
   wrap.id = 'maxPlayersWrap';
-  wrap.className = '';
+  wrap.className = 'filter-field';
   const label = document.createElement('label');
-  label.className = 'block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300';
+  label.className = 'filter-label block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300';
   label.textContent = 'Max Pemain';
   const input = document.createElement('input');
   input.id = 'maxPlayersInput';
   input.type = 'number';
   input.min = '1';
   input.placeholder = 'Tak terbatas';
-  input.className = 'mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100';
+  input.className = 'filter-input border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100';
   input.value = currentMaxPlayers ? String(currentMaxPlayers) : '';
   input.addEventListener('input', (e)=>{
     // update nilai lokal + tandai dirty; simpan ke state saat Save
@@ -2334,25 +2333,25 @@ function ensureLocationFields(){
   const parent = rc.parentElement.parentElement; // grid container
   wrap = document.createElement('div');
   wrap.id = 'locationWrap';
-  wrap.className = 'col-span-2 sm:col-span-2';
+  wrap.className = 'filter-field filter-field--full col-span-2 sm:col-span-2';
 
   const label1 = document.createElement('label');
-  label1.className = 'block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300';
+  label1.className = 'filter-label block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300';
   label1.textContent = 'Lokasi (opsional)';
   const input1 = document.createElement('input');
   input1.id = 'locationTextInput';
   input1.type = 'text';
   input1.placeholder = 'Mis. Lapangan A, GBK';
-  input1.className = 'mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100';
+  input1.className = 'filter-input border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100';
 
   const label2 = document.createElement('label');
-  label2.className = 'mt-3 block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300';
+  label2.className = 'filter-label mt-3 block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300';
   label2.textContent = 'Link Maps (opsional)';
   const input2 = document.createElement('input');
   input2.id = 'locationUrlInput';
   input2.type = 'url';
   input2.placeholder = 'https://maps.app.goo.gl/...';
-  input2.className = 'mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100';
+  input2.className = 'filter-input border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100';
 
   // Save on blur (best-effort)
   const save = debounce(async ()=>{
@@ -2427,15 +2426,14 @@ function ensureJoinOpenFields(){
   if (!wrap) {
     wrap = document.createElement('div');
     wrap.id = 'joinOpenWrap';
-    wrap.className = 'col-span-12 md:col-span-6 lg:col-span-4 xl:col-span-3';
-    wrap.classList.add('ef-cell','ef-span-2');
+    wrap.className = 'filter-field filter-field--full col-span-12 md:col-span-6 lg:col-span-4 xl:col-span-3';
     wrap.innerHTML = `
-      <label class="block text-[11px] uppercase tracking-wide font-semibold text-gray-600 dark:text-gray-300 mb-1">
+      <label class="filter-label block text-[11px] uppercase tracking-wide font-semibold text-gray-600 dark:text-gray-300 mb-1">
         Buka Join
       </label>
       <div class="join-open-row">
-        <input id="joinOpenDateInput" type="date"  class="join-open-input" />
-        <input id="joinOpenTimeInput" type="time"  class="join-open-input" step="60" />
+        <input id="joinOpenDateInput" type="date"  class="join-open-input filter-input" />
+        <input id="joinOpenTimeInput" type="time"  class="join-open-input filter-input" step="60" />
       </div>
     `;
   }
@@ -2500,90 +2498,6 @@ async function loadJoinOpenFromDB(){
     try{ refreshJoinUI?.(); }catch{}
   }catch{}
 }
-
-// ================== Editor Filter Grid (rebuild + cleanup) ================== //
-function buildEditorFilterGrid(){
-  const $ = (id)=> byId(id);
-  const exist = (el)=> el && el instanceof HTMLElement;
-
-  const panel = byId('filterPanel');
-  if (!panel || isViewer?.()) return;
-
-  // 1) Lepas kelas grid bawaan supaya tidak mengatur layout kita
-  ['grid','grid-cols-2','sm:grid-cols-3','md:grid-cols-6','gap-3'].forEach(k=> panel.classList.remove(k));
-  panel.classList.add('has-editor-grid'); // marker CSS
-
-  // 2) Buat/ambil container grid baru
-  let grid = byId('editorFilterGrid');
-  if (!grid){
-    grid = document.createElement('div');
-    grid.id = 'editorFilterGrid';
-    panel.appendChild(grid);
-  }
-  grid.className = 'editor-filter-grid';
-  grid.innerHTML = '';
-
-  // 3) Ambil referensi kontrol
-  const elTanggal    = $('sessionDate');
-  const elMulai      = $('startTime');
-  const elMenit      = $('minutesPerRound');
-  const elJeda       = $('breakPerRound');
-  const elJedaCheck  = $('showBreakRows');
-  const elMatchCourt = $('roundCount');
-  const elMaxPlayer  = $('maxPlayersInput');
-  const elLokasiWrap = $('locationWrap');     // wrap yang berisi lokasi + maps
-  const elBukaJoin   = $('joinOpenWrap');     // wrap 2 input (tgl+jam)
-
-  // 4) Helper: ambil "cell" pembungkus input (label+input)
-  const takeCell = (el)=> (exist(el) ? (el.closest('.ef-cell') || el.parentElement) : null);
-
-  // 5) Buat cell khusus Jeda (gabung number + checkbox)
-  const makeJedaCell = ()=>{
-    const num = takeCell(elJeda);
-    if (!num) return null;
-    const cell = document.createElement('div');
-    cell.className = 'ef-cell ef-jeda-cell';
-
-    const row = document.createElement('div');
-    row.className = 'ef-jeda-row';
-    // pindahkan wrapper number & label checkbox
-    row.appendChild(elJeda.parentElement);
-    const checkLabel = elJedaCheck?.closest('label') || document.querySelector('label[for="showBreakRows"]');
-    if (checkLabel) row.appendChild(checkLabel);
-    cell.appendChild(row);
-    return cell;
-  };
-
-  // 6) Susun urutan (mobile: 2 kolom)
-  const pieces = [
-    takeCell(elTanggal),
-    takeCell(elMulai),
-    takeCell(elMenit),
-    makeJedaCell(),
-    takeCell(elMatchCourt),
-    (byId('maxPlayersWrap') || takeCell(elMaxPlayer)),
-    // Full-width:
-    elLokasiWrap,
-    elBukaJoin
-  ].filter(Boolean);
-
-  pieces.forEach((cell)=>{
-    if (!cell) return;
-    if (cell.id === 'locationWrap' || cell.id === 'joinOpenWrap') cell.classList.add('ef-cell','ef-span-2');
-    cell.classList.add('ef-cell');
-    grid.appendChild(cell);
-  });
-
-  // 7) Bersihkan sisa anak lama di panel yang tidak punya kontrol (label kosong, spacer, dsb)
-  Array.from(panel.children).forEach(ch=>{
-    if (ch.id === 'editorFilterGrid') return;
-    // keep collapsible pemain (punya select/input)
-    if (ch.querySelector('input,select,textarea,[contenteditable="true"]')) return;
-    ch.style.display = 'none';
-  });
-}
-
-
 
 
 async function loadMaxPlayersFromDB(){
@@ -3190,14 +3104,6 @@ function renderCourt(container, arr) {
       doneV.textContent = 'Selesai';
       if (!r.finishedAt) doneV.classList.add('hidden');
       tdCalcV.appendChild(doneV);
-
-      // // tombol "Lihat Skor Live" (viewer-only)
-      // const btnLive = document.createElement('button');
-      // btnLive.className = 'px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm w-full sm:w-auto hover:bg-indigo-500 focus:outline-none focus:ring focus:ring-indigo-300';
-      // btnLive.textContent = 'Lihat Skor Live';
-      // btnLive.addEventListener('click', () => openScoreModal(activeCourt, i)); // modal akan terkunci otomatis utk viewer
-      // tdCalcV.appendChild(btnLive);
-
 
       tr.appendChild(tdCalcV);
       tbody.appendChild(tr);
@@ -4021,8 +3927,6 @@ function closeScoreModal(){
 // Handler dengan konfirmasi: bila match sudah dimulai namun belum selesai,
 // tutup = batalkan permainan (hapus startedAt) dan kembalikan tombol Mulai.
 function onCloseScoreClick(){
-  // Viewer read-only: cukup tutup tanpa ubah state
-  if (isViewer() && !isScoreOnlyMode()) { closeScoreModal(); return; }
   try{
     const r = (roundsByCourt[scoreCtx.court] || [])[scoreCtx.round] || {};
     const isStarted = !!r.startedAt;
@@ -5349,7 +5253,6 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   try{ ensureJoinOpenFields(); }catch{}
   try{ if (currentEventId) getPaidChannel(); }catch{}
   try{ if (currentEventId && window.sb) await loadJoinOpenFromDB(); }catch{}
-  try{ if (!isViewer?.()) buildEditorFilterGrid(); }catch{}
   try{ refreshJoinUI?.(); }catch{}
 
 });
@@ -5381,3 +5284,4 @@ byId('btnLogout')?.addEventListener('click', async ()=>{
   try{ await sb.auth.signOut(); }catch{}
   location.reload();
 });
+
