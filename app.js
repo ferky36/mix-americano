@@ -877,6 +877,7 @@ async function loadAccessRoleFromCloud(){
     try{ ensureMaxPlayersField(); await loadMaxPlayersFromDB(); }catch{}
     try{ ensureLocationFields(); await loadLocationFromDB(); }catch{}
     try{ ensureJoinOpenFields();  await loadJoinOpenFromDB(); }catch{}
+    try{ if (!isViewer()) buildEditorFilterGrid(); }catch{}
     try{ getPaidChannel(); }catch{}
   }catch{ setAccessRole('viewer'); }
   finally { hideLoading(); }
@@ -2427,6 +2428,7 @@ function ensureJoinOpenFields(){
     wrap = document.createElement('div');
     wrap.id = 'joinOpenWrap';
     wrap.className = 'col-span-12 md:col-span-6 lg:col-span-4 xl:col-span-3';
+    wrap.classList.add('ef-cell','ef-span-2');
     wrap.innerHTML = `
       <label class="block text-[11px] uppercase tracking-wide font-semibold text-gray-600 dark:text-gray-300 mb-1">
         Buka Join
@@ -2498,6 +2500,90 @@ async function loadJoinOpenFromDB(){
     try{ refreshJoinUI?.(); }catch{}
   }catch{}
 }
+
+// ================== Editor Filter Grid (rebuild + cleanup) ================== //
+function buildEditorFilterGrid(){
+  const $ = (id)=> byId(id);
+  const exist = (el)=> el && el instanceof HTMLElement;
+
+  const panel = byId('filterPanel');
+  if (!panel || isViewer?.()) return;
+
+  // 1) Lepas kelas grid bawaan supaya tidak mengatur layout kita
+  ['grid','grid-cols-2','sm:grid-cols-3','md:grid-cols-6','gap-3'].forEach(k=> panel.classList.remove(k));
+  panel.classList.add('has-editor-grid'); // marker CSS
+
+  // 2) Buat/ambil container grid baru
+  let grid = byId('editorFilterGrid');
+  if (!grid){
+    grid = document.createElement('div');
+    grid.id = 'editorFilterGrid';
+    panel.appendChild(grid);
+  }
+  grid.className = 'editor-filter-grid';
+  grid.innerHTML = '';
+
+  // 3) Ambil referensi kontrol
+  const elTanggal    = $('sessionDate');
+  const elMulai      = $('startTime');
+  const elMenit      = $('minutesPerRound');
+  const elJeda       = $('breakPerRound');
+  const elJedaCheck  = $('showBreakRows');
+  const elMatchCourt = $('roundCount');
+  const elMaxPlayer  = $('maxPlayersInput');
+  const elLokasiWrap = $('locationWrap');     // wrap yang berisi lokasi + maps
+  const elBukaJoin   = $('joinOpenWrap');     // wrap 2 input (tgl+jam)
+
+  // 4) Helper: ambil "cell" pembungkus input (label+input)
+  const takeCell = (el)=> (exist(el) ? (el.closest('.ef-cell') || el.parentElement) : null);
+
+  // 5) Buat cell khusus Jeda (gabung number + checkbox)
+  const makeJedaCell = ()=>{
+    const num = takeCell(elJeda);
+    if (!num) return null;
+    const cell = document.createElement('div');
+    cell.className = 'ef-cell ef-jeda-cell';
+
+    const row = document.createElement('div');
+    row.className = 'ef-jeda-row';
+    // pindahkan wrapper number & label checkbox
+    row.appendChild(elJeda.parentElement);
+    const checkLabel = elJedaCheck?.closest('label') || document.querySelector('label[for="showBreakRows"]');
+    if (checkLabel) row.appendChild(checkLabel);
+    cell.appendChild(row);
+    return cell;
+  };
+
+  // 6) Susun urutan (mobile: 2 kolom)
+  const pieces = [
+    takeCell(elTanggal),
+    takeCell(elMulai),
+    takeCell(elMenit),
+    makeJedaCell(),
+    takeCell(elMatchCourt),
+    (byId('maxPlayersWrap') || takeCell(elMaxPlayer)),
+    // Full-width:
+    elLokasiWrap,
+    elBukaJoin
+  ].filter(Boolean);
+
+  pieces.forEach((cell)=>{
+    if (!cell) return;
+    if (cell.id === 'locationWrap' || cell.id === 'joinOpenWrap') cell.classList.add('ef-cell','ef-span-2');
+    cell.classList.add('ef-cell');
+    grid.appendChild(cell);
+  });
+
+  // 7) Bersihkan sisa anak lama di panel yang tidak punya kontrol (label kosong, spacer, dsb)
+  Array.from(panel.children).forEach(ch=>{
+    if (ch.id === 'editorFilterGrid') return;
+    // keep collapsible pemain (punya select/input)
+    if (ch.querySelector('input,select,textarea,[contenteditable="true"]')) return;
+    ch.style.display = 'none';
+  });
+}
+
+
 
 
 async function loadMaxPlayersFromDB(){
@@ -3104,6 +3190,14 @@ function renderCourt(container, arr) {
       doneV.textContent = 'Selesai';
       if (!r.finishedAt) doneV.classList.add('hidden');
       tdCalcV.appendChild(doneV);
+
+      // tombol "Lihat Skor Live" (viewer-only)
+      const btnLive = document.createElement('button');
+      btnLive.className = 'px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm w-full sm:w-auto hover:bg-indigo-500 focus:outline-none focus:ring focus:ring-indigo-300';
+      btnLive.textContent = 'Lihat Skor Live';
+      btnLive.addEventListener('click', () => openScoreModal(activeCourt, i)); // modal akan terkunci otomatis utk viewer
+      tdCalcV.appendChild(btnLive);
+
 
       tr.appendChild(tdCalcV);
       tbody.appendChild(tr);
@@ -3927,6 +4021,8 @@ function closeScoreModal(){
 // Handler dengan konfirmasi: bila match sudah dimulai namun belum selesai,
 // tutup = batalkan permainan (hapus startedAt) dan kembalikan tombol Mulai.
 function onCloseScoreClick(){
+  // Viewer read-only: cukup tutup tanpa ubah state
+  if (isViewer() && !isScoreOnlyMode()) { closeScoreModal(); return; }
   try{
     const r = (roundsByCourt[scoreCtx.court] || [])[scoreCtx.round] || {};
     const isStarted = !!r.startedAt;
@@ -5253,6 +5349,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   try{ ensureJoinOpenFields(); }catch{}
   try{ if (currentEventId) getPaidChannel(); }catch{}
   try{ if (currentEventId && window.sb) await loadJoinOpenFromDB(); }catch{}
+  try{ if (!isViewer?.()) buildEditorFilterGrid(); }catch{}
   try{ refreshJoinUI?.(); }catch{}
 
 });

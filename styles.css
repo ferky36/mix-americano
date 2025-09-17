@@ -640,3 +640,40 @@ input[type="time"].join-open-input {
   100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
 }
 .serve-text{ letter-spacing:.02em; text-transform: uppercase; }
+
+/* ===== Filter/Jadwal: grid baru khusus editor ===== */
+#filterPanel.has-editor-grid { display:block; } /* override grid bawaan */
+
+#editorFilterGrid.editor-filter-grid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;   /* 2 kolom di mobile */
+  gap:12px;
+  align-items:start;
+}
+
+#editorFilterGrid .ef-cell{ min-width:0; }
+#editorFilterGrid .ef-span-2{ grid-column: 1 / -1; } /* full width */
+
+#editorFilterGrid .ef-jeda-row{
+  display:grid;
+  grid-template-columns: 1fr auto;  /* number + checkbox */
+  gap:10px;
+  align-items:center;
+}
+
+#editorFilterGrid input[type="number"]::-webkit-outer-spin-button,
+#editorFilterGrid input[type="number"]::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+#editorFilterGrid input[type="number"]{ -moz-appearance:textfield; }
+
+/* Tablet/Desktop: 12 kolom rapi */
+@media (min-width: 768px){
+  #editorFilterGrid.editor-filter-grid{
+    grid-template-columns: repeat(12, minmax(0,1fr));
+    gap:14px;
+  }
+  #editorFilterGrid .ef-cell{ grid-column: span 4; }
+  #editorFilterGrid .ef-span-2{ grid-column: span 12; }
+}
+
+/* Dark labels */
+.dark #editorFilterGrid .ef-cell label{ color:#cbd5e1; }
