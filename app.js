@@ -193,25 +193,6 @@ function getUrlParams() {
   };
 }
 
-// === Realtime identity & self-pull suppressor ========================
-const CLIENT_ID = (crypto?.randomUUID?.() ?? (Math.random().toString(36).slice(2) + Date.now()));
-
-let __selfPullUntil = 0;                  // epoch ms sampai kapan event DB diabaikan (untuk tab ini)
-function suppressSelfPull(ms = 1500){     // panggil setelah SAVE lokal (upsert) sukses/di-trigger
-  __selfPullUntil = Date.now() + ms;
-}
-
-// hanya viewer yg berdampak realtime
-// function shouldProcessRemoteChange(){     // hanya viewer + tidak sedang suppress
-//   return (typeof isViewer === 'function' ? isViewer() : false) && (Date.now() >= __selfPullUntil);
-// }
-
-// izinkan editor memproses perubahan dari klien lain, tapi tetap tahan self-pull
-function shouldProcessRemoteChange(){
-  const okByWindow = Date.now() >= __selfPullUntil;
-  return okByWindow && (true); // viewer maupun editor
-}
-
 function isUuid(v){
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v || '');
 }
@@ -970,7 +951,6 @@ async function saveStateToCloud() {
       }
     } catch {}
     _serverVersion = data.version;
-    suppressSelfPull(1500);   
     markSaved?.(data.updated_at);
     return true;
   } catch (e) {
@@ -1000,8 +980,6 @@ function subscribeRealtimeForState(){
       table: 'event_states',
       filter: `event_id=eq.${currentEventId}`
     }, (payload) => {
-       // === TAMBAHAN: viewer-only + ignore window setelah save lokal ===
-      if (typeof shouldProcessRemoteChange === 'function' && !shouldProcessRemoteChange()) return;
       const row = payload.new || payload.old;
       if (!row) return;
       if (row.session_date !== currentSessionDate) return;
@@ -1362,14 +1340,6 @@ function getPaidChannel(){
 
 
 // ================== Access Control ================== //
-// Viewer read-only (bukan editor & bukan mode score-only)
-function isReadOnlyViewer(){
-  try {
-    return (typeof isViewer === 'function' && isViewer())
-        && !(typeof isScoreOnlyMode === 'function' && isScoreOnlyMode());
-  } catch { return false; }
-}
-
 // role: 'editor' (full access) | 'viewer' (read-only)
 let accessRole = 'editor';
 // flag owner event (true jika user saat ini adalah owner dari event aktif)
@@ -1648,7 +1618,6 @@ async function saveStateToCloudWithLoading(){
 function maybeAutoSaveCloud(useLoading=false){
   try{
     if (isCloudMode()) {
-      suppressSelfPull(1500); // <-- TAMBAHAN: tahan listener realtime di tab ini sebentar
       if (useLoading) return saveStateToCloudWithLoading();
       return saveStateToCloud(); // silent
     } else {
@@ -3993,13 +3962,6 @@ function openScoreModal(courtIdx, roundIdx){
   byId('scoreRoundTitle').textContent = `Lap ${courtIdx+1} • Match ${roundIdx+1}`;
   byId('scoreAVal').textContent = scoreCtx.a;
   byId('scoreBVal').textContent = scoreCtx.b;
-  // === Viewer read-only: kunci & sembunyikan kontrol ===
-  if (isReadOnlyViewer()) {
-    try { setScoreModalLocked?.(true); } catch {}
-    const hide = (id)=>{ const el = byId(id); if (el){ el.classList.add('hidden-for-viewer'); el.setAttribute('aria-hidden','true'); } };
-    ['scoreButtonsA','scoreButtonsB','scoreStartBtn','scoreResetBtn','scoreFinishBtn'].forEach(hide);
-  }
-
   renderServeBadgeInModal();
 
     const ready = r.a1 && r.a2 && r.b1 && r.b2;
@@ -4243,12 +4205,6 @@ function commitScoreToRound(auto=false){
 
 
 function updateScoreDisplay(){
-  // Jangan toggle tombol untuk viewer murni
-  if (isReadOnlyViewer()) {
-    const a = byId('scoreButtonsA'); if (a) { a.style.display='none'; a.setAttribute('aria-hidden','true'); }
-    const b = byId('scoreButtonsB'); if (b) { b.style.display='none'; b.setAttribute('aria-hidden','true'); }
-  }
-
   byId('scoreAVal').textContent = scoreCtx.a;
   byId('scoreBVal').textContent = scoreCtx.b;
   renderServeBadgeInModal();
@@ -5425,13 +5381,3 @@ byId('btnLogout')?.addEventListener('click', async ()=>{
   try{ await sb.auth.signOut(); }catch{}
   location.reload();
 });
-
-
-
-
-
-
-
-
-
-
