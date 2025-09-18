@@ -4166,12 +4166,14 @@ const btnHdrMenu = document.getElementById("btnHdrMenu");
 if (btnHdrMenu) {
   btnHdrMenu.addEventListener("click", () => {
     const panel = document.getElementById("hdrControls");
+    if (!panel) return;
     panel.classList.toggle("hidden");
     if (!panel.classList.contains("hidden")) panel.classList.add("hdr-slide");
     setTimeout(() => panel.classList.remove("hdr-slide"), 220);
   });
   window.addEventListener("resize", () => {
     const panel = document.getElementById("hdrControls");
+    if (!panel) return;
     if (window.innerWidth >= 768) panel.classList.remove("hidden");
   });
 }
@@ -4181,6 +4183,7 @@ const btnFilter = document.getElementById("btnFilter");
 if (btnFilter) {
   btnFilter.addEventListener("click", () => {
     const panel = document.getElementById("filterPanel");
+    if (!panel) return;
     const willShow = panel.classList.contains("hidden");
     panel.classList.toggle("hidden");
     btnFilter.textContent = willShow
@@ -4191,10 +4194,14 @@ if (btnFilter) {
   });
   window.addEventListener("resize", () => {
     const panel = document.getElementById("filterPanel");
-    if (window.innerWidth >= 768) panel.classList.remove("hidden");
+    if (!panel) return;
+    if (window.innerWidth >= 768 && !isViewer()) {
+      panel.classList.remove("hidden");
+    } else if (isViewer()) {
+      panel.classList.add("hidden");
+    }
   });
 }
-
 byId("btnCollapsePlayers").addEventListener("click", () =>
   byId("playersPanel").classList.toggle("hidden")
 );
