@@ -82,20 +82,20 @@
 
       <!-- Panel Filter: hidden di HP, grid di ≥md -->
       <div id="filterPanel" class="collapsible default-collapsed open max-w-7xl mx-auto px-4 pb-4
-            grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 filter-grid">
-        <div class="filter-field">
+            grid filter-grid">
+        <div class="filter-field filter-field--half filter-field-date">
           <label class="filter-label block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Tanggal</label>
           <input id="sessionDate" type="date" class="filter-input border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100">
         </div>
-        <div class="filter-field">
+        <div class="filter-field filter-field--half filter-field-time">
           <label class="filter-label block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Mulai</label>
           <input id="startTime" type="time" class="filter-input border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value="19:00">
         </div>
-        <div class="filter-field">
+        <div class="filter-field filter-field--half filter-field-minutes">
           <label class="filter-label block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Menit/Match</label>
           <input id="minutesPerRound" type="number" min="5" class="filter-input border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value="12">
         </div>
-        <div class="filter-field">
+        <div class="filter-field filter-field--half filter-field-break">
           <label class="filter-label block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">
             Jeda/Match (menit)
           </label>
@@ -108,12 +108,12 @@
             </label>
           </div>
         </div>
-        <div class="filter-field">
+        <div class="filter-field filter-field--half filter-field-round">
           <label class="filter-label block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Match/Lapangan</label>
           <input id="roundCount" type="number" min="1" class="filter-input border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value="10">
         </div>
         <!-- panel PEMAIN collapsible -->
-        <div class="filter-field filter-field--full col-span-2 md:col-span-6">
+        <div class="filter-field filter-field--full">
           <div class="mt-2 p-3 rounded-2xl border bg-white dark:bg-gray-800 dark:border-gray-700">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2">
@@ -471,7 +471,3 @@
   <script src="app-responsive-addon.js?v=2025-08-29"></script>
 </body>
 </html>
-
-
-
-

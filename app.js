@@ -2333,7 +2333,7 @@ function ensureLocationFields(){
   const parent = rc.parentElement.parentElement; // grid container
   wrap = document.createElement('div');
   wrap.id = 'locationWrap';
-  wrap.className = 'filter-field filter-field--full col-span-2 sm:col-span-2';
+  wrap.className = 'filter-field filter-field--full';
 
   const label1 = document.createElement('label');
   label1.className = 'filter-label block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300';
@@ -2426,7 +2426,7 @@ function ensureJoinOpenFields(){
   if (!wrap) {
     wrap = document.createElement('div');
     wrap.id = 'joinOpenWrap';
-    wrap.className = 'filter-field filter-field--full col-span-12 md:col-span-6 lg:col-span-4 xl:col-span-3';
+    wrap.className = 'filter-field filter-field--full';
     wrap.innerHTML = `
       <label class="filter-label block text-[11px] uppercase tracking-wide font-semibold text-gray-600 dark:text-gray-300 mb-1">
         Buka Join
