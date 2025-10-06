@@ -127,6 +127,8 @@ function applyAccessMode(){
     const loggedIn = !!window.__hasUser;
     const allow = loggedIn && ((isOwnerNow()) || (!!window._isCashAdmin));
     if (cb) {
+      // If not logged in, force hide and skip further checks
+      if (!loggedIn) { cb.classList.add('hidden'); return; }
       if (known) {
         const show = !!(allow && currentEventId && isCloudMode());
         cb.classList.toggle('hidden', !show);
