@@ -87,6 +87,17 @@
       { key:'insight', label:'Insight',          icon: screenIcon() },
     ];
 
+    // Optional: Cashflow tab (only when allowed like desktop button)
+    const aloud = isCashflowAllowed();
+    let hostKas = null;
+    if (aloud){
+      tabs.push({ key:'kas', label:'Kas', icon: moneyIcon() });
+      hostKas = document.createElement('section');
+      hostKas.id = 'section-kas';
+      hostKas.className = 'bg-white dark:bg-gray-800 p-4 rounded-2xl shadow hidden';
+      main.appendChild(hostKas);
+    }
+
     tabs.forEach(t => ul.appendChild(tabItem(t.key, t.label, t.icon)));
     document.body.appendChild(bar);
 
@@ -165,6 +176,10 @@
       }catch{}
       toggle(hostRecap,   key==='recap');
       toggle(hostInsight, key==='insight');
+      if (aloud) {
+        toggle(hostKas, key==='kas');
+        if (key==='kas') mountCashflowInto(hostKas); else unmountCashflowToModal();
+      }
 
       if (key==='klasemen') enhanceStandingsMobile();
 
@@ -197,6 +212,66 @@
     }
 
   function toggle(el, show){ if (!el) return; el.classList.toggle('hidden', !show); }
+  function moneyIcon(){
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="10" x2="6" y2="10"/><line x1="18" y1="14" x2="18" y2="14"/><path d="M2 10h20"/><path d="M2 14h20"/></svg>';
+  }
+  function isCashflowAllowed(){
+    try{
+      const loggedIn = !!window.__hasUser;
+      const allow = loggedIn && ((typeof isOwnerNow==='function' && isOwnerNow()) || (!!window._isCashAdmin));
+      return !!(allow && typeof isCloudMode==='function' && isCloudMode() && typeof currentEventId!=='undefined' && !!currentEventId);
+    }catch{ return false; }
+  }
+  function getCashModal(){ return document.getElementById('cashModal'); }
+  function getCashInner(){ try{ return document.querySelector('#cashModal .relative'); }catch{ return null; } }
+  function mountCashflowInto(host){
+    if (!host) return;
+    let inner = getCashInner();
+    const modal = getCashModal();
+    // If modal content never initialized, trigger open then hijack
+    try{
+      const visible = modal && !modal.classList.contains('hidden');
+      if (!inner) {
+        document.getElementById('btnCashflow')?.click();
+        // try capture after a tick
+        setTimeout(()=> mountCashflowInto(host), 50);
+        return;
+      }
+      // Ensure latest data loaded by opening once
+      if (!visible) {
+        document.getElementById('btnCashflow')?.click();
+        setTimeout(()=> mountCashflowInto(host), 50);
+        return;
+      }
+    }catch{}
+    // Hide backdrop and move inner into host
+    try{ modal.querySelector('[data-cash-act]')?.classList.add('hidden'); }catch{}
+    try{ modal.classList.add('hidden'); }catch{}
+    try{
+      host.innerHTML='';
+      host.appendChild(inner);
+      inner.classList.remove('relative');
+      inner.classList.remove('mx-auto','mt-10','w-[95%]','max-w-5xl');
+    }catch{}
+  }
+  function unmountCashflowToModal(){
+    const modal = getCashModal(); if (!modal) return;
+    const inner = document.querySelector('#section-kas .modal__box')?.parentElement || document.querySelector('#section-kas > .modal__box') || document.querySelector('#section-kas > .relative');
+    if (!inner) return;
+    try{
+      // Restore inner back to modal and keep hidden
+      const box = inner; // modal__box wrapper is direct child of inner
+      // Create container matching original
+      const wrap = document.createElement('div');
+      wrap.className = 'relative mx-auto mt-10 w-[95%] max-w-5xl rounded-2xl bg-white dark:bg-gray-800 border dark:border-gray-700 shadow p-4 md:p-6';
+      // Move children back under wrap
+      while (box.firstChild) wrap.appendChild(box.firstChild);
+      // Clear host and append wrap into modal
+      inner.parentElement?.appendChild(wrap);
+      inner.remove();
+      modal.classList.add('hidden');
+    }catch{}
+  }
   }
 
   function escapeHtml(s){
