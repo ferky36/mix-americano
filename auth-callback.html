@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scoremate • Login</title>
+  <link rel="manifest" href="pwa-manifest.webmanifest" />
+  <meta name="theme-color" content="#4f46e5" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <style>
+    body{font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;color:#0f172a;background:#f8fafc;margin:0;padding:20px}
+    .card{max-width:560px;margin:60px auto;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:18px 20px;box-shadow:0 10px 30px rgba(0,0,0,.06)}
+    .muted{color:#64748b}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div id="cbTitle" style="font-weight:700;margin-bottom:6px">Menyelesaikan login…</div>
+    <div id="cbMsg" class="muted">Harap tunggu, Anda akan diarahkan ke aplikasi.</div>
+  </div>
+
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script>
+    // Buat client Supabase (gunakan project URL & anon key yang sama dengan index.html)
+    const SUPABASE_URL = 'https://edyneqtxtxdweczvcvvt.supabase.co';
+    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVkeW5lcXR4dHhkd2VjenZjdnZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYzNzM1MjgsImV4cCI6MjA3MTk0OTUyOH0.J_tYzbZ6fM4hw8QSiOaVcQwnPkUNC-uAZKe7W5i81DY';
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+    const START_URL = '/scoremate/'; // arahkan kembali ke halaman utama PWA (GitHub Pages scope)
+
+    function qs(name){ return new URLSearchParams(location.search).get(name); }
+    function hs(name){ return new URLSearchParams(location.hash.slice(1)).get(name); }
+    function setStatus(title,msg){ try{ cbTitle.textContent = title; cbMsg.textContent = msg; }catch{} }
+
+    (async function handleAuth(){
+      try{
+        // 1) Flow hash (access_token/refresh_token di fragment)
+        const at = hs('access_token');
+        const rt = hs('refresh_token');
+        if (at && rt){
+          setStatus('Menyiapkan sesi…','Mengatur sesi dari tautan login.');
+          const { error } = await sb.auth.setSession({ access_token: at, refresh_token: rt });
+          if (!error){ location.replace(START_URL); return; }
+        }
+
+        // 2) Flow PKCE (code di query string)
+        const code = qs('code');
+        if (code){
+          setStatus('Menukar kode…','Mengautentikasi dengan Supabase.');
+          const { data, error } = await sb.auth.exchangeCodeForSession({ code });
+          if (!error && data?.user){ location.replace(START_URL); return; }
+        }
+
+        // 3) Jika sudah login, langsung masuk
+        const { data: s } = await sb.auth.getSession();
+        if (s?.session){ location.replace(START_URL); return; }
+
+        setStatus('Gagal memproses login','Tautan tidak valid atau sudah dipakai. Coba minta OTP lagi.');
+      }catch(err){
+        setStatus('Terjadi kesalahan',''+(err?.message||err));
+      }
+    })();
+  </script>
+  <script>
+    // Registrasi SW agar halaman callback juga berada di scope PWA
+    if ('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+  </script>
+</body>
+</html>
+

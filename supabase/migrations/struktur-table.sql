@@ -648,7 +648,7 @@ $$;
 grant execute on function public.request_join_event(uuid, date, text, text, text) to authenticated;
 grant execute on function public.request_leave_event(uuid, date) to authenticated;
 
--- Delete event RPC (owner-only)
+-- Delete event RPC (owner-only or global owner via user_roles)
 create or replace function public.delete_event(
   p_event_id uuid
 ) returns jsonb
@@ -659,19 +659,38 @@ as $$
 declare
   v_uid uuid;
   v_owner uuid;
+  v_is_global_owner boolean := false;
 begin
   select auth.uid() into v_uid;
   if v_uid is null then
     return jsonb_build_object('status','unauthorized');
   end if;
 
+  -- Determine event creator/owner
   select owner_id into v_owner from public.events where id = p_event_id;
   if not found then
     return jsonb_build_object('status','not_found');
   end if;
 
-  -- Only the direct owner (events.owner_id) may delete
-  if v_owner <> v_uid then
+  -- Global owner check via user_roles (if table exists):
+  -- treat role = 'owner' or 'admin' OR is_owner=true as global owner
+  begin
+    perform 1 from information_schema.tables
+      where table_schema = 'public' and table_name = 'user_roles';
+    if found then
+      select exists (
+        select 1 from public.user_roles ur
+        where (ur.user_id = v_uid or lower(coalesce(ur.email,'')) = lower(coalesce(auth.email(),'') ))
+          and (coalesce(ur.is_owner,false) = true or lower(coalesce(ur.role,'')) in ('owner','admin'))
+      ) into v_is_global_owner;
+    end if;
+  exception when others then
+    -- if any error resolving user_roles, keep default false
+    v_is_global_owner := false;
+  end;
+
+  -- Allow delete if direct owner or global owner
+  if v_owner <> v_uid and not v_is_global_owner then
     return jsonb_build_object('status','forbidden');
   end if;
 

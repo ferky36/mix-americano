@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Match Recap – Simple</title>
+<style>
+  :root{
+    --bg: #0b0b0e; /* dark base */
+    --card: #131318;
+    --muted: #8b8b95;
+    --text: #f4f4f6;
+    --line: #1f2026;
+    --accent: #10b981; /* emerald */
+    --accent-weak: #103b2f;
+    --b: #2563eb; /* blue for Team B */
+    --b-weak: #0f1a3a;
+  }
+  @media (prefers-color-scheme: light){
+    :root{ --bg:#f8f8fb; --card:#ffffff; --muted:#6b7280; --text:#0f1115; --line:#eef0f3; --accent:#059669; --accent-weak:#d1fae5; --b:#2563eb; --b-weak:#dbeafe; }
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font:14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Noto Sans, "Apple Color Emoji","Segoe UI Emoji"; background:var(--bg); color:var(--text);}
+  .wrap{max-width:1100px; margin:auto; padding:20px; display:grid; gap:16px}
+  h1,h2,h3{margin:0 0 .5rem}
+
+  /* top stats */
+  .kpis{display:grid; grid-template-columns:repeat(4,1fr); gap:12px}
+  .kpi{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px}
+  .kpi .v{font-size:28px; font-weight:700}
+  .kpi .l{font-size:12px; color:var(--muted)}
+
+  /* layout: two columns */
+  .grid{display:grid; grid-template-columns:2fr 1fr; gap:16px}
+
+  /* match list */
+  .section-title{font-weight:600; font-size:16px}
+  .matches{display:grid; grid-template-columns:repeat(2,1fr); gap:12px}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px}
+  .meta{display:flex; justify-content:space-between; color:var(--muted); font-size:12px}
+  .teams{display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:8px; margin-top:10px}
+  .badge{display:inline-block; padding:2px 8px; font-size:11px; border-radius:999px; border:1px solid var(--line); color:var(--muted)}
+  .pill{display:inline-block; padding:2px 8px; font-size:11px; border-radius:999px; background:var(--accent-weak); color:var(--accent)}
+  .score{display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:10px}
+  .score .n{font-size:28px; font-weight:700}
+  .right{text-align:right}
+  .center{text-align:center}
+
+  /* team labels above names */
+  .side{display:flex; flex-direction:column; gap:2px}
+  .side.right{align-items:end; text-align:right}
+  .side-title{font-size:10px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted)}
+  .side-titleA{color:var(--accent)}
+  .side-titleB{color:#60a5fa}
+  .pair{font-size:14px}
+
+  /* standings */
+  .table{overflow:auto}
+  table{width:100%; border-collapse:collapse;}
+  th,td{padding:10px 8px; border-bottom:1px solid var(--line); text-align:center}
+  th{font-size:12px; color:var(--muted); font-weight:600; position:sticky; top:0; background:var(--card)}
+  td:first-child, th:first-child{text-align:right; width:36px; color:var(--muted)}
+  td:nth-child(2), th:nth-child(2){text-align:left}
+  .diff-pos{color:var(--accent)}
+  .diff-neg{color:#ef4444}
+  .wr-high{color:var(--accent)}
+  .wr-low{color:#ef4444}
+
+  /* notes */
+  .notes ul{margin:0; padding-left:18px; color:var(--muted)}
+  .rules{margin-top:10px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px}
+  .rules h4{margin:0 0 6px; font-size:13px}
+  .rules ol{margin:0; padding-left:18px; color:var(--muted)}
+  .notes ul{margin:0; padding-left:18px; color:var(--muted)}
+
+  /* responsive */
+  @media (max-width: 980px){ .grid{grid-template-columns:1fr} .grid-bottom{grid-template-columns:1fr} }
+  @media (max-width: 720px){ .kpis{grid-template-columns:repeat(2,1fr)} .matches{grid-template-columns:1fr} }
+
+  /* bottom row: rules + insights */
+  .grid-bottom{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:4px}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Mix Americano — Court 1</h1>
+      <div class="kpis">
+        <div class="kpi"><div class="v">5</div><div class="l">Total Match</div></div>
+        <div class="kpi"><div class="v">144</div><div class="l">Total Poin</div></div>
+        <div class="kpi"><div class="v">8.4</div><div class="l">Rata Selisih</div></div>
+        <div class="kpi"><div class="v">8–11</div><div class="l">Skor Paling Ketat (Match 5)</div></div>
+      </div>
+    </header>
+
+    <div class="grid">
+      <!-- left: matches -->
+      <section>
+        <h2 class="section-title">Rekap Pertandingan</h2>
+        <div class="matches">
+          <!-- Match 1 -->
+          <article class="card">
+            <div class="meta"><span>Match 1 • Court 1</span><span>19:00–19:07</span></div>
+            <div class="teams">
+              <div class="side">
+                <div class="side-title side-titleA">Team A</div>
+                <div class="pair">Gizla • Ricky</div>
+              </div>
+              <div class="center">vs</div>
+              <div class="side right">
+                <div class="side-title side-titleB">Team B</div>
+                <div class="pair">Ferdi • Della</div>
+              </div>
+            </div>
+            <div class="score">
+              <div class="n">24</div>
+              <div class="n right">8</div>
+            </div>
+            <div style="margin-top:8px; display:flex; gap:8px; align-items:center">
+              <span class="pill">Menang: Team A</span>
+              <span class="badge">Margin 16</span>
+            </div>
+          </article>
+
+          <!-- Match 2 -->
+          <article class="card">
+            <div class="meta"><span>Match 2 • Court 1</span><span>19:08–19:15</span></div>
+            <div class="teams">
+              <div class="side">
+                <div class="side-title side-titleA">Team A</div>
+                <div class="pair">Rangga R • Ricky</div>
+              </div>
+              <div class="center">vs</div>
+              <div class="side right">
+                <div class="side-title side-titleB">Team B</div>
+                <div class="pair">Marchel • Ferdi</div>
+              </div>
+            </div>
+            <div class="score">
+              <div class="n">9</div>
+              <div class="n right">23</div>
+            </div>
+            <div style="margin-top:8px; display:flex; gap:8px; align-items:center">
+              <span class="pill">Menang: Team B</span>
+              <span class="badge">Margin 14</span>
+            </div>
+          </article>
+
+          <!-- Match 3 -->
+          <article class="card">
+            <div class="meta"><span>Match 3 • Court 1</span><span>19:16–19:23</span></div>
+            <div class="teams">
+              <div class="side">
+                <div class="side-title side-titleA">Team A</div>
+                <div class="pair">Ricky • Faissy</div>
+              </div>
+              <div class="center">vs</div>
+              <div class="side right">
+                <div class="side-title side-titleB">Team B</div>
+                <div class="pair">Gizla • Della</div>
+              </div>
+            </div>
+            <div class="score">
+              <div class="n">15</div>
+              <div class="n right">11</div>
+            </div>
+            <div style="margin-top:8px; display:flex; gap:8px; align-items:center">
+              <span class="pill">Menang: Team A</span>
+              <span class="badge">Margin 4</span>
+            </div>
+          </article>
+
+          <!-- Match 4 -->
+          <article class="card">
+            <div class="meta"><span>Match 4 • Court 1</span><span>19:24–19:31</span></div>
+            <div class="teams">
+              <div class="side">
+                <div class="side-title side-titleA">Team A</div>
+                <div class="pair">Diana • Faissy</div>
+              </div>
+              <div class="center">vs</div>
+              <div class="side right">
+                <div class="side-title side-titleB">Team B</div>
+                <div class="pair">Abdi • Marchel</div>
+              </div>
+            </div>
+            <div class="score">
+              <div class="n">20</div>
+              <div class="n right">15</div>
+            </div>
+            <div style="margin-top:8px; display:flex; gap:8px; align-items:center">
+              <span class="pill">Menang: Team A</span>
+              <span class="badge">Margin 5</span>
+            </div>
+          </article>
+
+          <!-- Match 5 -->
+          <article class="card">
+            <div class="meta"><span>Match 5 • Court 1</span><span>19:32–19:39</span></div>
+            <div class="teams">
+              <div class="side">
+                <div class="side-title side-titleA">Team A</div>
+                <div class="pair">Diana • Abdi</div>
+              </div>
+              <div class="center">vs</div>
+              <div class="side right">
+                <div class="side-title side-titleB">Team B</div>
+                <div class="pair">Rangga R • Della</div>
+              </div>
+            </div>
+            <div class="score">
+              <div class="n">8</div>
+              <div class="n right">11</div>
+            </div>
+            <div style="margin-top:8px; display:flex; gap:8px; align-items:center">
+              <span class="pill">Menang: Team B</span>
+              <span class="badge">Margin 3</span>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- right: standings + notes -->
+      <aside class="stack">
+        <h2 class="section-title">Klasemen Pemain</h2>
+        <div class="card table" style="max-height:420px">
+          <table>
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Pemain</th>
+                <th>Total</th>
+                <th>Selisih</th>
+                <th>W</th>
+                <th>L</th>
+                <th>D</th>
+                <th>WinRate</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>1</td><td>Marchel</td><td>55</td><td class="diff-pos">32</td><td>5</td><td>1</td><td>0</td><td class="wr-high">83.3%</td></tr>
+              <tr><td>2</td><td>Ferdi</td><td>43</td><td class="diff-pos">12</td><td>2</td><td>2</td><td>0</td><td>50.0%</td></tr>
+              <tr><td>3</td><td>Abdi</td><td>32</td><td class="diff-pos">15</td><td>3</td><td>1</td><td>0</td><td class="wr-high">75.0%</td></tr>
+              <tr><td>4</td><td>Gizla</td><td>30</td><td>0</td><td>2</td><td>1</td><td>0</td><td>66.7%</td></tr>
+              <tr><td>5</td><td>Della</td><td>24</td><td class="diff-neg">-13</td><td>1</td><td>3</td><td>0</td><td class="wr-low">25.0%</td></tr>
+              <tr><td>6</td><td>Ichsan</td><td>23</td><td class="diff-pos">6</td><td>3</td><td>1</td><td>0</td><td class="wr-high">75.0%</td></tr>
+              <tr><td>7</td><td>Rangga</td><td>22</td><td class="diff-neg">-19</td><td>1</td><td>3</td><td>0</td><td class="wr-low">25.0%</td></tr>
+              <tr><td>8</td><td>Fai</td><td>21</td><td class="diff-neg">-6</td><td>2</td><td>2</td><td>0</td><td>50.0%</td></tr>
+              <tr><td>9</td><td>Diana</td><td>16</td><td class="diff-neg">-18</td><td>1</td><td>3</td><td>0</td><td class="wr-low">25.0%</td></tr>
+              <tr><td>10</td><td>Altundri</td><td>10</td><td class="diff-neg">-9</td><td>0</td><td>3</td><td>0</td><td class="wr-low">0.0%</td></tr>
+            </tbody>
+          </table>
+        </div>
+        </aside>
+    </div>
+
+    <div class="grid-bottom">
+      <section>
+        <h2 class="section-title">📊 Aturan Ranking</h2>
+        <div class="rules">
+          <ol>
+            <li><strong>Total</strong> — poin total lebih tinggi berada di peringkat lebih atas.</li>
+            <li><strong>Selisih</strong> — jika Total sama, ditentukan oleh (point for − point against). Lebih besar → lebih tinggi.</li>
+            <li><strong>Menang</strong> — jika Total & Selisih sama, dilihat jumlah kemenangan (W).</li>
+            <li>Jika semua sama → urutkan alfabetis nama.</li>
+          </ol>
+        </div>
+      </section>
+      <section>
+        <h2 class="section-title">Catatan & Insight</h2>
+        <div class="card notes">
+          <ul>
+            <li><strong>Peringkat berdasarkan Total:</strong> Marchel (55) memimpin; Ferdi (43) & Abdi (32) mengejar.</li>
+            <li><strong>Selisih terbaik:</strong> Marchel (+32) & Abdi (+15) menunjukkan kontrol game tinggi.</li>
+            <li><strong>WinRate unggul (≥ 70%):</strong> Abdi 75%, Ichsan 75% — kandidat kunci untuk pairing berat.</li>
+            <li><strong>Butuh perbaikan:</strong> Della (25%, ±−13), Rangga (25%, ±−19), Diana (25%, ±−18) — coba pairing dengan pemain ± positif (Marchel, Abdi, Gizla).</li>
+            <li><strong>Consistency watch:</strong> Ferdi 50% namun Total tinggi (43) → kontribusi poin bagus meski hasil belum stabil.</li>
+            <li><strong>Rotasi & keseimbangan:</strong> beri jam terbang tambahan untuk Fai (50%, ±−6) dengan partner defensif kuat.</li>
+          </ul>
+        </div>
+      </section>
+    </div>
+
+    <footer style="color:var(--muted); font-size:12px; margin-top:6px">Terakhir diperbarui 19:40</footer>
+  </div>
+</body>
+</html>

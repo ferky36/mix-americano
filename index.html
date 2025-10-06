@@ -1,10 +1,16 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
+  <link rel="manifest" href="pwa-manifest.webmanifest" />
+  <meta name="theme-color" content="#4f46e5" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mix Americano – 2 Lapangan</title>
+  <title>Padel-NBC</title>
   <link rel="stylesheet" href="styles.css?v=2025-08-29" />
+  <link rel="stylesheet" href="match-recap.css?v=2025-09-22" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script> tailwind.config = { darkMode: 'class' };</script>
 </head>
@@ -32,6 +38,7 @@
                 <span id="chipCountText">0 pemain</span>
               </span>
               <button id="btnTheme" class="px-3 py-2 rounded-xl bg-white/20 text-white font-semibold shadow hover:bg-white/30" title="Toggle Dark Mode">🌙/☀️</button>
+              <button id="btnInstallAppHdr" class="hidden px-3 py-2 rounded-xl bg-white/20 text-white font-semibold shadow hover:bg-white/30" title="Install aplikasi ke perangkat">Install App</button>
             </div>
             
           </div>
@@ -59,6 +66,7 @@
           <button id="btnReport" class="px-3 py-2 rounded-xl bg-white text-indigo-700 font-semibold shadow hover:opacity-90">
             📊 Report
           </button>
+          <button id="btnCashflow" type="button" class="px-3 py-2 rounded-xl bg-white text-indigo-700 font-semibold shadow hover:opacity-90">Cashflow</button>
           <button id="btnLeaveEvent" 
             class="px-3 py-2 rounded-xl bg-white text-red-700 font-semibold shadow hover:opacity-90">
             🚪 Keluar Event
@@ -81,21 +89,21 @@
       </div>
 
       <!-- Panel Filter: hidden di HP, grid di ≥md -->
-      <div id="filterPanel" class="collapsible default-collapsed open max-w-7xl mx-auto px-4 pb-4
-            grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 filter-grid">
-        <div class="filter-field">
+      <div id="filterPanel" class="collapsible default-collapsed max-w-7xl mx-auto px-4 pb-4
+            grid filter-grid">
+        <div class="filter-field filter-field--half filter-field-date">
           <label class="filter-label block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Tanggal</label>
           <input id="sessionDate" type="date" class="filter-input border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100">
         </div>
-        <div class="filter-field">
+        <div class="filter-field filter-field--half filter-field-time">
           <label class="filter-label block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Mulai</label>
           <input id="startTime" type="time" class="filter-input border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value="19:00">
         </div>
-        <div class="filter-field">
+        <div class="filter-field filter-field--half filter-field-minutes">
           <label class="filter-label block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Menit/Match</label>
           <input id="minutesPerRound" type="number" min="5" class="filter-input border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value="12">
         </div>
-        <div class="filter-field">
+        <div class="filter-field filter-field--half filter-field-break">
           <label class="filter-label block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">
             Jeda/Match (menit)
           </label>
@@ -108,12 +116,12 @@
             </label>
           </div>
         </div>
-        <div class="filter-field">
+        <div class="filter-field filter-field--half filter-field-round">
           <label class="filter-label block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Match/Lapangan</label>
           <input id="roundCount" type="number" min="1" class="filter-input border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value="10">
         </div>
         <!-- panel PEMAIN collapsible -->
-        <div class="filter-field filter-field--full col-span-2 md:col-span-6">
+        <div class="filter-field filter-field--full">
           <div class="mt-2 p-3 rounded-2xl border bg-white dark:bg-gray-800 dark:border-gray-700">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2">
@@ -298,6 +306,112 @@
       </div>
     </div>
   </div>
+  <!-- Modal: Kas Event -->
+  <div id="cashModal" class="fixed inset-0 bg-black/40 hidden z-50">
+    <div class="absolute inset-0" data-cash-act="close"></div>
+    <div class="relative mx-auto mt-10 w-[95%] max-w-5xl rounded-2xl bg-white dark:bg-gray-800 border dark:border-gray-700 shadow p-4 md:p-6">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-lg md:text-xl font-semibold">
+          Cashflow Event
+          <span id="cashEventInfo" class="ml-2 text-sm font-normal text-gray-600 dark:text-gray-300"></span>
+        </h3>
+        <button id="btnCashClose" class="px-3 py-1 rounded-lg border dark:border-gray-700">Tutup</button>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+        <div class="rounded-xl border dark:border-gray-700 p-3">
+          <div class="text-xs text-gray-500 dark:text-gray-300">Uang Masuk</div>
+          <div id="cashSumIn" class="text-xl font-bold text-emerald-600">Rp0</div>
+        </div>
+        <div class="rounded-xl border dark:border-gray-700 p-3">
+          <div class="text-xs text-gray-500 dark:text-gray-300">Uang Keluar</div>
+          <div id="cashSumOut" class="text-xl font-bold text-red-500">Rp0</div>
+        </div>
+        <div class="rounded-xl border dark:border-gray-700 p-3">
+          <div class="text-xs text-gray-500 dark:text-gray-300">Sisa</div>
+          <div id="cashSumRemain" class="text-xl font-bold">Rp0</div>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <section class="rounded-xl border dark:border-gray-700 p-3">
+          <div class="flex items-center justify-between mb-2">
+            <h4 class="font-semibold">Uang Masuk</h4>
+            <div class="flex items-center gap-2">
+              <span id="cashCountIn" class="text-xs text-gray-500 dark:text-gray-300">0 baris</span>
+              <button id="btnCashAddIn" class="px-2 py-1 rounded-lg border dark:border-gray-700 text-sm">Tambah</button>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-sm dark-table">
+              <thead>
+                <tr class="text-left border-b border-gray-200 dark:border-gray-700">
+                  <th class="py-2 pr-2">Source</th>
+                  <th class="py-2 pr-2 text-right">Amount</th>
+                  <th class="py-2 pr-2 text-right">Pax</th>
+                  <th class="py-2 pr-2 text-right">Total</th>
+                  <th class="py-2 pr-2"></th>
+                </tr>
+              </thead>
+              <tbody id="cashTbodyIn"></tbody>
+            </table>
+          </div>
+        </section>
+        <section class="rounded-xl border dark:border-gray-700 p-3">
+          <div class="flex items-center justify-between mb-2">
+            <h4 class="font-semibold">Uang Keluar</h4>
+            <div class="flex items-center gap-2">
+              <span id="cashCountOut" class="text-xs text-gray-500 dark:text-gray-300">0 baris</span>
+              <button id="btnCashAddOut" class="px-2 py-1 rounded-lg border dark:border-gray-700 text-sm">Tambah</button>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-sm dark-table">
+              <thead>
+                <tr class="text-left border-b border-gray-200 dark:border-gray-700">
+                  <th class="py-2 pr-2">Items</th>
+                  <th class="py-2 pr-2 text-right">Amount</th>
+                  <th class="py-2 pr-2 text-right">Pax</th>
+                  <th class="py-2 pr-2 text-right">Total</th>
+                  <th class="py-2 pr-2"></th>
+                </tr>
+              </thead>
+              <tbody id="cashTbodyOut"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+  <!-- Submodal: Tambah/Edit Kas -->
+  <div id="cashFormModal" class="fixed inset-0 bg-black/40 hidden z-[60]">
+    <div class="absolute inset-0" data-cashform-act="close"></div>
+    <div class="relative mx-auto mt-16 w-[92%] max-w-md rounded-2xl bg-white dark:bg-gray-800 border dark:border-gray-700 shadow p-4 md:p-6">
+      <h3 id="cashFormTitle" class="text-lg font-semibold mb-2">Tambah</h3>
+      <form id="cashForm" class="space-y-3">
+        <div>
+          <label id="cashLabelLabel" class="text-xs text-gray-500 dark:text-gray-300">Keterangan</label>
+          <input id="cashLabel" type="text" placeholder="Misal: Peserta / Lapangan" class="mt-1 w-full border rounded-xl px-3 py-2 bg-white dark:bg-gray-900 dark:border-gray-700" required />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-gray-500 dark:text-gray-300">Amount</label>
+            <input id="cashAmount" type="number" min="0" step="1000" value="0" class="mt-1 w-full border rounded-xl px-3 py-2 bg-white dark:bg-gray-900 dark:border-gray-700" required />
+          </div>
+          <div>
+            <label class="text-xs text-gray-500 dark:text-gray-300">Pax</label>
+            <input id="cashPax" type="number" min="1" step="1" value="1" class="mt-1 w-full border rounded-xl px-3 py-2 bg-white dark:bg-gray-900 dark:border-gray-700" required />
+          </div>
+        </div>
+        <div class="flex items-center justify-end gap-3 text-sm">
+          <div>Total: <strong id="cashTotal">Rp0</strong></div>
+        </div>
+        <div class="flex items-center justify-end gap-2">
+          <button type="button" id="cashCancel" class="px-3 py-2 rounded-lg border dark:border-gray-700">Batal</button>
+          <button type="submit" class="px-3 py-2 rounded-lg bg-indigo-600 text-white">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Modal Hitung Skor -->
   <div id="scoreModal" class="fixed inset-0 z-50 hidden">
     <!-- backdrop -->
@@ -422,7 +536,7 @@
           <button id="eventCopyBtn" class="px-3 py-2 rounded-lg bg-green-600 text-white text-sm">Copy</button>
         </div>
       </div>
-    </div>
+  </div>
   </div>
 
   <!-- Modal: Login -->
@@ -442,6 +556,24 @@
     </div>
   </div>
 
+  <!-- Modal: Admin Login -->
+  <div id="adminLoginModal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/40" id="adminBackdrop"></div>
+    <div class="relative mx-auto mt-16 w-[92%] max-w-md rounded-2xl bg-white dark:bg-gray-800 shadow p-4 md:p-6">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-lg font-semibold">Administrator Login</h3>
+        <button id="adminCancelBtn" class="px-3 py-1 rounded-lg border dark:border-gray-700">Tutup</button>
+      </div>
+      <div class="space-y-3">
+        <div class="text-sm text-gray-600 dark:text-gray-300">Masukkan email dan password Supabase Anda.</div>
+        <input id="adminEmail" type="email" placeholder="email@example.com" class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" />
+        <input id="adminPass" type="password" placeholder="Password" class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" />
+        <button id="adminLoginBtn" class="w-full px-3 py-2 rounded-xl bg-indigo-600 text-white font-semibold">Login</button>
+        <div id="adminMsg" class="text-xs"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Global Loading Overlay -->
   <div id="loadingOverlay" class="fixed inset-0 z-[60] hidden">
     <div class="absolute inset-0 bg-black/30 backdrop-blur-sm"></div>
@@ -455,7 +587,7 @@
   </div>
 
 
-  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+  <!-- <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script> -->
   <!-- Supabase SDK dari CDN -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script type="module" id="supabase-init">
@@ -467,11 +599,42 @@
     console.log('[Supabase] client ready:', !!window.sb);
 
   </script>
+  <script src="scripts/helpers.js?v=2025-08-29"></script>
+  <script src="scripts/join-open.js?v=2025-08-29"></script>
+  <script src="scripts/storage.js?v=2025-08-29"></script>
+  <script src="scripts/event-controls.js?v=2025-08-29"></script>
+  <script src="scripts/event-location-public.js?v=2025-08-29"></script>
+  <script src="scripts/title-rename.js?v=2025-08-29"></script>
+  <script src="scripts/auth-redirect.js?v=2025-08-29"></script>
+  <script src="scripts/auth-core.js?v=2025-08-29"></script>
+  <script src="scripts/join-event.js?v=2025-08-29"></script>
+  <script src="scripts/toast.js?v=2025-08-29"></script>
+  <script src="scripts/delta-updates.js?v=2025-08-29"></script>
+  <script src="scripts/autosave.js?v=2025-08-29"></script>
+  <script src="scripts/state.js?v=2025-08-29"></script>
+  <script src="scripts/player-meta.js?v=2025-08-29"></script>
+  <script src="scripts/access-control.js?v=2025-08-29"></script>
+  <script src="scripts/theme.js?v=2025-08-29"></script>
+  <script src="scripts/sessions.js?v=2025-08-29"></script>
+  <script src="scripts/players-ui.js?v=2025-08-29"></script>
+  <script src="scripts/editor-panel.js?v=2025-08-29"></script>
+  <script src="scripts/max-players.js?v=2025-08-29"></script>
+  <script src="scripts/event-location-editor.js?v=2025-08-29"></script>
+  <script src="scripts/americano.js?v=2025-08-29"></script>
+  <script src="scripts/rename-helpers.js?v=2025-08-29"></script>
+  <script src="scripts/courts.js?v=2025-08-29"></script>
+  <script src="scripts/rendering.js?v=2025-08-29"></script>
+  <script src="scripts/auto-fill.js?v=2025-08-29"></script>
+  <script src="scripts/score-modal.js?v=2025-08-29"></script>
+  <script src="scripts/filter-toggle.js?v=2025-08-29"></script>
+  <script src="scripts/auth-ui.js?v=2025-08-29"></script>
+  <script src="scripts/standings-export.js?v=2025-08-29"></script>
+  <script src="scripts/player-composition-info.js?v=2025-09-26"></script>
+  <script src="scripts/match-recap.js?v=2025-09-22"></script>
+  <script src="scripts/pwa-install.js"></script>
+  <script src="scripts/cashflow.js"></script>
   <script src="app.js?v=2025-08-29"></script>
   <script src="app-responsive-addon.js?v=2025-08-29"></script>
+  <script src="scripts/mobile-nav.js"></script>
 </body>
 </html>
-
-
-
-
