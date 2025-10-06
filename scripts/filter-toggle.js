@@ -249,7 +249,8 @@ function getSearchDateValue(){
 async function loadSearchDates(){
   ensureSearchDateInput();
   const inp = byId('searchDateInput'); if (!inp) return;
-  const allowAll = (!!window._isOwnerUser) || (typeof isViewer==='function' && isViewer());
+  // Owner global ATAU editor (UI) boleh melihat semua tanggal event
+  const allowAll = (!!window._isOwnerUser) || (typeof isViewer==='function' ? !isViewer() : false);
   let ids = [];
   if (!allowAll){ ids = await getMyEventIds(); }
   try{
@@ -393,7 +394,8 @@ async function loadSearchEventsForDate(dateStr){
   evSel.innerHTML = '<option value="">Memuat…</option>';
   btnOpen && (btnOpen.disabled = true);
   const delBtn = byId('deleteEventBtn'); if (delBtn) delBtn.disabled = true;
-  const allowAll = (!!window._isOwnerUser) || (typeof isViewer==='function' && isViewer());
+  // Owner global ATAU editor (UI) boleh melihat semua event pada tanggal tsb
+  const allowAll = (!!window._isOwnerUser) || (typeof isViewer==='function' ? !isViewer() : false);
   const ids = allowAll ? [] : await getMyEventIds();
   if ((!allowAll && !ids.length) || !dateStr){ evSel.innerHTML = '<option value="">— Tidak ada —</option>'; return; }
   try{

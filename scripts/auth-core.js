@@ -29,6 +29,7 @@ try {
 
 async function updateAuthUI(){
   const user = await getCurrentUser();
+  try{ window.__hasUser = !!user; }catch{}
   const loginBtn = byId('btnLogin'); const logoutBtn = byId('btnLogout'); const info = byId('authInfo'); const email = byId('authUserEmail');
   if (user){
     // Otomatiskan akses editor berdasarkan metadata / tabel user_roles (tanpa owner=yes di URL)
@@ -38,6 +39,7 @@ async function updateAuthUI(){
     info?.classList.remove('hidden');
     if (email) email.textContent = user.email || user.id;
   } else {
+    try{ window.__hasUser = false; }catch{}
     try{ if (typeof accessRole==='undefined' || accessRole!=='viewer') setAccessRole?.('viewer'); }catch{}
     loginBtn?.classList.remove('hidden'); byId('btnAdminLogin')?.classList.remove('hidden');
     logoutBtn?.classList.add('hidden');

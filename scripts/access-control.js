@@ -120,16 +120,17 @@ function applyAccessMode(){
     if (wrap) wrap.classList.toggle('hidden', isViewer() || !currentEventId || !isCloudMode());
   } catch {}
 
-  // Cashflow button visibility: only owner or cash-admin
+  // Cashflow button visibility: only owner or cash-admin, and only when logged in
   try {
     const cb = byId('btnCashflow');
     const known = (typeof window._isCashAdmin !== 'undefined');
-    const allow = (isOwnerNow()) || (!!window._isCashAdmin);
+    const loggedIn = !!window.__hasUser;
+    const allow = loggedIn && ((isOwnerNow()) || (!!window._isCashAdmin));
     if (cb) {
       if (known) {
         const show = !!(allow && currentEventId && isCloudMode());
         cb.classList.toggle('hidden', !show);
-        roleDebug('cashflow-toggle', { known, allow, isOwnerNow: isOwnerNow(), _isCashAdmin: window._isCashAdmin, event: currentEventId, cloud: isCloudMode(), show });
+        roleDebug('cashflow-toggle', { known, allow, loggedIn, isOwnerNow: isOwnerNow(), _isCashAdmin: window._isCashAdmin, event: currentEventId, cloud: isCloudMode(), show });
       }
       // If not known yet, ask background to compute it; don't toggle to avoid flicker
       if (!known) { try{ ensureCashAdminFlag?.(); }catch{} }
