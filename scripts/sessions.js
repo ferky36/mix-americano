@@ -155,6 +155,8 @@ function initCloudFromUrl() {
     (async ()=>{ const ok = await ensureEventExistsOrReset(); if (ok) loadAccessRoleFromCloud?.(); else applyAccessMode(); })();
   } else {
     applyAccessMode();
+    // Even in forced viewer, compute cash-admin flag so Cashflow button can appear
+    try{ ensureCashAdminFlag?.(); }catch{}
   }
   try{ updateAdminButtonsVisibility?.(); }catch{}
 

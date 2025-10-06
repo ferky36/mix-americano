@@ -110,6 +110,26 @@ async function loadAccessRoleFromCloud(){
   finally { hideLoading(); }
 }
 
+// Compute cash-admin flag even if UI stays viewer (e.g., forced viewer via URL)
+async function ensureCashAdminFlag(){
+  try{
+    if (!isCloudMode() || !window.sb?.auth || !currentEventId) return;
+    const { data: userData } = await sb.auth.getUser();
+    const uid = userData?.user?.id || null;
+    if (!uid) return;
+    const { data: mem } = await sb
+      .from('event_members')
+      .select('role')
+      .eq('event_id', currentEventId)
+      .eq('user_id', uid)
+      .maybeSingle();
+    const memRole = mem?.role || null;
+    window._memberRole = memRole;
+    window._isCashAdmin = (!!window._isOwnerUser) || (memRole === 'admin');
+    try{ const cb = byId('btnCashflow'); if (cb) cb.classList.toggle('hidden', !((!!window._isCashAdmin) && currentEventId && isCloudMode())); }catch{}
+  }catch{}
+}
+
 async function fetchEventTitleFromDB(eventId){
   try{
     showLoading('Memuat judul event…');
