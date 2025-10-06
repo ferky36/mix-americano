@@ -55,7 +55,8 @@ async function resolveUserRoleAndApply(user){
   const prevOwner = !!window._isOwnerUser;
   try{
     role = String((user.app_metadata?.role || user.user_metadata?.role || '')).toLowerCase();
-    isOwner = !!(user.app_metadata?.is_owner || user.user_metadata?.is_owner || role==='owner' || role==='admin');
+    // Global owner only if explicit is_owner true or role === 'owner'
+    isOwner = !!(user.app_metadata?.is_owner || user.user_metadata?.is_owner || role==='owner');
   }catch{}
 
   // Cache ringan di localStorage untuk mengurangi hit /auth/v1/user dan query tabel
@@ -79,7 +80,8 @@ async function resolveUserRoleAndApply(user){
         .maybeSingle();
       if (!error && data){
         role = String(data.role||'').toLowerCase();
-        isOwner = !!data.is_owner || role==='owner' || role==='admin';
+        // Do NOT treat 'admin' as owner; only explicit is_owner or role 'owner'
+        isOwner = !!data.is_owner || role==='owner';
         try{ localStorage.setItem(CK, JSON.stringify({ role, isOwner, ts: Date.now() })); }catch{}
         // Persist ke user_metadata agar terbaca di /auth/v1/user tanpa query DB pada refresh berikutnya
         try{ await sb.auth.updateUser({ data: { role, is_owner: isOwner } }); }catch{}
@@ -88,7 +90,8 @@ async function resolveUserRoleAndApply(user){
   }
 
   window._isOwnerUser = !!isOwner;
-  const desired = (role==='editor' || role==='owner' || role==='admin') ? 'editor' : 'viewer';
+  // Admin is cashflow-only: keep viewer UI for admin
+  const desired = (isOwner || role==='editor') ? 'editor' : 'viewer';
   try{
     if (typeof accessRole==='undefined' || accessRole !== desired) {
       setAccessRole?.(desired);
