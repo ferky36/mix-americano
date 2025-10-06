@@ -152,11 +152,11 @@ function initCloudFromUrl() {
 
   // Load access role if in cloud mode (skip elevation if forced viewer)
   if (currentEventId && !_forceViewer) {
-    (async ()=>{ const ok = await ensureEventExistsOrReset(); if (ok) loadAccessRoleFromCloud?.(); else applyAccessMode(); })();
+    (async ()=>{ const ok = await ensureEventExistsOrReset(); if (ok) { await loadAccessRoleFromCloud?.(); try{ updateMobileCashTab?.(); }catch{} } else { applyAccessMode(); try{ updateMobileCashTab?.(); }catch{} } })();
   } else {
     applyAccessMode();
     // Even in forced viewer, compute cash-admin flag so Cashflow button can appear
-    try{ ensureCashAdminFlag?.(); }catch{}
+    try{ ensureCashAdminFlag?.(); updateMobileCashTab?.(); }catch{}
   }
   try{ updateAdminButtonsVisibility?.(); }catch{}
 
@@ -189,7 +189,7 @@ function initCloudFromUrl() {
             if (accData.event_id && !currentEventId) currentEventId = accData.event_id;
             try{ clearViewerParams(); }catch{}
             _forceViewer = false;
-            loadAccessRoleFromCloud?.();
+            loadAccessRoleFromCloud?.(); try{ updateMobileCashTab?.(); }catch{}
             return; // selesai
           }
         }catch{}
@@ -218,7 +218,7 @@ function initCloudFromUrl() {
         // refresh akses dan bersihkan param viewer yang mungkin tersisa di URL
         try{ clearViewerParams(); }catch{}
         _forceViewer = false;
-        loadAccessRoleFromCloud?.();
+        loadAccessRoleFromCloud?.(); try{ updateMobileCashTab?.(); }catch{}
       }catch(e){ console.warn('accept-invite failed', e); }
     })();
   }

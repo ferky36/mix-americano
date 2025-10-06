@@ -18,6 +18,7 @@ function isOwnerNow(){
   }catch{}
   return !!window._isOwnerUser;
 }
+function isMobileNow(){ try { return window.matchMedia && window.matchMedia('(max-width: 640px)').matches; } catch { return false; } }
 function isCashAdmin(){
   try { if (typeof isOwnerNow === 'function' && isOwnerNow()) return true; } catch {}
   return !!window._isCashAdmin;
@@ -127,8 +128,10 @@ function applyAccessMode(){
     const loggedIn = !!window.__hasUser;
     const allow = loggedIn && ((isOwnerNow()) || (!!window._isCashAdmin));
     if (cb) {
-      // If not logged in, force hide and skip further checks
+      // If not logged in, force hide and stop toggling
       if (!loggedIn) { cb.classList.add('hidden'); return; }
+      // Always hide header Cashflow button on mobile view; use navbar tab instead
+      if (isMobileNow()) { cb.classList.add('hidden'); return; }
       if (known) {
         const show = !!(allow && currentEventId && isCloudMode());
         cb.classList.toggle('hidden', !show);
@@ -138,6 +141,9 @@ function applyAccessMode(){
       if (!known) { try{ ensureCashAdminFlag?.(); }catch{} }
     }
   } catch {}
+
+  // Sync mobile navbar Cashflow tab visibility with same logic
+  try { updateMobileCashTab?.(); } catch {}
 
   // Move editor players panel out of filter grid into its own section
   try {

@@ -58,6 +58,20 @@
     main.appendChild(hostRecap);
     main.appendChild(hostInsight);
 
+    // Ensure editor players section (if exists/needed) lives ABOVE section-jadwal
+    try{
+      const isView = (typeof isViewer==='function') ? isViewer() : false;
+      if (!isView) {
+        // Move panel out of filter grid into its own section using existing helper
+        try{ relocateEditorPlayersPanel?.(); }catch{}
+        const ep = document.getElementById('editorPlayersSection');
+        if (ep && hostJadwal && ep.nextSibling !== hostJadwal) {
+          // place just before Jadwal wrapper to keep it on top
+          main.insertBefore(ep, hostJadwal);
+        }
+      }
+    }catch{}
+
     // Do NOT move editor players list; keep it under #editorPlayersSection (managed by editor-panel.js)
     // Viewer list (#viewerPlayersWrap) is also kept where created by ensureViewerPlayersPanel().
 
@@ -129,6 +143,9 @@
     // Initial state
     // Default tab: Jadwal & Pemain (combined)
     select('jadwal');
+    // Ensure Kas tab reflects current role after init
+    try{ updateMobileCashTab?.(); }catch{}
+    setTimeout(()=>{ try{ updateMobileCashTab?.(); }catch{} }, 300);
 
     function tabItem(key, label, iconSvg){
       const li = document.createElement('li');
@@ -163,23 +180,20 @@
       // Default: show jadwal (controls + courts), hide standings, collapse players panel
       toggle(hostJadwal,  key==='jadwal');
       toggle(hostKlasemen,key==='klasemen');
-      // Also show/hide the editor players section alongside Jadwal & Pemain tab
-      try{
-        const ensureSec = (typeof ensureEditorPlayersSection === 'function') ? ensureEditorPlayersSection : null;
-        const isView = (typeof isViewer==='function') ? isViewer() : false;
-        // Never create editorPlayersSection in viewer mode
-        let ep = document.getElementById('editorPlayersSection');
-        if (!isView && !ep && key==='jadwal' && ensureSec) ep = ensureSec();
-        if (ep) ep.classList.toggle('hidden', key!=='jadwal' || isView);
-        const vp = document.getElementById('viewerPlayersWrap');
-        if (vp) vp.classList.toggle('hidden', key!=='jadwal' || !isView);
-      }catch{}
+      // IMPORTANT: Do not toggle editorPlayersSection/viewerPlayersWrap here.
+      // Leave visibility and relocation to access-control.js to avoid conflicts.
+      try{ /* no-op: managed by access-control */ }catch{}
       toggle(hostRecap,   key==='recap');
       toggle(hostInsight, key==='insight');
-      if (aloud) {
-        toggle(hostKas, key==='kas');
-        if (key==='kas') mountCashflowInto(hostKas); else unmountCashflowToModal();
-      }
+      // Handle Kas tab dynamically by presence of tab/host (not by init flag)
+      try{
+        const hasKas = !!document.getElementById('tab-kas');
+        const hostKasNode = document.getElementById('section-kas');
+        if (hasKas && hostKasNode){
+          toggle(hostKasNode, key==='kas');
+          if (key==='kas') mountCashflowInto(hostKasNode); else unmountCashflowToModal();
+        }
+      }catch{}
 
       if (key==='klasemen') enhanceStandingsMobile();
 
@@ -212,46 +226,87 @@
     }
 
   function toggle(el, show){ if (!el) return; el.classList.toggle('hidden', !show); }
+  // Dynamic update for Cashflow tab when role/login changes
+  function updateMobileCashTab(){
+    if (!isMobile()) return;
+    const bar = document.getElementById('mobileTabbar'); if (!bar) return;
+    const ul = bar.querySelector('ul'); if (!ul) return;
+    const hasTab = !!document.getElementById('tab-kas');
+    const allowed = isCashflowAllowed();
+    let hostKasLocal = document.getElementById('section-kas');
+    if (allowed && !hasTab){
+      // Ensure host exists
+      if (!hostKasLocal){
+        hostKasLocal = document.createElement('section');
+        hostKasLocal.id = 'section-kas';
+        hostKasLocal.className = 'bg-white dark:bg-gray-800 p-4 rounded-2xl shadow hidden';
+        try{ document.querySelector('main')?.appendChild(hostKasLocal); }catch{}
+      }
+      // Append tab item at the end
+      ul.appendChild(tabItem('kas','Kas', moneyIcon()));
+    } else if (!allowed && hasTab){
+      // If currently on kas, move away to jadwal first
+      const key = (typeof window !== 'undefined' && window.__mobileTabKey) ? window.__mobileTabKey : null;
+      if (key==='kas') select('jadwal');
+      // Remove/hide tab and unmount content
+      try{ document.getElementById('tab-kas')?.parentElement?.remove(); }catch{}
+      try{ unmountCashflowToModal(); }catch{}
+      if (hostKasLocal) hostKasLocal.classList.add('hidden');
+    }
+  }
+  try{ window.updateMobileCashTab = updateMobileCashTab; }catch{}
   function moneyIcon(){
     return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="10" x2="6" y2="10"/><line x1="18" y1="14" x2="18" y2="14"/><path d="M2 10h20"/><path d="M2 14h20"/></svg>';
   }
   function isCashflowAllowed(){
     try{
       const loggedIn = !!window.__hasUser;
-      const allow = loggedIn && ((typeof isOwnerNow==='function' && isOwnerNow()) || (!!window._isCashAdmin));
-      return !!(allow && typeof isCloudMode==='function' && isCloudMode() && typeof currentEventId!=='undefined' && !!currentEventId);
+      const ownerNow = (typeof isOwnerNow==='function') ? isOwnerNow() : !!window._isOwnerUser;
+      const cashAdmin = !!window._isCashAdmin;
+      const allow = loggedIn && (ownerNow || cashAdmin);
+      const inCloud = (typeof isCloudMode==='function' && isCloudMode());
+      const hasEvent = (typeof currentEventId!=='undefined' && !!currentEventId);
+      return !!(allow && inCloud && hasEvent);
     }catch{ return false; }
   }
   function getCashModal(){ return document.getElementById('cashModal'); }
-  function getCashInner(){ try{ return document.querySelector('#cashModal .relative'); }catch{ return null; } }
-  function mountCashflowInto(host){
+  function getCashInner(){
+    try{
+      let el = document.querySelector('#cashModal > .relative');
+      if (!el) el = document.querySelector('#cashModal .relative');
+      return el || null;
+    }catch{ return null; }
+  }
+  function mountCashflowInto(host, tries=0){
+    if (tries > 10) return; // avoid infinite loop
     if (!host) return;
     let inner = getCashInner();
     const modal = getCashModal();
     // If modal content never initialized, trigger open then hijack
     try{
       const visible = modal && !modal.classList.contains('hidden');
-      if (!inner) {
-        document.getElementById('btnCashflow')?.click();
-        // try capture after a tick
-        setTimeout(()=> mountCashflowInto(host), 50);
-        return;
-      }
-      // Ensure latest data loaded by opening once
-      if (!visible) {
-        document.getElementById('btnCashflow')?.click();
-        setTimeout(()=> mountCashflowInto(host), 50);
+      if (!inner || !visible) {
+        // Prefer calling public opener (does not depend on hidden header button)
+        if (typeof window.openCashflow === 'function') window.openCashflow();
+        else document.getElementById('btnCashflow')?.click();
+        // wait a bit longer to allow render
+        setTimeout(()=> mountCashflowInto(host, tries+1), 140);
         return;
       }
     }catch{}
-    // Hide backdrop and move inner into host
-    try{ modal.querySelector('[data-cash-act]')?.classList.add('hidden'); }catch{}
-    try{ modal.classList.add('hidden'); }catch{}
+    // Hide backdrop and move inner into host; also disable modal pointer events
+    try{
+      const bd = modal.querySelector('[data-cash-act]') || modal.querySelector('.absolute.inset-0');
+      if (bd){ bd.classList.add('hidden'); bd.style.display='none'; bd.style.pointerEvents='none'; }
+    }catch{}
+    try{ modal.classList.add('hidden'); modal.style.display='none'; modal.style.pointerEvents='none'; modal.style.visibility='hidden'; }catch{}
     try{
       host.innerHTML='';
       host.appendChild(inner);
       inner.classList.remove('relative');
       inner.classList.remove('mx-auto','mt-10','w-[95%]','max-w-5xl');
+      // Ensure Close button hidden in mobile tab
+      try{ const c = document.getElementById('btnCashClose'); if (c) c.classList.add('hidden'); }catch{}
     }catch{}
   }
   function unmountCashflowToModal(){
@@ -270,6 +325,9 @@
       inner.parentElement?.appendChild(wrap);
       inner.remove();
       modal.classList.add('hidden');
+      modal.style.display=''; modal.style.pointerEvents=''; modal.style.visibility='';
+      // Restore Close button visibility for desktop modal
+      try{ const c = document.getElementById('btnCashClose'); if (c) c.classList.remove('hidden'); }catch{}
     }catch{}
   }
   }

@@ -109,6 +109,8 @@ async function loadAccessRoleFromCloud(){
     try{ ensureLocationFields(); await loadLocationFromDB(); }catch{}
     try{ ensureJoinOpenFields();  await loadJoinOpenFromDB(); }catch{}
     try{ getPaidChannel(); }catch{}
+    // Sync mobile cash tab visibility
+    try{ updateMobileCashTab?.(); }catch{}
   }catch{ setAccessRole('viewer'); }
   finally { hideLoading(); }
 }
@@ -138,6 +140,7 @@ async function ensureCashAdminFlag(){
       }
     }catch{}
     try{ const cb = byId('btnCashflow'); if (cb) cb.classList.toggle('hidden', !((!!window._isCashAdmin) && currentEventId && isCloudMode())); }catch{}
+    try{ updateMobileCashTab?.(); }catch{}
   }catch{}
 }
 

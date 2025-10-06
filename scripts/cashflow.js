@@ -123,7 +123,13 @@
     cash = { masuk, keluar };
   }
 
-  function openModal(){ const m = byId('cashModal'); if (m) m.classList.remove('hidden'); }
+  function isMobileNow(){ try { return window.matchMedia && window.matchMedia('(max-width: 640px)').matches; } catch { return false; } }
+  function openModal(){
+    const m = byId('cashModal');
+    if (m) m.classList.remove('hidden');
+    // Hide Close button on mobile view
+    try{ const c = byId('btnCashClose'); if (c) c.classList.toggle('hidden', isMobileNow()); }catch{}
+  }
   function closeModal(){ const m = byId('cashModal'); if (m) m.classList.add('hidden'); }
 
   function openForm(kind, row){
@@ -228,6 +234,7 @@
   function bind(){
     const openBtn = byId('btnCashflow');
     if (openBtn) openBtn.addEventListener('click', onOpen);
+    try { window.openCashflow = onOpen; } catch {}
     const closeBtn = byId('btnCashClose');
     if (closeBtn) closeBtn.addEventListener('click', closeModal);
     const modal = byId('cashModal');
