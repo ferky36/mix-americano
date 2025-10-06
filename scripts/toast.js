@@ -130,6 +130,13 @@ async function ensureCashAdminFlag(){
     window._memberRole = memRole;
     window._isCashAdmin = (!!window._isOwnerUser) || (memRole === 'admin');
     roleDebug('ensureCashAdminFlag', { memRole, _isOwnerUser: window._isOwnerUser, _isCashAdmin: window._isCashAdmin, event: currentEventId, cloud:isCloudMode() });
+    // Jika membership sudah editor dan tidak forced viewer, naikkan UI ke editor
+    try{
+      const forced = !!window._forceViewer;
+      if (memRole === 'editor' && !forced) {
+        if (typeof accessRole==='undefined' || accessRole !== 'editor') setAccessRole?.('editor');
+      }
+    }catch{}
     try{ const cb = byId('btnCashflow'); if (cb) cb.classList.toggle('hidden', !((!!window._isCashAdmin) && currentEventId && isCloudMode())); }catch{}
   }catch{}
 }

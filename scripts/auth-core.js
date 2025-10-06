@@ -91,12 +91,19 @@ async function resolveUserRoleAndApply(user){
 
   window._isOwnerUser = !!isOwner;
   // Admin is cashflow-only: keep viewer UI for admin
-  const desired = (isOwner || role==='editor') ? 'editor' : 'viewer';
+  let desired = (isOwner || role==='editor') ? 'editor' : 'viewer';
+  // Jika sedang dalam Cloud Mode + ada event aktif, JANGAN menurunkan akses dari editor -> viewer.
+  // Biarkan per-event role (loadAccessRoleFromCloud) yang menentukan. Hanya upgrade di sini.
   try{
-    if (typeof accessRole==='undefined' || accessRole !== desired) {
+    const inCloudEvent = (typeof isCloudMode==='function' && isCloudMode() && typeof currentEventId!=='undefined' && !!currentEventId);
+    const curr = (typeof accessRole==='undefined') ? 'viewer' : accessRole;
+    if (inCloudEvent) {
+      // only upgrade
+      desired = (curr === 'editor' || desired === 'editor') ? 'editor' : 'viewer';
+    }
+    if (curr !== desired) {
       setAccessRole?.(desired);
     } else {
-      // Role tidak berubah; jika owner flag berubah, terapkan ulang mode agar tombol owner muncul
       if (prevOwner !== window._isOwnerUser) { try{ applyAccessMode?.(); }catch{} }
     }
   }catch{}
