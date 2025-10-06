@@ -81,11 +81,11 @@ async function loadAccessRoleFromCloud(){
       return;
     }
 
-    // 1) event owner shortcut (optional)
+    // 1) event owner shortcut (optional) — do NOT overwrite global owner flag
     try{
       const { data: ev } = await sb.from('events').select('owner_id').eq('id', currentEventId).maybeSingle();
-      _isOwnerUser = !!(ev?.owner_id && ev.owner_id === uid);
-      if (_isOwnerUser) { setAccessRole('editor'); return; }
+      const isEventOwner = !!(ev?.owner_id && ev.owner_id === uid);
+      if (isEventOwner) { setAccessRole('editor'); return; }
     }catch{}
 
     // 2) membership check
@@ -97,7 +97,7 @@ async function loadAccessRoleFromCloud(){
       .maybeSingle();
     const memRole = mem?.role || null;
     window._memberRole = memRole;
-    window._isCashAdmin = (!!_isOwnerUser) || (memRole === 'admin');
+    window._isCashAdmin = (!!window._isOwnerUser) || (memRole === 'admin');
     // Admin adalah role khusus kas; untuk akses umum tetap viewer
     const uiRole = (memRole === 'editor') ? 'editor' : 'viewer';
     setAccessRole(uiRole);
