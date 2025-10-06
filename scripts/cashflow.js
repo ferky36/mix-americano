@@ -83,6 +83,8 @@
   }
 
   async function delRow(id){
+    const can = (typeof isCashAdmin==='function') ? isCashAdmin() : (!!window._isCashAdmin);
+    if (!can) { alert('Anda tidak memiliki akses Cashflow untuk event ini.'); return; }
     if (!confirm('Hapus baris ini?')) return;
     try{
       if (isCloudMode() && window.sb && currentEventId){
@@ -155,8 +157,8 @@
 
   async function submitForm(e){
     e.preventDefault();
-    const viewer = (typeof isViewer==='function') ? isViewer() : false;
-    if (viewer) { alert('Mode viewer (read-only).'); return; }
+    const can = (typeof isCashAdmin==='function') ? isCashAdmin() : (!!window._isCashAdmin);
+    if (!can) { alert('Anda tidak memiliki akses Cashflow untuk event ini.'); return; }
     const payload = {
       event_id: currentEventId || null,
       kind: editing.kind,
