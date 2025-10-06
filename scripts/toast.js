@@ -1,4 +1,5 @@
 "use strict";
+function roleDebug(){ try{ if (window.__debugRole) console.debug('[role]', ...arguments); }catch{} }
 // ============== Toast helper ==============
 function showToast(message, type='info'){
   try{
@@ -74,6 +75,7 @@ async function loadAccessRoleFromCloud(){
     // Global owner (from auth-core): always editor, regardless of event ownership/membership
     if (window._isOwnerUser) {
       setAccessRole('editor');
+      roleDebug('global-owner=true -> editor full');
       try{ ensureMaxPlayersField(); await loadMaxPlayersFromDB(); }catch{}
       try{ ensureLocationFields(); await loadLocationFromDB(); }catch{}
       try{ ensureJoinOpenFields();  await loadJoinOpenFromDB(); }catch{}
@@ -85,7 +87,7 @@ async function loadAccessRoleFromCloud(){
     try{
       const { data: ev } = await sb.from('events').select('owner_id').eq('id', currentEventId).maybeSingle();
       const isEventOwner = !!(ev?.owner_id && ev.owner_id === uid);
-      if (isEventOwner) { setAccessRole('editor'); return; }
+      if (isEventOwner) { setAccessRole('editor'); roleDebug('event-owner=true -> editor full'); return; }
     }catch{}
 
     // 2) membership check
@@ -101,6 +103,7 @@ async function loadAccessRoleFromCloud(){
     // Admin adalah role khusus kas; untuk akses umum tetap viewer
     const uiRole = (memRole === 'editor') ? 'editor' : 'viewer';
     setAccessRole(uiRole);
+    roleDebug('membership', { memRole, _isOwnerUser: window._isOwnerUser, _isCashAdmin: window._isCashAdmin, uiRole });
     // Load event settings (max_players, location) once role known
     try{ ensureMaxPlayersField(); await loadMaxPlayersFromDB(); }catch{}
     try{ ensureLocationFields(); await loadLocationFromDB(); }catch{}
@@ -126,6 +129,7 @@ async function ensureCashAdminFlag(){
     const memRole = mem?.role || null;
     window._memberRole = memRole;
     window._isCashAdmin = (!!window._isOwnerUser) || (memRole === 'admin');
+    roleDebug('ensureCashAdminFlag', { memRole, _isOwnerUser: window._isOwnerUser, _isCashAdmin: window._isCashAdmin, event: currentEventId, cloud:isCloudMode() });
     try{ const cb = byId('btnCashflow'); if (cb) cb.classList.toggle('hidden', !((!!window._isCashAdmin) && currentEventId && isCloudMode())); }catch{}
   }catch{}
 }

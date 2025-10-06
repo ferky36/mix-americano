@@ -7,6 +7,7 @@ let _isOwnerUser = false;
 // waiting list container (shared) – ensure single shared array reference
 if (!Array.isArray(window.waitingList)) window.waitingList = [];
 var waitingList = window.waitingList;
+function roleDebug(){ try{ if (window.__debugRole) console.debug('[role]', ...arguments); }catch{} }
 function isViewer(){ return accessRole !== 'editor'; }
 function isScoreOnlyMode(){ return !!window._viewerScoreOnly; }
 function canEditScore(){ return !isViewer() || isScoreOnlyMode(); }
@@ -125,7 +126,11 @@ function applyAccessMode(){
     const known = (typeof window._isCashAdmin !== 'undefined');
     const allow = (isOwnerNow()) || (!!window._isCashAdmin);
     if (cb) {
-      if (known) cb.classList.toggle('hidden', !(allow && currentEventId && isCloudMode()));
+      if (known) {
+        const show = !!(allow && currentEventId && isCloudMode());
+        cb.classList.toggle('hidden', !show);
+        roleDebug('cashflow-toggle', { known, allow, isOwnerNow: isOwnerNow(), _isCashAdmin: window._isCashAdmin, event: currentEventId, cloud: isCloudMode(), show });
+      }
       // If not known yet, ask background to compute it; don't toggle to avoid flicker
       if (!known) { try{ ensureCashAdminFlag?.(); }catch{} }
     }
