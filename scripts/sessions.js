@@ -185,6 +185,8 @@ function initCloudFromUrl() {
           if (!accErr && accData){
             // Jika RPC mengembalikan event_id/role, sinkronkan lokal
             if (accData.event_id && !currentEventId) currentEventId = accData.event_id;
+            try{ clearViewerParams(); }catch{}
+            _forceViewer = false;
             loadAccessRoleFromCloud?.();
             return; // selesai
           }
@@ -211,11 +213,24 @@ function initCloudFromUrl() {
         // tandai accepted (best effort)
         try{ await sb.from('event_invites').update({ accepted_at: new Date().toISOString() }).eq('token', p.invite); }catch{}
 
-        // refresh akses
+        // refresh akses dan bersihkan param viewer yang mungkin tersisa di URL
+        try{ clearViewerParams(); }catch{}
+        _forceViewer = false;
         loadAccessRoleFromCloud?.();
       }catch(e){ console.warn('accept-invite failed', e); }
     })();
   }
+}
+
+// Hapus param yang memaksa viewer dari URL agar peran baru terpakai
+function clearViewerParams(){
+  try{
+    const u = new URL(location.href);
+    let changed = false;
+    if (u.searchParams.has('view')){ u.searchParams.delete('view'); changed = true; }
+    if (u.searchParams.has('role')){ u.searchParams.delete('role'); changed = true; }
+    if (changed) history.replaceState({}, document.title, u.toString());
+  }catch{}
 }
 
 
