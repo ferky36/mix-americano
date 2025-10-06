@@ -122,7 +122,13 @@ function applyAccessMode(){
   // Cashflow button visibility: only owner or cash-admin
   try {
     const cb = byId('btnCashflow');
-    if (cb) cb.classList.toggle('hidden', !(isCashAdmin() && currentEventId && isCloudMode()));
+    const known = (typeof window._isCashAdmin !== 'undefined');
+    const allow = (isOwnerNow()) || (!!window._isCashAdmin);
+    if (cb) {
+      if (known) cb.classList.toggle('hidden', !(allow && currentEventId && isCloudMode()));
+      // If not known yet, ask background to compute it; don't toggle to avoid flicker
+      if (!known) { try{ ensureCashAdminFlag?.(); }catch{} }
+    }
   } catch {}
 
   // Move editor players panel out of filter grid into its own section
@@ -131,6 +137,9 @@ function applyAccessMode(){
     const host = document.getElementById('editorPlayersSection');
     if (host) host.classList.toggle('hidden', isViewer());
   } catch {}
+
+  // As a safety, recompute cash-admin flag after mode changes
+  try{ ensureCashAdminFlag?.(); }catch{}
 }
 
 
