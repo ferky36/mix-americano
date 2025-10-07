@@ -79,12 +79,12 @@
     const bar = document.createElement('nav');
     bar.id = 'mobileTabbar';
     bar.setAttribute('role','tablist');
-    // Make navbar consistently dark to avoid white flash/sticky focus look on mobile
+    // Theme-aware navbar (light: white, dark: previous dark style)
     bar.className = [
       'fixed','left-0','right-0','bottom-0','z-40',
-      'bg-gray-900/95','text-white','backdrop-blur',
-      'border-t','border-gray-800',
-      'shadow-[0_-6px_20px_rgba(0,0,0,0.25)]'
+      'bg-white/95','text-gray-800','dark:bg-gray-900/95','dark:text-white','backdrop-blur',
+      'border-t','border-gray-200','dark:border-gray-800',
+      'shadow-[0_-6px_20px_rgba(0,0,0,0.08)]','dark:shadow-[0_-6px_20px_rgba(0,0,0,0.25)]'
     ].join(' ');
 
     const wrap = document.createElement('div');
@@ -125,8 +125,8 @@
           #mobileTabbar button:focus{ outline: none; box-shadow: none; }
           #mobileTabbar button:focus-visible{ outline: none; box-shadow: none; }
           /* Active state follows theme and beats sticky :hover */
-          html:not(.dark) #mobileTabbar button.mobtab-active{ background-color:#111827 !important; color:#ffffff !important; }
-          html:not(.dark) #mobileTabbar button.mobtab-active:hover{ background-color:#111827 !important; }
+          html:not(.dark) #mobileTabbar button.mobtab-active{ background-color:#e5e7eb !important; color:#111827 !important; }
+          html:not(.dark) #mobileTabbar button.mobtab-active:hover{ background-color:#e5e7eb !important; }
           html.dark #mobileTabbar button.mobtab-active{ background-color:#374151 !important; color:#ffffff !important; }
           html.dark #mobileTabbar button.mobtab-active:hover{ background-color:#374151 !important; }
         `;
@@ -154,7 +154,7 @@
       btn.id = `tab-${key}`;
       btn.className = [
         'flex','flex-col','items-center','justify-center','px-3','py-2','rounded-xl','min-w-[60px]',
-        'text-[11px]','font-medium','text-gray-600','dark:text-gray-200','hover:bg-gray-100','dark:hover:bg-gray-700'
+        'text-[11px]','font-medium','text-gray-700','dark:text-gray-200','hover:bg-gray-100','dark:hover:bg-gray-700'
       ].join(' ');
       btn.innerHTML = `
         <span class="w-6 h-6 grid place-items-center">${iconSvg}</span>
