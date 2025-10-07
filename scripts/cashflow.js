@@ -6,6 +6,21 @@
   const byId = (id)=> document.getElementById(id);
   const qs = (s, r=document)=> r.querySelector(s);
   const qsa = (s, r=document)=> Array.from(r.querySelectorAll(s));
+  const fmtDateID = (raw)=>{
+    try{
+      if (!raw) return '';
+      let s = String(raw).trim();
+      // Accept DD/MM/YYYY or YYYY-MM-DD or ISO
+      if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)){
+        const [d,m,y] = s.split('/'); s = `${y}-${m}-${d}`;
+      } else if (/^\d{4}-\d{2}-\d{2}$/.test(s)){
+        // already ISO date
+      } else if (!isNaN(Date.parse(s))){
+        const d = new Date(s); s = d.toISOString().slice(0,10);
+      }
+      return new Date(s+'T00:00:00').toLocaleDateString('id-ID',{ weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+    }catch{ return String(raw||''); }
+  };
 
   let cash = { masuk: [], keluar: [] };
   let editing = { id: null, kind: 'masuk' };
@@ -57,8 +72,107 @@
       return tr;
     }
 
-    cash.masuk.forEach(it => tbodyIn.appendChild(row(it)));
-    cash.keluar.forEach(it => tbodyOut.appendChild(row(it)));
+    // Range mode layout: event cards with two tables inside each card
+    const secIn = tbodyIn.closest('section');
+    const secOut = tbodyOut.closest('section');
+    const gridWrap = secIn ? secIn.parentElement : null; // the 2-column grid wrapper
+
+    if (rangeMode.active){
+      if (gridWrap) gridWrap.style.display = 'none';
+      let host = byId('cashRangeWrap');
+      if (!host){ host = document.createElement('div'); host.id = 'cashRangeWrap'; host.className = 'space-y-4'; gridWrap?.after(host); }
+      host.innerHTML = '';
+
+      // Build map of events from both lists
+      const map = new Map();
+      const add = (it)=>{
+        const id = it.event_id || it.eventId || `${it.eventTitle}|${it.eventDate}`;
+        if (!map.has(id)) map.set(id, { title: it.eventTitle||'', date: it.eventDate||'', masuk:[], keluar:[] });
+        const ent = map.get(id); (it.kind==='keluar' ? ent.keluar : ent.masuk).push(it);
+      };
+      (cash.masuk||[]).forEach(add); (cash.keluar||[]).forEach(add);
+      // Sort by date asc
+      const events = [...map.values()].sort((a,b)=> String(a.date).localeCompare(String(b.date)));
+      let gIn = 0, gOut = 0;
+      events.forEach(ev =>{
+        const sumIn = ev.masuk.reduce((s,x)=> s + Number(x.amount||0)*Number(x.pax||1), 0);
+        const sumOut= ev.keluar.reduce((s,x)=> s + Number(x.amount||0)*Number(x.pax||1), 0);
+        const bal = sumIn - sumOut; gIn += sumIn; gOut += sumOut;
+        const card = document.createElement('section');
+        card.className = 'rounded-2xl border dark:border-gray-700 bg-white dark:bg-gray-800 p-3 md:p-4';
+        const dateText = fmtDateID(ev.date);
+        card.innerHTML = `
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+            <div class="flex items-center gap-2 flex-wrap">
+              ${dateText ? `<span class=\"rounded-full border border-gray-200 bg-gray-100 text-gray-600 dark:border-gray-700 dark:bg-gray-800/70 dark:text-gray-300 text-xs px-2.5 py-1\">${dateText}</span>` : ''}
+              <span class="rounded-full border border-gray-200 bg-gray-100 text-gray-600 dark:border-gray-700 dark:bg-gray-800/70 dark:text-gray-300 text-xs px-2.5 py-1">${(ev.title||'').trim()||'Event'}</span>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="rounded-full border border-emerald-200 bg-emerald-50 text-emerald-600 dark:border-gray-700 dark:bg-gray-800/70 dark:text-emerald-500 font-semibold px-3 py-1 text-sm">Masuk: ${fmtIDR(sumIn)}</span>
+              <span class="rounded-full border border-red-200 bg-red-50 text-red-600 dark:border-gray-700 dark:bg-gray-800/70 dark:text-red-500 font-semibold px-3 py-1 text-sm">Keluar: ${fmtIDR(sumOut)}</span>
+              <span class="rounded-full border border-sky-200 bg-sky-50 text-sky-600 dark:border-gray-700 dark:bg-gray-800/70 ${bal>=0?'dark:text-sky-400':'dark:text-red-400'} font-semibold px-3 py-1 text-sm">Sisa: ${fmtIDR(bal)}</span>
+            </div>
+          </div>`;
+        const grid = document.createElement('div');
+        grid.className = 'grid md:grid-cols-2 gap-3';
+        function tableFor(kind, items){
+          const wrap = document.createElement('div');
+          const tbl = document.createElement('table');
+          tbl.className = 'min-w-full text-sm dark-table rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden';
+          const isMasuk = (kind==='masuk');
+          const head = document.createElement('thead');
+          head.innerHTML = `<tr class="text-left border-b border-gray-200 dark:border-gray-700 uppercase tracking-wider text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/40">
+              <th class="py-2 pr-2">${isMasuk?'Uang Masuk':'Uang Keluar'}</th>
+              <th class="py-2 pr-2 text-right">Amount</th>
+              <th class="py-2 pr-2 text-right">Pax</th>
+              <th class="py-2 pr-2 text-right">Total</th>
+            </tr>`;
+          const body = document.createElement('tbody');
+          items.forEach(it =>{
+            const tr = document.createElement('tr');
+            const total = Number(it.amount||0)*Number(it.pax||1);
+            tr.innerHTML = `
+              <td class="py-2 pr-2">${it.label||'-'}</td>
+              <td class="py-2 pr-2 text-right text-gray-700 dark:text-gray-300">${fmtIDR(it.amount)}</td>
+              <td class="py-2 pr-2 text-right text-gray-700 dark:text-gray-300">${Number(it.pax||1)}</td>
+              <td class="py-2 pr-2 text-right font-semibold">${fmtIDR(total)}</td>`;
+            body.appendChild(tr);
+          });
+          tbl.appendChild(head); tbl.appendChild(body); wrap.appendChild(tbl);
+          const sum = items.reduce((s,x)=> s + Number(x.amount||0)*Number(x.pax||1), 0);
+          const tot = document.createElement('div');
+          tot.className = 'flex justify-end gap-3 pt-2 px-1 text-gray-700 dark:text-gray-300';
+          tot.innerHTML = `<span class="rounded-full px-3 py-1 ${isMasuk?
+              'border border-emerald-200 bg-emerald-50 text-emerald-600 dark:border-gray-700 dark:bg-gray-800/70 dark:text-emerald-500':
+              'border border-red-200 bg-red-50 text-red-600 dark:border-gray-700 dark:bg-gray-800/70 dark:text-red-500'
+            }">Total ${isMasuk?'Masuk':'Keluar'}: <b>${fmtIDR(sum)}</b></span>`;
+          wrap.appendChild(tot);
+          return wrap;
+        }
+        grid.appendChild(tableFor('masuk', ev.masuk));
+        grid.appendChild(tableFor('keluar', ev.keluar));
+        card.appendChild(grid);
+        host.appendChild(card);
+      });
+      // Bottom grand totals bar
+      const cont = document.createElement('div');
+      cont.className = 'rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 md:p-4 flex items-center justify-between flex-wrap gap-2';
+      const balAll = gIn - gOut;
+      cont.innerHTML = `
+        <div class="font-bold">Total Keseluruhan</div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="rounded-full border border-emerald-200 bg-emerald-50 text-emerald-600 dark:border-gray-700 dark:bg-gray-800/70 dark:text-emerald-500 font-semibold px-3 py-1 text-sm">Masuk: ${fmtIDR(gIn)}</span>
+          <span class="rounded-full border border-red-200 bg-red-50 text-red-600 dark:border-gray-700 dark:bg-gray-800/70 dark:text-red-500 font-semibold px-3 py-1 text-sm">Keluar: ${fmtIDR(gOut)}</span>
+          <span class="rounded-full border border-sky-200 bg-sky-50 text-sky-600 dark:border-gray-700 dark:bg-gray-800/70 ${balAll>=0?'dark:text-sky-400':'dark:text-red-400'} font-semibold px-3 py-1 text-sm">Sisa: ${fmtIDR(balAll)}</span>
+        </div>`;
+      host.appendChild(cont);
+    } else {
+      // Normal tables
+      const rc = byId('cashRangeWrap'); if (rc){ rc.remove(); }
+      if (gridWrap) gridWrap.style.display = '';
+      cash.masuk.forEach(it => tbodyIn.appendChild(row(it)));
+      cash.keluar.forEach(it => tbodyOut.appendChild(row(it)));
+    }
 
     const sumIn = sum(cash.masuk);
     const sumOut = sum(cash.keluar);
@@ -71,9 +185,11 @@
     if (cIn) cIn.textContent = `${cash.masuk.length} baris`;
     if (cOut) cOut.textContent = `${cash.keluar.length} baris`;
 
-    // row actions
-    qsa('#cashTbodyIn tr,[id="cashTbodyIn"] tr').forEach(tr => tr.addEventListener('click', onRowAction('masuk')));
-    qsa('#cashTbodyOut tr,[id="cashTbodyOut"] tr').forEach(tr => tr.addEventListener('click', onRowAction('keluar')));
+    // row actions (only on normal tables)
+    if (!rangeMode.active){
+      qsa('#cashTbodyIn tr,[id="cashTbodyIn"] tr').forEach(tr => tr.addEventListener('click', onRowAction('masuk')));
+      qsa('#cashTbodyOut tr,[id="cashTbodyOut"] tr').forEach(tr => tr.addEventListener('click', onRowAction('keluar')));
+    }
   }
 
   // ---------- Export (Excel/PDF) shared for desktop & mobile ----------
@@ -281,7 +397,11 @@
     if (e1) { console.error(e1); cash = {masuk:[],keluar:[]}; return; }
     const ids = (evs||[]).map(e=> e.id);
     if (!ids.length){ cash = {masuk:[],keluar:[]}; return; }
-    const titleById = new Map((evs||[]).map(e=> [e.id, e.title||'']));
+    const metaById = new Map((evs||[]).map(e=> {
+      const d = e && e.event_date ? String(e.event_date) : '';
+      const iso = d ? (d.includes('T') ? d.slice(0,10) : d) : '';
+      return [e.id, { title: e.title||'', date: iso }];
+    }));
     const { data: cf, error: e2 } = await sb
       .from('event_cashflows')
       .select('id,kind,label,amount,pax,event_id')
@@ -290,7 +410,8 @@
     if (e2) { console.error(e2); cash = {masuk:[],keluar:[]}; return; }
     const masuk = [], keluar = [];
     (cf||[]).forEach(r=>{
-      const withTitle = { ...r, eventTitle: titleById.get(r.event_id) || '' };
+      const meta = metaById.get(r.event_id) || { title:'', date:'' };
+      const withTitle = { ...r, eventTitle: meta.title, eventDate: meta.date };
       (r.kind==='keluar' ? keluar : masuk).push(withTitle);
     });
     cash = { masuk, keluar };
