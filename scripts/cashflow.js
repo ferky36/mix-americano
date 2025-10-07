@@ -9,6 +9,7 @@
 
   let cash = { masuk: [], keluar: [] };
   let editing = { id: null, kind: 'masuk' };
+  let rangeMode = { active:false, start:null, end:null };
 
   function sum(list){ return list.reduce((s, it)=> s + (Number(it.amount||0) * Number(it.pax||1)), 0); }
 
@@ -17,8 +18,10 @@
       const can = (typeof isCashAdmin==='function') ? isCashAdmin() : false;
       const addIn  = byId('btnCashAddIn');
       const addOut = byId('btnCashAddOut');
-      if (addIn)  addIn.classList.toggle('hidden', !can);
-      if (addOut) addOut.classList.toggle('hidden', !can);
+      // In range mode, disable add/edit/delete entirely
+      const allow = can && !rangeMode.active;
+      if (addIn)  addIn.classList.toggle('hidden', !allow);
+      if (addOut) addOut.classList.toggle('hidden', !allow);
       // also hide edit/delete actions in rows later in render
     }catch{}
   }
@@ -30,13 +33,15 @@
     tbodyIn.innerHTML = '';
     tbodyOut.innerHTML = '';
 
-    const can = (typeof isCashAdmin==='function') ? isCashAdmin() : false;
+    // Disable row actions in range mode (read-only)
+    const can = (!rangeMode.active) && ((typeof isCashAdmin==='function') ? isCashAdmin() : false);
 
     function row(it){
       const tr = document.createElement('tr');
       tr.className = 'border-b border-gray-200 dark:border-gray-700';
       const total = Number(it.amount||0) * Number(it.pax||1);
-      const label = it.label || '-';
+      const baseLabel = it.label || '-';
+      const label = rangeMode.active && it.eventTitle ? (`[${it.eventTitle}] ` + baseLabel) : baseLabel;
       tr.innerHTML = `
         <td class="py-2 pr-2">${label}</td>
         <td class="py-2 pr-2 text-right">${fmtIDR(it.amount)}</td>
@@ -71,6 +76,145 @@
     qsa('#cashTbodyOut tr,[id="cashTbodyOut"] tr').forEach(tr => tr.addEventListener('click', onRowAction('keluar')));
   }
 
+  // ---------- Export (Excel/PDF) shared for desktop & mobile ----------
+  let __xlsxLoading = null;
+  function ensureXLSX(){
+    if (window.XLSX && XLSX.utils) return Promise.resolve();
+    if (__xlsxLoading) return __xlsxLoading;
+    __xlsxLoading = new Promise((resolve, reject)=>{
+      const s = document.createElement('script');
+      s.src = 'https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js';
+      s.async = true;
+      s.onload = ()=> resolve();
+      s.onerror = ()=> reject(new Error('Gagal memuat library Excel'));
+      document.head.appendChild(s);
+    });
+    return __xlsxLoading;
+  }
+
+  function cashAoA(){
+    const head = ['Keterangan','Amount','Pax','Total'];
+    const masuk = [head, ...cash.masuk.map(it=>{
+      const amt = Number(it.amount||0), pax = Number(it.pax||1);
+      const lbl = (rangeMode.active && it.eventTitle) ? (`[${it.eventTitle}] ` + (it.label||'-')) : (it.label||'-');
+      return [lbl, amt, pax, amt*pax];
+    })];
+    const keluar = [head, ...cash.keluar.map(it=>{
+      const amt = Number(it.amount||0), pax = Number(it.pax||1);
+      const lbl = (rangeMode.active && it.eventTitle) ? (`[${it.eventTitle}] ` + (it.label||'-')) : (it.label||'-');
+      return [lbl, amt, pax, amt*pax];
+    })];
+    const sumIn = sum(cash.masuk), sumOut = sum(cash.keluar), remain = sumIn - sumOut;
+    const ctx = (byId('cashEventInfo')?.textContent||'').trim();
+    const ringkasan = [
+      [rangeMode.active ? 'Cashflow Range' : 'Cashflow Event', ctx],
+      [],
+      ['Uang Masuk', sumIn],
+      ['Uang Keluar', sumOut],
+      ['Sisa', remain]
+    ];
+    return { masuk, keluar, ringkasan };
+  }
+
+  async function exportCashflowExcel(){
+    try{
+      await ensureXLSX();
+      const { masuk, keluar, ringkasan } = cashAoA();
+      const wb = XLSX.utils.book_new();
+      const ws1 = XLSX.utils.aoa_to_sheet(ringkasan);
+      const ws2 = XLSX.utils.aoa_to_sheet(masuk);
+      const ws3 = XLSX.utils.aoa_to_sheet(keluar);
+      // basic column widths
+      ws2['!cols'] = [{wch:28},{wch:12},{wch:8},{wch:14}];
+      ws3['!cols'] = [{wch:28},{wch:12},{wch:8},{wch:14}];
+      XLSX.utils.book_append_sheet(wb, ws1, 'Ringkasan');
+      XLSX.utils.book_append_sheet(wb, ws2, 'Masuk');
+      XLSX.utils.book_append_sheet(wb, ws3, 'Keluar');
+      const title = (byId('appTitle')?.textContent||'Event').trim().replace(/[^\w\- ]+/g,'');
+      const info = (byId('cashEventInfo')?.textContent||'').trim().replace(/[\\/:*?"<>|]+/g,'');
+      const name = `${title||'Event'}_Cashflow_${info||new Date().toISOString().slice(0,10)}.xlsx`;
+      XLSX.writeFile(wb, name);
+    }catch(e){ console.error(e); alert('Gagal export Excel.'); }
+  }
+
+  function buildCashflowHTML(){
+    const { masuk, keluar, ringkasan } = cashAoA();
+    function tbl(aoa){
+      const rows = aoa.map((row,i)=>{
+        const tag = i===0 ? 'th' : 'td';
+        const cells = row.map((c,ci)=>`<${tag} style="border:1px solid #ddd; padding:6px 8px; text-align:${ci>0?'right':'left'}">${(typeof c==='number')? c : String(c)}</${tag}>`).join('');
+        return `<tr>${cells}</tr>`;
+      }).join('');
+      return `<table style="width:100%; border-collapse:collapse; font-size:12px; margin:8px 0"><thead>${rows.split('</tr>').shift()}</thead><tbody>${rows.split('</tr>').slice(1).join('</tr>')}</tbody></table>`;
+    }
+    const title = (byId('appTitle')?.textContent||'Event');
+    const info = (byId('cashEventInfo')?.textContent||'');
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/>
+      <title>${title} - Cashflow ${info}</title>
+      <style>
+        body{ font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin:24px; }
+        h2{ margin:0 0 12px; }
+        h3{ margin:16px 0 6px; }
+        thead th{ background:#f3f4f6; }
+        tr:nth-child(even) td{ background:#fafafa; }
+        @media print { body{ margin:8mm; } }
+      </style></head><body>
+      <h2>${title}  Cashflow (${info})</h2>
+      <h3>Ringkasan</h3>
+      ${tbl([['Keterangan','Nilai'], ...ringkasan.filter(r=>r.length).map(r=>[r[0], r[1]])])}
+      <h3>Uang Masuk</h3>
+      ${tbl([['Keterangan','Amount','Pax','Total'], ...cash.masuk.map(it=>[it.label||'-', Number(it.amount||0), Number(it.pax||1), Number(it.amount||0)*Number(it.pax||1)])])}
+      <h3>Uang Keluar</h3>
+      ${tbl([['Keterangan','Amount','Pax','Total'], ...cash.keluar.map(it=>[it.label||'-', Number(it.amount||0), Number(it.pax||1), Number(it.amount||0)*Number(it.pax||1)])])}
+    </body></html>`;
+    return html;
+  }
+
+  function exportCashflowPDF(){
+    try{
+      // Rebuild simple printable HTML to avoid any stray characters
+      const { masuk, keluar, ringkasan } = cashAoA();
+      const title = (byId('appTitle')?.textContent||'Event');
+      const info = (byId('cashEventInfo')?.textContent||'');
+      const tbl = (aoa)=>{
+        const head = aoa[0]||[]; const body = aoa.slice(1);
+        const th = '<tr>' + head.map((h,i)=>`<th style="border:1px solid #ddd; padding:6px 8px; text-align:${i>0?'right':'left'}">${h}</th>`).join('') + '</tr>';
+        const trs = body.map(r=> '<tr>' + r.map((c,i)=>`<td style="border:1px solid #ddd; padding:6px 8px; text-align:${i>0?'right':'left'}">${(typeof c==='number')? c : String(c)}</td>`).join('') + '</tr>').join('');
+        return `<table style="width:100%; border-collapse:collapse; font-size:12px; margin:8px 0"><thead>${th}</thead><tbody>${trs}</tbody></table>`;
+      };
+      const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/>
+        <title>${title} - Cashflow ${info}</title>
+        <style>
+          body{ font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin:24px; }
+          h2{ margin:0 0 12px; }
+          h3{ margin:16px 0 6px; }
+          thead th{ background:#f3f4f6; }
+          tr:nth-child(even) td{ background:#fafafa; }
+          @media print { body{ margin:8mm; } }
+        </style></head><body>
+        <h2>${title} – Cashflow (${info})</h2>
+        <h3>Ringkasan</h3>
+        ${tbl([['Keterangan','Nilai'], ...ringkasan.filter(r=>r.length).map(r=>[r[0], r[1]])])}
+        <h3>Uang Masuk</h3>
+        ${tbl([['Keterangan','Amount','Pax','Total'], ...cash.masuk.map(it=>[(rangeMode.active&&it.eventTitle?`[${it.eventTitle}] `:'') + (it.label||'-'), Number(it.amount||0), Number(it.pax||1), Number(it.amount||0)*Number(it.pax||1)])])}
+        <h3>Uang Keluar</h3>
+        ${tbl([['Keterangan','Amount','Pax','Total'], ...cash.keluar.map(it=>[(rangeMode.active&&it.eventTitle?`[${it.eventTitle}] `:'') + (it.label||'-'), Number(it.amount||0), Number(it.pax||1), Number(it.amount||0)*Number(it.pax||1)])])}
+      </body></html>`;
+      const w = window.open('', '_blank');
+      if (!w){ alert('Popup diblokir. Izinkan popup untuk export PDF.'); return; }
+      w.document.open(); w.document.write(html); w.document.close();
+      w.focus(); setTimeout(()=>{ try{ w.print(); }catch{} }, 200);
+    }catch(e){ console.error(e); alert('Gagal export PDF.'); }
+  }
+
+  function exportCashflow(format){
+    const f = String(format||'excel').toLowerCase();
+    if (f==='excel' || f==='xlsx') return exportCashflowExcel();
+    if (f==='pdf') return exportCashflowPDF();
+  }
+
+  try{ window.exportCashflow = exportCashflow; }catch{}
+
   function onRowAction(kind){
     return (e)=>{
       const btn = e.target?.closest('button');
@@ -83,6 +227,7 @@
   }
 
   async function delRow(id){
+    if (rangeMode.active) { alert('Hapus tidak tersedia pada mode rentang.'); return; }
     const can = (typeof isCashAdmin==='function') ? isCashAdmin() : (!!window._isCashAdmin);
     if (!can) { alert('Anda tidak memiliki akses Cashflow untuk event ini.'); return; }
     if (!confirm('Hapus baris ini?')) return;
@@ -120,6 +265,34 @@
     if (error) { console.error(error); cash = {masuk:[],keluar:[]}; return; }
     const masuk = [], keluar = [];
     (data||[]).forEach(r=>{ (r.kind==='keluar' ? keluar : masuk).push(r); });
+    cash = { masuk, keluar };
+  }
+
+  async function loadRangeFromCloud(start, end){
+    // Expect ISO date (YYYY-MM-DD)
+    if (!isCloudMode() || !window.sb){ throw new Error('Range hanya tersedia di mode cloud.'); }
+    if (!start || !end) { cash = {masuk:[],keluar:[]}; return; }
+    const { data: evs, error: e1 } = await sb
+      .from('events')
+      .select('id,title,event_date')
+      .gte('event_date', start)
+      .lte('event_date', end)
+      .order('event_date', { ascending: true });
+    if (e1) { console.error(e1); cash = {masuk:[],keluar:[]}; return; }
+    const ids = (evs||[]).map(e=> e.id);
+    if (!ids.length){ cash = {masuk:[],keluar:[]}; return; }
+    const titleById = new Map((evs||[]).map(e=> [e.id, e.title||'']));
+    const { data: cf, error: e2 } = await sb
+      .from('event_cashflows')
+      .select('id,kind,label,amount,pax,event_id')
+      .in('event_id', ids)
+      .order('created_at', { ascending: true });
+    if (e2) { console.error(e2); cash = {masuk:[],keluar:[]}; return; }
+    const masuk = [], keluar = [];
+    (cf||[]).forEach(r=>{
+      const withTitle = { ...r, eventTitle: titleById.get(r.event_id) || '' };
+      (r.kind==='keluar' ? keluar : masuk).push(withTitle);
+    });
     cash = { masuk, keluar };
   }
 
@@ -201,10 +374,12 @@
   }
 
   async function onOpen(){
-    if (!currentEventId){ showToast?.('Buka event dulu.', 'warn'); return; }
+    if (!rangeMode.active && !currentEventId){ showToast?.('Buka event dulu.', 'warn'); return; }
     if (!(typeof isCashAdmin==='function' && isCashAdmin())){ alert('Anda tidak memiliki akses Cashflow untuk event ini.'); return; }
     showLoading?.('Memuat kas…');
-    try{ await loadFromCloud(); } finally { hideLoading?.(); }
+    try{
+      if (rangeMode.active){ await loadRangeSafe(); } else { await loadFromCloud(); }
+    } finally { hideLoading?.(); }
     ensureButtonsAccess();
     try{ await setEventInfo(); }catch{}
     render();
@@ -214,6 +389,10 @@
   async function setEventInfo(){
     const span = byId('cashEventInfo');
     if (!span) return;
+    if (rangeMode.active && rangeMode.start && rangeMode.end){
+      span.textContent = `Range ${rangeMode.start} s/d ${rangeMode.end}`;
+      return;
+    }
     let title = '';
     let date = '';
     try{
@@ -228,7 +407,35 @@
     const parts = [];
     if (title) parts.push(title);
     if (date) parts.push(date);
-    span.textContent = parts.join(' — ');
+    span.textContent = parts.join(' – ');
+  }
+
+  async function loadRangeSafe(){
+    try{
+      await loadRangeFromCloud(rangeMode.start, rangeMode.end);
+    }catch(e){ console.error(e); showToast?.('Range hanya tersedia di mode cloud.', 'warn'); cash = {masuk:[],keluar:[]}; }
+  }
+
+  async function applyRange(){
+    const s = (byId('cashStart')?.value||'').trim();
+    const e = (byId('cashEnd')?.value||'').trim();
+    if (!s || !e){ alert('Isi tanggal Start dan End.'); return; }
+    if (s > e){ alert('Tanggal Start harus <= End.'); return; }
+    rangeMode = { active:true, start:s, end:e };
+    showLoading?.('Memuat kas (range)…');
+    try{ await loadRangeSafe(); } finally { hideLoading?.(); }
+    ensureButtonsAccess();
+    try{ await setEventInfo(); }catch{}
+    render();
+  }
+
+  async function clearRange(){
+    rangeMode = { active:false, start:null, end:null };
+    showLoading?.('Memuat kas…');
+    try{ await loadFromCloud(); } finally { hideLoading?.(); }
+    ensureButtonsAccess();
+    try{ await setEventInfo(); }catch{}
+    render();
   }
 
   function bind(){
@@ -248,6 +455,10 @@
     if (p) p.addEventListener('input', updateFormTotal);
     const addIn = byId('btnCashAddIn'); if (addIn) addIn.addEventListener('click', ()=> openForm('masuk'));
     const addOut= byId('btnCashAddOut'); if (addOut) addOut.addEventListener('click', ()=> openForm('keluar'));
+    const exl = byId('btnCashExportExcel'); if (exl) exl.addEventListener('click', ()=> exportCashflow('excel'));
+    const pdf = byId('btnCashExportPDF'); if (pdf) pdf.addEventListener('click', ()=> exportCashflow('pdf'));
+    const apR = byId('btnCashApplyRange'); if (apR) apR.addEventListener('click', applyRange);
+    const clR = byId('btnCashClearRange'); if (clR) clR.addEventListener('click', clearRange);
   }
 
   // init after DOM ready

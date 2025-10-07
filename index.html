@@ -315,7 +315,11 @@
           Cashflow Event
           <span id="cashEventInfo" class="ml-2 text-sm font-normal text-gray-600 dark:text-gray-300"></span>
         </h3>
-        <button id="btnCashClose" class="px-3 py-1 rounded-lg border dark:border-gray-700">Tutup</button>
+        <div class="flex items-center gap-2">
+          <button id="btnCashExportExcel" class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-sm hover:opacity-90">Export Excel</button>
+          <button id="btnCashExportPDF" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm hover:opacity-90">Export PDF</button>
+          <button id="btnCashClose" class="px-3 py-1 rounded-lg border dark:border-gray-700">Tutup</button>
+        </div>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
         <div class="rounded-xl border dark:border-gray-700 p-3">
@@ -329,6 +333,28 @@
         <div class="rounded-xl border dark:border-gray-700 p-3">
           <div class="text-xs text-gray-500 dark:text-gray-300">Sisa</div>
           <div id="cashSumRemain" class="text-xl font-bold">Rp0</div>
+        </div>
+      </div>
+      <!-- Filter Tanggal (opsional, untuk menampilkan lintas event) -->
+      <div class="rounded-xl border dark:border-gray-700 p-3 mb-4">
+        <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full md:w-auto">
+            <div>
+              <label class="text-xs text-gray-500 dark:text-gray-300">Start</label>
+              <input type="date" id="cashStart" class="mt-1 w-full border rounded-xl px-3 py-2 bg-white dark:bg-gray-900 dark:border-gray-700" />
+            </div>
+            <div>
+              <label class="text-xs text-gray-500 dark:text-gray-300">End</label>
+              <input type="date" id="cashEnd" class="mt-1 w-full border rounded-xl px-3 py-2 bg-white dark:bg-gray-900 dark:border-gray-700" />
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="btnCashApplyRange" class="px-3 py-2 rounded-lg bg-indigo-600 text-white">Terapkan</button>
+            <button id="btnCashClearRange" class="px-3 py-2 rounded-lg border dark:border-gray-700">Reset</button>
+          </div>
+        </div>
+        <div class="mt-2 text-xs text-gray-600 dark:text-gray-300">
+          Isi tanggal Start–End untuk melihat kas dari semua event dalam rentang tersebut (Cloud saja).
         </div>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
