@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Scoremate • Login</title>
+  <title>Mix Americano • Login</title>
   <link rel="manifest" href="pwa-manifest.webmanifest" />
   <meta name="theme-color" content="#4f46e5" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
@@ -26,7 +26,7 @@
     const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVkeW5lcXR4dHhkd2VjenZjdnZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYzNzM1MjgsImV4cCI6MjA3MTk0OTUyOH0.J_tYzbZ6fM4hw8QSiOaVcQwnPkUNC-uAZKe7W5i81DY';
     const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
-    const START_URL = '/scoremate/'; // arahkan kembali ke halaman utama PWA (GitHub Pages scope)
+    const START_URL = '/mix-americano/'; // arahkan kembali ke halaman utama PWA (GitHub Pages scope)
 
     function qs(name){ return new URLSearchParams(location.search).get(name); }
     function hs(name){ return new URLSearchParams(location.hash.slice(1)).get(name); }

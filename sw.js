@@ -1,5 +1,5 @@
-/* Simple service worker for Scoremate PWA */
-const CACHE_NAME = 'scoremate-sw-v1';
+/* Simple service worker for mix-americano PWA */
+const CACHE_NAME = 'mix-americano-sw-v1';
 const CORE_FALLBACK = ['/', './', 'index.html'];
 
 self.addEventListener('install', (event)=>{
