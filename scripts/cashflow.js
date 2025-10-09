@@ -366,10 +366,14 @@
         }catch(e){ console.warn('Template export failed:', e); return false; }
       }
 
-      if (await __tryExportTemplate(events)) return;
+      // Try template via fetch only when running over http(s). Skip on file://
+      if (location.protocol !== 'file:'){
+        if (await __tryExportTemplate(events)) return;
+      }
 
       const wb = new ExcelJS.Workbook();
       const ws = wb.addWorksheet('Cashflow');
+      const safeMerge = (r1,c1,r2,c2)=>{ try{ ws.mergeCells(r1,c1,r2,c2); }catch(e){} };
 
       // Columns layout: A-E (Masuk), F gap, G-K (Keluar)
       ws.columns = [
@@ -386,7 +390,7 @@
       const redFill   = { type:'pattern', pattern:'solid', fgColor:{argb:'FFFCE8E6'} };
 
       let r = 1;
-      ws.mergeCells(r,1,r,11); ws.getCell(r,1).value = 'Laporan Cashflow Padel NBC'; ws.getCell(r,1).font = titleFont; r+=2;
+      safeMerge(r,1,r,11); ws.getCell(r,1).value = 'Laporan Cashflow Padel NBC'; ws.getCell(r,1).font = titleFont; r+=2;
 
       let periodText = '';
       if (rangeMode.active){
@@ -398,11 +402,11 @@
         periodText = (byId('cashEventInfo')?.textContent||'').trim();
         if (periodText) periodText = `Periode: ${periodText}`;
       }
-      if (periodText){ ws.mergeCells(r,2,r,10); const c = ws.getCell(r,2); c.value = periodText; c.alignment = { horizontal:'center' }; r+=2; }
+      if (periodText){ safeMerge(r,2,r,10); const c = ws.getCell(r,2); c.value = periodText; c.alignment = { horizontal:'center' }; r+=2; }
 
       function putTable(anchorRow, isMasuk, items){
         const startCol = isMasuk ? 1 : 7;
-        ws.mergeCells(anchorRow, startCol, anchorRow, startCol+3);
+        safeMerge(anchorRow, startCol, anchorRow, startCol+3);
         const cTitle = ws.getCell(anchorRow, startCol);
         cTitle.value = isMasuk ? 'UANG MASUK' : 'UANG KELUAR';
         cTitle.font = { bold:true, color:{argb:'FF111827'} };
@@ -419,15 +423,25 @@
           const vals = [it.label||'-', amt, pax, tot];
           for (let i=0;i<4;i++){
             const c = ws.getCell(rowPtr, startCol+i);
-            c.value = vals[i]; c.alignment = { horizontal: i===0?'left':'right' }; c.border = borderThin; if (i>0){ c.numFmt = fmtMoney; }
+            c.value = vals[i]; c.alignment = { horizontal: i===0?'left':'right' }; c.border = borderThin;
+            if (i===1 || i===3){ c.numFmt = fmtMoney; }
+            if (i===2){ c.numFmt = '#,##0'; }
           }
           rowPtr++;
         });
-        const sum = items.reduce((s,x)=> s + Number(x.amount||0)*Number(x.pax||1), 0);
+        // Total row with SUM formula over TOTAL column
         ws.mergeCells(rowPtr, startCol, rowPtr, startCol+2);
         const tl = ws.getCell(rowPtr, startCol); tl.value = `Total ${isMasuk?'Masuk':'Keluar'}:`; tl.font = { bold:true }; tl.fill = isMasuk? greenFill : redFill; tl.border = borderThin;
-        const tv = ws.getCell(rowPtr, startCol+3); tv.value = sum; tv.font = { bold:true }; tv.numFmt = fmtMoney; tv.fill = isMasuk? greenFill : redFill; tv.border = borderThin; tv.alignment = { horizontal:'right' };
-        return rowPtr;
+        const tv = ws.getCell(rowPtr, startCol+3);
+        if (rowPtr > (anchorRow+2)){
+          const a = ws.getCell(anchorRow+2, startCol+3).address;
+          const b = ws.getCell(rowPtr-1,   startCol+3).address;
+          tv.value = { formula: `SUM(${a}:${b})` };
+        } else {
+          tv.value = 0;
+        }
+        tv.font = { bold:true }; tv.numFmt = fmtMoney; tv.fill = isMasuk? greenFill : redFill; tv.border = borderThin; tv.alignment = { horizontal:'right' };
+        return { last: rowPtr, totalCell: ws.getCell(rowPtr, startCol+3).address };
       }
 
       function fmtDateIDStr(d){
@@ -436,34 +450,38 @@
       }
 
       let grandIn = 0, grandOut = 0;
+      const totalsLeft = [], totalsRight = [];
       for (const ev of events){
         const sumIn = (ev.masuk||[]).reduce((s,x)=> s + Number(x.amount||0)*Number(x.pax||1), 0);
         const sumOut = (ev.keluar||[]).reduce((s,x)=> s + Number(x.amount||0)*Number(x.pax||1), 0);
         grandIn += sumIn; grandOut += sumOut; const bal = sumIn - sumOut;
 
-        ws.mergeCells(r,1,r,5); const hLeft = ws.getCell(r,1);
+        safeMerge(r,1,r,5); const hLeft = ws.getCell(r,1);
         const dText = fmtDateIDStr(ev.date||'');
         hLeft.value = dText ? `${dText}   ${ev.title? '  '+ev.title : ''}` : (ev.title||'');
         hLeft.fill = headerFill; hLeft.font = { bold:true, color:{argb:'FF374151'} };
-        ws.mergeCells(r,7,r,8); const cIn = ws.getCell(r,7); cIn.value = `Masuk: ${new Intl.NumberFormat('id-ID').format(sumIn)}`; cIn.font = { bold:true, color:{argb:'FF059669'} }; cIn.alignment = { horizontal:'center' }; cIn.fill = greenFill;
-        ws.mergeCells(r,9,r,10); const cOut = ws.getCell(r,9); cOut.value = `Keluar: ${new Intl.NumberFormat('id-ID').format(sumOut)}`; cOut.font = { bold:true, color:{argb:'FFDC2626'} }; cOut.alignment = { horizontal:'center' }; cOut.fill = redFill;
+        safeMerge(r,7,r,8); const cIn = ws.getCell(r,7); cIn.value = `Masuk: ${new Intl.NumberFormat('id-ID').format(sumIn)}`; cIn.font = { bold:true, color:{argb:'FF059669'} }; cIn.alignment = { horizontal:'center' }; cIn.fill = greenFill;
+        safeMerge(r,9,r,10); const cOut = ws.getCell(r,9); cOut.value = `Keluar: ${new Intl.NumberFormat('id-ID').format(sumOut)}`; cOut.font = { bold:true, color:{argb:'FFDC2626'} }; cOut.alignment = { horizontal:'center' }; cOut.fill = redFill;
         ws.getCell(r,11).value = `Sisa: ${new Intl.NumberFormat('id-ID').format(bal)}`; ws.getCell(r,11).font = { bold:true, color:{argb: bal>=0? 'FF0EA5E9':'FFDC2626'} };
         r += 2;
 
         const endMasuk = putTable(r, true, ev.masuk||[]);
         const endKeluar = putTable(r, false, ev.keluar||[]);
-        r = Math.max(endMasuk, endKeluar) + 2;
+        if (endMasuk && endMasuk.totalCell) totalsLeft.push(endMasuk.totalCell);
+        if (endKeluar && endKeluar.totalCell) totalsRight.push(endKeluar.totalCell);
+        r = Math.max(Number(endMasuk && endMasuk.last || 0), Number(endKeluar && endKeluar.last || 0)) + 2;
+        r = Number.isFinite(r) && r>0 ? Math.trunc(r) : 1;
       }
 
       const balanceAll = grandIn - grandOut;
-      ws.mergeCells(r,1,r,5); const gTitle = ws.getCell(r,1); gTitle.value = 'Total Keseluruhan'; gTitle.font = { bold:true }; r++;
-      ws.mergeCells(r,1,r,3); const gIn = ws.getCell(r,1); gIn.value = 'Masuk:'; gIn.font = { bold:true, color:{argb:'FF059669'} }; gIn.fill = greenFill; gIn.border = borderThin;
-      ws.getCell(r,4).value = grandIn; ws.getCell(r,4).numFmt = fmtMoney; ws.getCell(r,4).font = { bold:true, color:{argb:'FF059669'} }; ws.getCell(r,4).fill = greenFill; ws.getCell(r,4).alignment = { horizontal:'right' }; ws.getCell(r,4).border = borderThin;
-      ws.mergeCells(r,7,r,9); const gOut = ws.getCell(r,7); gOut.value = 'Keluar:'; gOut.font = { bold:true, color:{argb:'FFDC2626'} }; gOut.fill = redFill; gOut.border = borderThin;
-      ws.getCell(r,10).value = grandOut; ws.getCell(r,10).numFmt = fmtMoney; ws.getCell(r,10).font = { bold:true, color:{argb:'FFDC2626'} }; ws.getCell(r,10).fill = redFill; ws.getCell(r,10).alignment = { horizontal:'right' }; ws.getCell(r,10).border = borderThin;
+      safeMerge(r,1,r,5); const gTitle = ws.getCell(r,1); gTitle.value = 'Total Keseluruhan'; gTitle.font = { bold:true }; r++;
+      safeMerge(r,1,r,3); const gIn = ws.getCell(r,1); gIn.value = 'Masuk:'; gIn.font = { bold:true, color:{argb:'FF059669'} }; gIn.fill = greenFill; gIn.border = borderThin;
+      ws.getCell(r,4).value = totalsLeft.length ? { formula: `SUM(${totalsLeft.join(',')})` } : 0; ws.getCell(r,4).numFmt = fmtMoney; ws.getCell(r,4).font = { bold:true, color:{argb:'FF059669'} }; ws.getCell(r,4).fill = greenFill; ws.getCell(r,4).alignment = { horizontal:'right' }; ws.getCell(r,4).border = borderThin;
+      safeMerge(r,7,r,9); const gOut = ws.getCell(r,7); gOut.value = 'Keluar:'; gOut.font = { bold:true, color:{argb:'FFDC2626'} }; gOut.fill = redFill; gOut.border = borderThin;
+      ws.getCell(r,10).value = totalsRight.length ? { formula: `SUM(${totalsRight.join(',')})` } : 0; ws.getCell(r,10).numFmt = fmtMoney; ws.getCell(r,10).font = { bold:true, color:{argb:'FFDC2626'} }; ws.getCell(r,10).fill = redFill; ws.getCell(r,10).alignment = { horizontal:'right' }; ws.getCell(r,10).border = borderThin;
       r++;
-      ws.mergeCells(r,1,r,3); const gBal = ws.getCell(r,1); gBal.value = 'Sisa:'; gBal.font = { bold:true, color:{argb:'FF0EA5E9'} }; gBal.border = borderThin;
-      ws.getCell(r,4).value = balanceAll; ws.getCell(r,4).numFmt = fmtMoney; ws.getCell(r,4).font = { bold:true, color:{argb: balanceAll>=0?'FF0EA5E9':'FFDC2626'} }; ws.getCell(r,4).alignment = { horizontal:'right' }; ws.getCell(r,4).border = borderThin;
+      safeMerge(r,1,r,3); const gBal = ws.getCell(r,1); gBal.value = 'Sisa:'; gBal.font = { bold:true, color:{argb:'FF0EA5E9'} }; gBal.border = borderThin;
+      ws.getCell(r,4).value = { formula: `D${r-1}-J${r-1}` }; ws.getCell(r,4).numFmt = fmtMoney; ws.getCell(r,4).font = { bold:true, color:{argb:'FF0EA5E9'} }; ws.getCell(r,4).alignment = { horizontal:'right' }; ws.getCell(r,4).border = borderThin;
 
       const name = 'Laporan Cashflow Padel NBC.xlsx';
       const buf = await wb.xlsx.writeBuffer();
