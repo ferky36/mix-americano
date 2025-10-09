@@ -193,19 +193,43 @@
   }
 
   // ---------- Export (Excel/PDF) shared for desktop & mobile ----------
-  let __xlsxLoading = null;
-  function ensureXLSX(){
-    if (window.XLSX && XLSX.utils) return Promise.resolve();
-    if (__xlsxLoading) return __xlsxLoading;
-    __xlsxLoading = new Promise((resolve, reject)=>{
+  // Use ExcelJS to generate a formatted workbook that mirrors the Excel layout
+  let __exceljsLoading = null;
+  function ensureExcelJS(){
+    if (window.ExcelJS) return Promise.resolve();
+    if (__exceljsLoading) return __exceljsLoading;
+    __exceljsLoading = new Promise((resolve, reject)=>{
       const s = document.createElement('script');
-      s.src = 'https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js';
+      s.src = 'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';
       s.async = true;
       s.onload = ()=> resolve();
-      s.onerror = ()=> reject(new Error('Gagal memuat library Excel'));
+      s.onerror = ()=> reject(new Error('Gagal memuat ExcelJS'));
       document.head.appendChild(s);
     });
-    return __xlsxLoading;
+    return __exceljsLoading;
+  }
+
+  // PDF export using pdfmake (loaded via CDN)
+  let __pdfmakeLoading = null;
+  function ensurePdfMake(){
+    if (window.pdfMake && window.pdfMake.vfs) return Promise.resolve();
+    if (__pdfmakeLoading) return __pdfmakeLoading;
+    __pdfmakeLoading = new Promise((resolve, reject)=>{
+      const s1 = document.createElement('script');
+      s1.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js';
+      s1.async = true;
+      s1.onload = ()=>{
+        const s2 = document.createElement('script');
+        s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js';
+        s2.async = true;
+        s2.onload = ()=> resolve();
+        s2.onerror = ()=> reject(new Error('Gagal memuat font pdfmake'));
+        document.head.appendChild(s2);
+      };
+      s1.onerror = ()=> reject(new Error('Gagal memuat pdfmake'));
+      document.head.appendChild(s1);
+    });
+    return __pdfmakeLoading;
   }
 
   function cashAoA(){
@@ -232,6 +256,287 @@
     return { masuk, keluar, ringkasan };
   }
 
+  // Formatted Excel export: Laporan Cashflow Padel NBC
+  async function exportCashflowExcelNBC(){
+    try{
+      await ensureExcelJS();
+
+      function groupEvents(){
+        if (rangeMode.active){
+          const map = new Map();
+          const add = (it)=>{
+            const key = it.event_id || it.eventId || `${it.eventTitle||''}|${it.eventDate||''}`;
+            if (!map.has(key)) map.set(key, { title: it.eventTitle||'', date: it.eventDate||'', masuk:[], keluar:[] });
+            const ent = map.get(key); (it.kind==='keluar'? ent.keluar : ent.masuk).push(it);
+          };
+          (cash.masuk||[]).forEach(add); (cash.keluar||[]).forEach(add);
+          return [...map.values()].sort((a,b)=> String(a.date).localeCompare(String(b.date)));
+        }
+        const title = (byId('appTitle')?.textContent||'').trim();
+        let date = '';
+        try{ date = (typeof currentSessionDate!=='undefined' && currentSessionDate) ? currentSessionDate : (byId('chipDateText')?.textContent||''); }catch{}
+        return [{ title, date, masuk: cash.masuk||[], keluar: cash.keluar||[] }];
+      }
+
+      const events = groupEvents();
+
+      // Attempt using provided Excel template first; fallback to generated workbook
+      async function __tryExportTemplate(evts){
+        try{
+          const res = await fetch('enhancement/Laporan_Kas_Event_LIGHT.xlsx', { cache:'no-store' });
+          if (!res.ok) throw new Error('Template not reachable');
+          const ab = await res.arrayBuffer();
+          const wbT = new ExcelJS.Workbook();
+          await wbT.xlsx.load(ab);
+          const wsT = wbT.getWorksheet('Report') || wbT.worksheets[0];
+          if (!wsT) throw new Error('Sheet not found');
+          const get = (r,c)=> wsT.getCell(r,c);
+          const clone = (s)=> JSON.parse(JSON.stringify(s||{}));
+          const S = {
+            headLeft: clone(get(5,2).style), chipIn: clone(get(5,9).style), chipOut: clone(get(5,10).style), chipBal: clone(get(5,11).style),
+            secMasuk: clone(get(7,2).style), secKeluar: clone(get(7,8).style),
+            thB: clone(get(8,2).style), thC: clone(get(8,3).style), thD: clone(get(8,4).style), thE: clone(get(8,5).style),
+            thH: clone(get(8,8).style), thI: clone(get(8,9).style), thJ: clone(get(8,10).style), thK: clone(get(8,11).style),
+            tdB: clone(get(9,2).style), tdC: clone(get(9,3).style), tdD: clone(get(9,4).style), tdE: clone(get(9,5).style),
+            tdH: clone(get(9,8).style), tdI: clone(get(9,9).style), tdJ: clone(get(9,10).style), tdK: clone(get(9,11).style),
+            tlMasuk: clone(get(11,2).style), tvMasuk: clone(get(11,5).style), tlKeluar: clone(get(11,8).style), tvKeluar: clone(get(11,11).style),
+            gtTitle: clone(get(21,2).style), inLbl: clone(get(22,2).style), inVal: clone(get(22,5).style), outLbl: clone(get(22,8).style), outVal: clone(get(22,11).style), balLbl: clone(get(23,2).style), balVal: clone(get(23,5).style)
+          };
+          // Title and period
+          try{ wsT.mergeCells(1,2,1,5); }catch{}
+          get(1,2).value = 'Laporan Cashflow Padel NBC';
+          let period = '';
+          if (rangeMode.active){ const d1 = evts[0]?.date||rangeMode.start||''; const d2 = evts[evts.length-1]?.date||rangeMode.end||''; period = (d1||d2)? `${d1} s/d ${d2}` : ''; }
+          else { period = (byId('cashEventInfo')?.textContent||'').trim(); }
+          get(2,3).value = period;
+
+          // Clear rows after header
+          if (wsT.rowCount>4) wsT.spliceRows(5, wsT.rowCount-4);
+          let r0 = 5; const nf = new Intl.NumberFormat('id-ID',{maximumFractionDigits:0});
+          const leftTotals=[]; const rightTotals=[];
+          const fmtDate = (d)=>{ try{ return new Date(String(d||'').slice(0,10)+'T00:00:00').toLocaleDateString('id-ID',{ weekday:'long', day:'2-digit', month:'long', year:'numeric' }); }catch{ return String(d||''); } };
+
+          for (const ev of evts){
+            const sIn = (ev.masuk||[]).reduce((a,x)=> a+Number(x.amount||0)*Number(x.pax||1),0);
+            const sOut= (ev.keluar||[]).reduce((a,x)=> a+Number(x.amount||0)*Number(x.pax||1),0);
+            const bal = sIn - sOut;
+            // Header
+            get(r0,2).value = fmtDate(ev.date||''); get(r0,2).style = S.headLeft; get(r0,3).value = ev.title||'';
+            get(r0,9).value = `Masuk: Rp ${nf.format(sIn)}`;   get(r0,9).style = S.chipIn;
+            get(r0,10).value= `Keluar: Rp ${nf.format(sOut)}`; get(r0,10).style= S.chipOut;
+            get(r0,11).value= `Sisa: Rp ${nf.format(bal)}`;    get(r0,11).style= S.chipBal;
+            r0 += 2;
+            // Section titles
+            try{ wsT.mergeCells(r0,2,r0,5); }catch{}
+            get(r0,2).value='UANG MASUK'; get(r0,2).style=S.secMasuk;
+            try{ wsT.mergeCells(r0,8,r0,11); }catch{}
+            get(r0,8).value='UANG KELUAR'; get(r0,8).style=S.secKeluar;
+            // Column headers
+            get(r0+1,2).value='ITEM';   get(r0+1,2).style=S.thB; get(r0+1,3).value='AMOUNT'; get(r0+1,3).style=S.thC; get(r0+1,4).value='PAX'; get(r0+1,4).style=S.thD; get(r0+1,5).value='TOTAL'; get(r0+1,5).style=S.thE;
+            get(r0+1,8).value='ITEM';   get(r0+1,8).style=S.thH; get(r0+1,9).value='AMOUNT'; get(r0+1,9).style=S.thI; get(r0+1,10).value='PAX'; get(r0+1,10).style=S.thJ; get(r0+1,11).value='TOTAL'; get(r0+1,11).style=S.thK;
+            // Data rows
+            let r = r0+2; const max = Math.max(ev.masuk?.length||0, ev.keluar?.length||0);
+            for(let i=0;i<max;i++){
+              const m = ev.masuk?.[i]; const k = ev.keluar?.[i];
+              get(r,2).value = m ? (m.label||'-') : null; get(r,2).style=S.tdB;
+              get(r,3).value = m ? Number(m.amount||0) : null; get(r,3).style=S.tdC;
+              get(r,4).value = m ? Number(m.pax||1) : null; get(r,4).style=S.tdD;
+              get(r,5).value = m ? { formula: `C${r}*D${r}` } : null; get(r,5).style=S.tdE;
+              get(r,8).value = k ? (k.label||'-') : null; get(r,8).style=S.tdH;
+              get(r,9).value = k ? Number(k.amount||0) : null; get(r,9).style=S.tdI;
+              get(r,10).value= k ? Number(k.pax||1) : null; get(r,10).style=S.tdJ;
+              get(r,11).value= k ? { formula: `I${r}*J${r}` } : null; get(r,11).style=S.tdK;
+              r++;
+            }
+            get(r,2).value='Total Masuk:'; get(r,2).style=S.tlMasuk; get(r,5).value = { formula: `SUM(E${r0+2}:E${r-1})` }; get(r,5).style=S.tvMasuk; leftTotals.push(`E${r}`);
+            get(r,8).value='Total Keluar:'; get(r,8).style=S.tlKeluar; get(r,11).value= { formula: `SUM(K${r0+2}:K${r-1})` }; get(r,11).style=S.tvKeluar; rightTotals.push(`K${r}`);
+            r0 = r + 2; // space
+          }
+          // Grand totals
+          try{ wsT.mergeCells(r0,2,r0,11); }catch{}
+          get(r0,2).value='Total Keseluruhan'; get(r0,2).style=S.gtTitle; r0++;
+          get(r0,2).value='Masuk:'; get(r0,2).style=S.inLbl; get(r0,5).value = leftTotals.length? { formula: `SUM(${leftTotals.join(',')})` } : 0; get(r0,5).style=S.inVal;
+          get(r0,8).value='Keluar:'; get(r0,8).style=S.outLbl; get(r0,11).value= rightTotals.length? { formula: `SUM(${rightTotals.join(',')})` } : 0; get(r0,11).style=S.outVal; r0++;
+          get(r0,2).value='Sisa:'; get(r0,2).style=S.balLbl; get(r0,5).value = { formula: `E${r0-1}-K${r0-1}` }; get(r0,5).style=S.balVal;
+
+          const out = await wbT.xlsx.writeBuffer();
+          const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+          const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Laporan Cashflow Padel NBC.xlsx'; a.click(); setTimeout(()=> URL.revokeObjectURL(a.href), 2000);
+          return true;
+        }catch(e){ console.warn('Template export failed:', e); return false; }
+      }
+
+      if (await __tryExportTemplate(events)) return;
+
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet('Cashflow');
+
+      // Columns layout: A-E (Masuk), F gap, G-K (Keluar)
+      ws.columns = [
+        {key:'A', width: 24}, {key:'B', width: 14}, {key:'C', width: 10}, {key:'D', width: 16}, {key:'E', width: 4},
+        {key:'F', width: 2},
+        {key:'G', width: 24}, {key:'H', width: 14}, {key:'I', width: 10}, {key:'J', width: 16}, {key:'K', width: 14}
+      ];
+
+      const fmtMoney = "[$Rp-421] #,##0;[Red]-[$Rp-421] #,##0";
+      const titleFont = { name: 'Calibri', size: 18, bold: true, color: {argb:'FF000000'} };
+      const headerFill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFF3F4F6'} };
+      const borderThin = { top:{style:'thin', color:{argb:'FFDDDDDD'}}, left:{style:'thin', color:{argb:'FFDDDDDD'}}, bottom:{style:'thin', color:{argb:'FFDDDDDD'}}, right:{style:'thin', color:{argb:'FFDDDDDD'}} };
+      const greenFill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFE6F4EA'} };
+      const redFill   = { type:'pattern', pattern:'solid', fgColor:{argb:'FFFCE8E6'} };
+
+      let r = 1;
+      ws.mergeCells(r,1,r,11); ws.getCell(r,1).value = 'Laporan Cashflow Padel NBC'; ws.getCell(r,1).font = titleFont; r+=2;
+
+      let periodText = '';
+      if (rangeMode.active){
+        if (events.length){
+          const d1 = events[0].date||rangeMode.start||''; const d2 = events[events.length-1].date||rangeMode.end||'';
+          if (d1||d2) periodText = `Periode: ${d1||''} s/d ${d2||''}`;
+        }
+      } else {
+        periodText = (byId('cashEventInfo')?.textContent||'').trim();
+        if (periodText) periodText = `Periode: ${periodText}`;
+      }
+      if (periodText){ ws.mergeCells(r,2,r,10); const c = ws.getCell(r,2); c.value = periodText; c.alignment = { horizontal:'center' }; r+=2; }
+
+      function putTable(anchorRow, isMasuk, items){
+        const startCol = isMasuk ? 1 : 7;
+        ws.mergeCells(anchorRow, startCol, anchorRow, startCol+3);
+        const cTitle = ws.getCell(anchorRow, startCol);
+        cTitle.value = isMasuk ? 'UANG MASUK' : 'UANG KELUAR';
+        cTitle.font = { bold:true, color:{argb:'FF111827'} };
+        cTitle.alignment = { horizontal:'center' };
+        const heads = ['ITEM','AMOUNT','PAX','TOTAL'];
+        for (let i=0;i<heads.length;i++){
+          const c = ws.getCell(anchorRow+1, startCol+i);
+          c.value = heads[i]; c.fill = headerFill; c.font = { bold:true };
+          c.alignment = { horizontal: i===0?'left':'right' }; c.border = borderThin;
+        }
+        let rowPtr = anchorRow+2;
+        items.forEach(it=>{
+          const amt = Number(it.amount||0); const pax = Number(it.pax||1); const tot = amt*pax;
+          const vals = [it.label||'-', amt, pax, tot];
+          for (let i=0;i<4;i++){
+            const c = ws.getCell(rowPtr, startCol+i);
+            c.value = vals[i]; c.alignment = { horizontal: i===0?'left':'right' }; c.border = borderThin; if (i>0){ c.numFmt = fmtMoney; }
+          }
+          rowPtr++;
+        });
+        const sum = items.reduce((s,x)=> s + Number(x.amount||0)*Number(x.pax||1), 0);
+        ws.mergeCells(rowPtr, startCol, rowPtr, startCol+2);
+        const tl = ws.getCell(rowPtr, startCol); tl.value = `Total ${isMasuk?'Masuk':'Keluar'}:`; tl.font = { bold:true }; tl.fill = isMasuk? greenFill : redFill; tl.border = borderThin;
+        const tv = ws.getCell(rowPtr, startCol+3); tv.value = sum; tv.font = { bold:true }; tv.numFmt = fmtMoney; tv.fill = isMasuk? greenFill : redFill; tv.border = borderThin; tv.alignment = { horizontal:'right' };
+        return rowPtr;
+      }
+
+      function fmtDateIDStr(d){
+        if (!d) return '';
+        try { return new Date(String(d).slice(0,10)+'T00:00:00').toLocaleDateString('id-ID',{ weekday:'long', day:'2-digit', month:'long', year:'numeric' }); } catch { return String(d); }
+      }
+
+      let grandIn = 0, grandOut = 0;
+      for (const ev of events){
+        const sumIn = (ev.masuk||[]).reduce((s,x)=> s + Number(x.amount||0)*Number(x.pax||1), 0);
+        const sumOut = (ev.keluar||[]).reduce((s,x)=> s + Number(x.amount||0)*Number(x.pax||1), 0);
+        grandIn += sumIn; grandOut += sumOut; const bal = sumIn - sumOut;
+
+        ws.mergeCells(r,1,r,5); const hLeft = ws.getCell(r,1);
+        const dText = fmtDateIDStr(ev.date||'');
+        hLeft.value = dText ? `${dText}   ${ev.title? '  '+ev.title : ''}` : (ev.title||'');
+        hLeft.fill = headerFill; hLeft.font = { bold:true, color:{argb:'FF374151'} };
+        ws.mergeCells(r,7,r,8); const cIn = ws.getCell(r,7); cIn.value = `Masuk: ${new Intl.NumberFormat('id-ID').format(sumIn)}`; cIn.font = { bold:true, color:{argb:'FF059669'} }; cIn.alignment = { horizontal:'center' }; cIn.fill = greenFill;
+        ws.mergeCells(r,9,r,10); const cOut = ws.getCell(r,9); cOut.value = `Keluar: ${new Intl.NumberFormat('id-ID').format(sumOut)}`; cOut.font = { bold:true, color:{argb:'FFDC2626'} }; cOut.alignment = { horizontal:'center' }; cOut.fill = redFill;
+        ws.getCell(r,11).value = `Sisa: ${new Intl.NumberFormat('id-ID').format(bal)}`; ws.getCell(r,11).font = { bold:true, color:{argb: bal>=0? 'FF0EA5E9':'FFDC2626'} };
+        r += 2;
+
+        const endMasuk = putTable(r, true, ev.masuk||[]);
+        const endKeluar = putTable(r, false, ev.keluar||[]);
+        r = Math.max(endMasuk, endKeluar) + 2;
+      }
+
+      const balanceAll = grandIn - grandOut;
+      ws.mergeCells(r,1,r,5); const gTitle = ws.getCell(r,1); gTitle.value = 'Total Keseluruhan'; gTitle.font = { bold:true }; r++;
+      ws.mergeCells(r,1,r,3); const gIn = ws.getCell(r,1); gIn.value = 'Masuk:'; gIn.font = { bold:true, color:{argb:'FF059669'} }; gIn.fill = greenFill; gIn.border = borderThin;
+      ws.getCell(r,4).value = grandIn; ws.getCell(r,4).numFmt = fmtMoney; ws.getCell(r,4).font = { bold:true, color:{argb:'FF059669'} }; ws.getCell(r,4).fill = greenFill; ws.getCell(r,4).alignment = { horizontal:'right' }; ws.getCell(r,4).border = borderThin;
+      ws.mergeCells(r,7,r,9); const gOut = ws.getCell(r,7); gOut.value = 'Keluar:'; gOut.font = { bold:true, color:{argb:'FFDC2626'} }; gOut.fill = redFill; gOut.border = borderThin;
+      ws.getCell(r,10).value = grandOut; ws.getCell(r,10).numFmt = fmtMoney; ws.getCell(r,10).font = { bold:true, color:{argb:'FFDC2626'} }; ws.getCell(r,10).fill = redFill; ws.getCell(r,10).alignment = { horizontal:'right' }; ws.getCell(r,10).border = borderThin;
+      r++;
+      ws.mergeCells(r,1,r,3); const gBal = ws.getCell(r,1); gBal.value = 'Sisa:'; gBal.font = { bold:true, color:{argb:'FF0EA5E9'} }; gBal.border = borderThin;
+      ws.getCell(r,4).value = balanceAll; ws.getCell(r,4).numFmt = fmtMoney; ws.getCell(r,4).font = { bold:true, color:{argb: balanceAll>=0?'FF0EA5E9':'FFDC2626'} }; ws.getCell(r,4).alignment = { horizontal:'right' }; ws.getCell(r,4).border = borderThin;
+
+      const name = 'Laporan Cashflow Padel NBC.xlsx';
+      const buf = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(()=> URL.revokeObjectURL(a.href), 2000);
+    }catch(e){ console.error(e); alert('Gagal export Excel.'); }
+  }
+  // New PDF export that mirrors the Excel layout using pdfmake
+  async function exportCashflowPDFNBC(){
+    try{
+      await ensurePdfMake();
+      function groupEvents(){
+        if (rangeMode.active){
+          const map = new Map();
+          const add = (it)=>{
+            const key = it.event_id || it.eventId || `${it.eventTitle||''}|${it.eventDate||''}`;
+            if (!map.has(key)) map.set(key, { title: it.eventTitle||'', date: it.eventDate||'', masuk:[], keluar:[] });
+            const ent = map.get(key); (it.kind==='keluar'? ent.keluar : ent.masuk).push(it);
+          };
+          (cash.masuk||[]).forEach(add); (cash.keluar||[]).forEach(add);
+          return [...map.values()].sort((a,b)=> String(a.date).localeCompare(String(b.date)));
+        }
+        const title = (byId('appTitle')?.textContent||'').trim();
+        let date = '';
+        try{ date = (typeof currentSessionDate!=='undefined' && currentSessionDate) ? currentSessionDate : (byId('chipDateText')?.textContent||''); }catch{}
+        return [{ title, date, masuk: cash.masuk||[], keluar: cash.keluar||[] }];
+      }
+      const events = groupEvents();
+      const money = (n)=> new Intl.NumberFormat('id-ID',{maximumFractionDigits:0}).format(Number(n||0));
+      const fmtDate = (d)=>{ try{ return new Date(String(d||'').slice(0,10)+'T00:00:00').toLocaleDateString('id-ID',{ weekday:'long', day:'2-digit', month:'long', year:'numeric' }); }catch{ return String(d||''); } };
+      let periodText = '';
+      if (rangeMode.active){
+        const d1 = events[0]?.date || rangeMode.start || ''; const d2 = events[events.length-1]?.date || rangeMode.end || '';
+        if (d1||d2) periodText = `Periode: ${d1} s/d ${d2}`;
+      } else {
+        const info = (byId('cashEventInfo')?.textContent||'').trim();
+        if (info) periodText = `Periode: ${info}`;
+      }
+      function tableBody(items, isMasuk){
+        const head = [
+          { text:'ITEM', fillColor:'#F3F4F6', bold:true },
+          { text:'AMOUNT', alignment:'right', fillColor:'#F3F4F6', bold:true },
+          { text:'PAX', alignment:'right', fillColor:'#F3F4F6', bold:true },
+          { text:'TOTAL', alignment:'right', fillColor:'#F3F4F6', bold:true }
+        ];
+        const rows = (items||[]).map(it=>{
+          const amt = Number(it.amount||0); const pax = Number(it.pax||1); const tot = amt*pax;
+          return [ {text: it.label||'-'}, {text: money(amt), alignment:'right'}, {text: money(pax), alignment:'right'}, {text: money(tot), alignment:'right', bold:true} ];
+        });
+        const sum = (items||[]).reduce((s,x)=> s + Number(x.amount||0)*Number(x.pax||1), 0);
+        const totalRow = [ {text:`Total ${isMasuk?'Masuk':'Keluar'}:`, colSpan:3, fillColor: isMasuk?'#E6F4EA':'#FCE8E6', bold:true}, {}, {}, {text: money(sum), alignment:'right', fillColor: isMasuk?'#E6F4EA':'#FCE8E6', bold:true} ];
+        return [head, ...rows, totalRow];
+      }
+      const content = [];
+      content.push({ text:'Laporan Cashflow Padel NBC', alignment:'center', fontSize:18, bold:true, margin:[0,0,0,8] });
+      if (periodText) content.push({ text: periodText, alignment:'center', margin:[0,0,0,16] });
+      let grandIn=0, grandOut=0;
+      events.forEach(ev=>{
+        const sumIn=(ev.masuk||[]).reduce((s,x)=>s+Number(x.amount||0)*Number(x.pax||1),0);
+        const sumOut=(ev.keluar||[]).reduce((s,x)=>s+Number(x.amount||0)*Number(x.pax||1),0);
+        grandIn+=sumIn; grandOut+=sumOut; const bal=sumIn-sumOut;
+        content.push({ table:{ widths:['*','auto','auto','auto'], body:[[ {text:`${fmtDate(ev.date||'')}   ${ev.title||''}`, fillColor:'#EEF2F7', margin:[6,4,6,4]}, {text:`Masuk: Rp ${money(sumIn)}`, color:'#059669', fillColor:'#E6F4EA', margin:[6,4,6,4]}, {text:`Keluar: Rp ${money(sumOut)}`, color:'#DC2626', fillColor:'#FCE8E6', margin:[6,4,6,4]}, {text:`Sisa: Rp ${money(bal)}`, color: bal>=0?'#0EA5E9':'#DC2626', fillColor:'#E8F4FC', margin:[6,4,6,4]} ]]}, layout:'noBorders', margin:[0,0,0,6] });
+        content.push({ columns:[ {width:'48%', stack:[ {text:'UANG MASUK', alignment:'center', bold:true, margin:[0,4,0,2]}, {table:{headerRows:1, widths:['*',70,40,80], body: tableBody(ev.masuk,true)}, layout:{hLineColor:'#E5E7EB', vLineColor:'#E5E7EB'}} ]}, {width:8, text:''}, {width:'48%', stack:[ {text:'UANG KELUAR', alignment:'center', bold:true, margin:[0,4,0,2]}, {table:{headerRows:1, widths:['*',70,40,80], body: tableBody(ev.keluar,false)}, layout:{hLineColor:'#E5E7EB', vLineColor:'#E5E7EB'}} ]} ], columnGap:8, margin:[0,0,0,12] });
+      });
+      const balAll=grandIn-grandOut;
+      content.push({ text:'Total Keseluruhan', bold:true, alignment:'center', margin:[0,0,0,6] });
+      content.push({ columns:[ {width:'48%', table:{ widths:['*',100], body:[ [ {text:'Masuk:', fillColor:'#E6F4EA', color:'#059669', bold:true}, {text:`Rp ${money(grandIn)}`, alignment:'right', fillColor:'#E6F4EA', color:'#059669', bold:true} ], [ {text:'Sisa:', color: balAll>=0?'#0EA5E9':'#DC2626', bold:true}, {text:`Rp ${money(balAll)}`, alignment:'right', color: balAll>=0?'#0EA5E9':'#DC2626', bold:true} ] ]}, layout:{hLineColor:'#E5E7EB', vLineColor:'#E5E7EB'} }, {width:8, text:''}, {width:'48%', table:{ widths:['*',100], body:[ [ {text:'Keluar:', fillColor:'#FCE8E6', color:'#DC2626', bold:true}, {text:`Rp ${money(grandOut)}`, alignment:'right', fillColor:'#FCE8E6', color:'#DC2626', bold:true} ] ]}, layout:{hLineColor:'#E5E7EB', vLineColor:'#E5E7EB'} } ], columnGap:8 });
+      const docDef={ pageSize:'A4', pageOrientation:'landscape', pageMargins:[20,24,20,28], defaultStyle:{ font:'Roboto', fontSize:10 }, content };
+      pdfMake.createPdf(docDef).download('Laporan Cashflow Padel NBC.pdf');
+    }catch(e){ console.error(e); alert('Gagal export PDF.'); }
+  }
+  // Route any legacy calls to the new exporter
+  try{ exportCashflowExcel = exportCashflowExcelNBC; }catch{}
   async function exportCashflowExcel(){
     try{
       await ensureXLSX();
@@ -325,8 +630,8 @@
 
   function exportCashflow(format){
     const f = String(format||'excel').toLowerCase();
-    if (f==='excel' || f==='xlsx') return exportCashflowExcel();
-    if (f==='pdf') return exportCashflowPDF();
+    if (f==='excel' || f==='xlsx') return exportCashflowExcelNBC();
+    if (f==='pdf') return exportCashflowPDFNBC();
   }
 
   try{ window.exportCashflow = exportCashflow; }catch{}
