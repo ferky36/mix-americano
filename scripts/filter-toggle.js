@@ -416,7 +416,18 @@ async function loadSearchEventsForDate(dateStr){
       states = r.data;
     }
     const eids = Array.from(new Set((states||[]).map(r=>r.event_id).filter(Boolean)));
-    if (!eids.length){ evSel.innerHTML = '<option value="">— Tidak ada —</option>'; return; }
+    if (!eids.length){
+      // Jika kalender masih menandai tanggal ini (hijau) namun daftar event kosong,
+      // sinkronkan highlight agar tidak menyesatkan.
+      try{
+        if (Array.isArray(window._searchEventDates) && window._searchEventDates.includes(dateStr)){
+          window._searchEventDates = window._searchEventDates.filter(d=> d !== dateStr);
+          try{ renderSearchCalendarFor(dateStr); }catch{}
+        }
+      }catch{}
+      evSel.innerHTML = '<option value="">— Tidak ada —</option>';
+      return;
+    }
     const { data: evs } = await sb.from('events').select('id,title').in('id', eids);
     const titleMap = new Map((evs||[]).map(r=>[r.id, r.title || r.id]));
     evSel.innerHTML = '';
