@@ -34,6 +34,14 @@ async function updateAuthUI(){
   if (user){
     // Otomatiskan akses editor berdasarkan metadata / tabel user_roles (tanpa owner=yes di URL)
     await resolveUserRoleAndApply(user);
+    // Pastikan flag cash-admin dihitung segera setelah login agar tombol Cashflow muncul tanpa refresh
+    try{
+      if (typeof currentEventId !== 'undefined' && currentEventId) {
+        await ensureCashAdminFlag?.();
+        try{ updateMobileCashTab?.(); }catch{}
+        try{ applyAccessMode?.(); }catch{}
+      }
+    }catch{}
     loginBtn?.classList.add('hidden'); byId('btnAdminLogin')?.classList.add('hidden');
     logoutBtn?.classList.remove('hidden');
     info?.classList.remove('hidden');
