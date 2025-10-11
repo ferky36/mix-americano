@@ -435,3 +435,35 @@ function runReport(){
   };
 
 }
+
+// Final override: fairness info based on actual scheduled rounds (post-render)
+try {
+  window.renderFairnessInfo = function(){
+    let box = byId('fairnessInfo');
+    if(!box){
+      box = document.createElement('div');
+      box.id='fairnessInfo';
+      box.className='mt-3 text-xs bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 rounded-lg p-2';
+      const toolbar = byId('courtsToolbar') || document.body;
+      toolbar.parentNode.insertBefore(box, toolbar.nextSibling);
+    }
+    const cnt = (typeof countAppearAll==='function') ? countAppearAll(-1) : {};
+    const list = Object.keys(cnt)
+      .filter(p => (cnt[p]||0) > 0)
+      .sort((a,b)=>{ const da=(cnt[a]||0), db=(cnt[b]||0); if(da!==db) return db-da; return String(a).localeCompare(String(b)); });
+    const values = list.length ? list.map(p=>cnt[p]||0) : [0];
+    const min = Math.min.apply(null, values);
+    const max = Math.max.apply(null, values);
+    const spread = max - min;
+    const rows = list.map(p=>{
+      const n = cnt[p]||0;
+      const mark = (n===min ? '⬇' : (n===max ? '⬆' : '•'));
+      return `<span class="inline-block mr-3">${mark} <b>${escapeHtml(p)}</b>: ${n}</span>`;
+    }).join('');
+    box.innerHTML = `
+      <div class="font-semibold mb-1">Fairness Info (semua lapangan): min=${min}, max=${max}, selisih=${spread}</div>
+      <div class="leading-6">${rows}</div>
+      <div class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">Tips: jika ada ⬆ dan ⬇ berjauhan, klik \"Terapkan\" lagi untuk mengacak ulang; sistem mengutamakan pemain yang masih kurang main.</div>
+    `;
+  };
+} catch {}
