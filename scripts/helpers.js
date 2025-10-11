@@ -169,17 +169,14 @@ function __applyFairnessFilter(){
     const table = document.querySelector('.rnd-table tbody');
     if (!table){ return; }
     const rows = table.querySelectorAll('tr');
-    if (!target){
-      rows.forEach(tr=> tr.classList.remove('hidden'));
-      return;
-    }
+    if (!target){ rows.forEach(tr=> { tr.classList.remove('hidden'); tr.classList.remove('fi-hide'); tr.style.display=''; try{ delete tr.dataset.fiPrevDisplay; }catch{} }); return; }
     rows.forEach(tr=>{
       // keep non-match rows hidden if they don't include the player
       const idxStr = tr.getAttribute('data-index');
       const isBreak = tr.classList.contains('rnd-break-row');
-      if (isBreak){ tr.classList.add('hidden'); return; }
+      if (isBreak){ tr.classList.add('fi-hide'); try{ if (!tr.dataset.fiPrevDisplay){ tr.dataset.fiPrevDisplay = tr.style.display || ''; } tr.style.display='none'; }catch{} return; }
       const i = Number(idxStr);
-      if (!Number.isFinite(i)){ tr.classList.remove('hidden'); return; }
+      if (!Number.isFinite(i)){ tr.classList.remove('hidden'); tr.classList.remove('fi-hide'); tr.style.display=''; try{ delete tr.dataset.fiPrevDisplay; }catch{} return; }
       // Prefer DOM selected option texts/values when available
       let hit = false;
       try{
@@ -195,7 +192,8 @@ function __applyFairnessFilter(){
         const round = (Array.isArray(window.roundsByCourt) ? (window.roundsByCourt[window.activeCourt||0]||[])[i] : null) || {};
         hit = [round.a1, round.a2, round.b1, round.b2].some(x => String(x||'') === target);
       }
-      tr.classList.toggle('hidden', !hit);
+      if (hit){ tr.classList.remove('hidden'); tr.classList.remove('fi-hide'); tr.style.display=''; try{ delete tr.dataset.fiPrevDisplay; }catch{} }
+      else { tr.classList.add('fi-hide'); try{ if (!tr.dataset.fiPrevDisplay){ tr.dataset.fiPrevDisplay = tr.style.display || ''; } tr.style.display='none'; }catch{} }
     });
   }catch{}
 }
@@ -268,6 +266,7 @@ function __applyFairnessFilter(){
           #fairnessInfo .fi-name{ white-space:nowrap; font-size:12px; padding:4px 6px; }
           #fairnessInfo .fi-clear{ font-size:12px; }
         }
+        .rnd-table tr.fi-hide{ display:none !important; }
       `;
       document.head.appendChild(st);
     }catch{}
