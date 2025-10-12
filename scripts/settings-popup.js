@@ -135,7 +135,31 @@
     }catch{}
 
     // HTM
-    try{ const h=byId('spHTM'); if (h){ h.value = getHTM(); const saveDB=(val)=>{ try{ if(!window.sb||!window.currentEventId||!window.isCloudMode||!isCloudMode()) return; const n=Number(val||0)||0; sb.from('events').update({ htm:n }).eq('id', currentEventId).then(()=>{}).catch(()=>{}); }catch{} }; h.oninput=()=>{ setHTM(h.value||''); try{ const n=Number(h.value||0)||0; const s=document.getElementById('summaryHTM'); if(s){ s.textContent='Rp'+n.toLocaleString('id-ID'); } window.__htmAmount=n; }catch{}; saveDB(h.value||''); }; } }catch{}
+    try{
+      const h = byId('spHTM');
+      if (h){
+        h.value = getHTM();
+        const saveDB = async (val)=>{
+          try{
+            if(!window.sb || !window.currentEventId || !window.isCloudMode || !isCloudMode()) return;
+            const n = Number(val||0)||0;
+            const { error } = await sb.from('events').update({ htm:n }).eq('id', currentEventId);
+            if (!error) { try{ showToast?.('HTM tersimpan', 'success'); }catch{} }
+            else { try{ showToast?.('Gagal menyimpan HTM', 'error'); }catch{} }
+          }catch{ try{ showToast?.('Gagal menyimpan HTM', 'error'); }catch{} }
+        };
+        h.oninput = ()=>{
+          setHTM(h.value||'');
+          try{
+            const n=Number(h.value||0)||0;
+            const s=document.getElementById('summaryHTM'); if(s){ s.textContent='Rp'+n.toLocaleString('id-ID'); }
+            window.__htmAmount=n;
+          }catch{}
+        };
+        // Kurangi trafik: commit ke DB saat blur
+        h.onblur = ()=> saveDB(h.value||'');
+      }
+    }catch{}
   }
 
   function toggleBtnVisibility(){

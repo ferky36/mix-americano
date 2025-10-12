@@ -66,7 +66,16 @@ async function syncPaidToCashflow(name, paid){
     if (!isCloudMode || !isCloudMode() || !window.sb || !currentEventId) return;
 
     // Ambil nominal HTM (localStorage berbasis event)
-    function readHTM(){ try { return Number(localStorage.getItem('event.htm.'+(currentEventId||'local'))||0) || 0; } catch { return 0; } }
+    function readHTM(){
+      try{
+        const sp = document.getElementById('spHTM');
+        if (sp && sp.value) return Number(sp.value)||0;
+      }catch{}
+      try{
+        if (typeof window.__htmAmount !== 'undefined') return Number(window.__htmAmount)||0;
+      }catch{}
+      try { return Number(localStorage.getItem('event.htm.'+(currentEventId||'local'))||0) || 0; } catch { return 0; }
+    }
     const amount = readHTM();
 
     if (paid){

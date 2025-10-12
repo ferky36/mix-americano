@@ -13,28 +13,32 @@ do $$ begin
   ) then
     drop policy events_update_owner_or_editor on public.events;
   end if;
-  if not exists (
+  if exists (
     select 1 from pg_policies
     where schemaname = 'public' and tablename = 'events' and policyname = 'events_update_owner_editor_admin'
   ) then
-    create policy events_update_owner_editor_admin on public.events
-      for update
-      using (
-        exists (
-          select 1 from public.event_members em
-          where em.event_id = events.id
-            and em.user_id = auth.uid()
-            and em.role in ('owner','editor','admin')
-        )
-      )
-      with check (
-        exists (
-          select 1 from public.event_members em
-          where em.event_id = events.id
-            and em.user_id = auth.uid()
-            and em.role in ('owner','editor','admin')
-        )
-      );
+    drop policy events_update_owner_editor_admin on public.events;
   end if;
+  create policy events_update_owner_editor_admin on public.events
+    for update
+    using (
+      events.owner_id = auth.uid()
+      or exists (
+        select 1 from public.event_members em
+        where em.event_id = events.id
+          and em.user_id = auth.uid()
+          and em.role in ('editor','admin')
+      )
+    )
+    with check (
+      events.owner_id = auth.uid()
+      or exists (
+        select 1 from public.event_members em
+        where em.event_id = events.id
+          and em.user_id = auth.uid()
+          and em.role in ('editor','admin')
+      )
+    );
 end $$;
+
 
