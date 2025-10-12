@@ -153,12 +153,34 @@ function applyAccessMode(){
     if (!isViewer()) relocateEditorPlayersPanel();
     const host = document.getElementById('editorPlayersSection');
     if (host) host.classList.toggle('hidden', isViewer());
-    // Additionally, ensure the original collapsible wrapper isn't visible for viewers
-    const collapseBtn = byId('btnCollapsePlayers');
-    if (collapseBtn){
-      const wrapper = collapseBtn.closest('.p-3') || collapseBtn.parentElement?.parentElement;
-      if (wrapper) wrapper.classList.toggle('hidden', isViewer());
-    }
+    // Additionally, ensure the original collapsible wrapper (inside filter grid)
+    // is hidden for viewers (owner/editor only). This handles mobile rearrangement too.
+    (function ensureHidePlayersWrapperForViewer(){
+      const btn = byId('btnCollapsePlayers');
+      if (!btn) return;
+      // wrapper card (rounded border)
+      const card = btn.closest('.p-3') || btn.parentElement?.parentElement;
+      if (card) card.classList.toggle('hidden', isViewer());
+      // whole filter-field block that contains the card
+      try{
+        const field = card ? card.closest('.filter-field') : btn.closest('.filter-field');
+        if (field) field.classList.toggle('hidden', isViewer());
+      }catch{}
+      // Observe DOM changes to keep it hidden on mobile reflow
+      try{
+        if (!window.__playersBlockMO){
+          const mo = new MutationObserver(()=>{
+            const b = byId('btnCollapsePlayers');
+            if (!b) return;
+            const c = b.closest('.p-3') || b.parentElement?.parentElement;
+            if (c) c.classList.toggle('hidden', isViewer());
+            try{ const f = c ? c.closest('.filter-field') : b.closest('.filter-field'); if (f) f.classList.toggle('hidden', isViewer()); }catch{}
+          });
+          mo.observe(document.body, { childList:true, subtree:true });
+          window.__playersBlockMO = mo;
+        }
+      }catch{}
+    })();
   } catch {}
 
   // As a safety, recompute cash-admin flag after mode changes
