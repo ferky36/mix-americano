@@ -802,6 +802,14 @@ input[type="time"].join-open-input {
 .collapsible { overflow:hidden; max-height:0; transition:max-height .28s ease, opacity .18s ease; opacity:0; }
 .collapsible.open { max-height: 4000px; opacity:1; }
 
+/* Paid toggle pulse animation */
+.pay-pulse { animation: payPulse 650ms ease-out; }
+@keyframes payPulse {
+  0% { box-shadow: 0 0 0 0 rgba(16,185,129,.45); }
+  70%{ box-shadow: 0 0 0 10px rgba(16,185,129,0); }
+  100%{ box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+}
+
 /* ===== Join Open (Buka Join) – layout & responsive ===== */
 .join-open-row {
   display:grid;

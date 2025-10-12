@@ -91,6 +91,7 @@ function renderPlayersList() {
                 : 'bg-white dark:bg-gray-900 dark:border-gray-700');
         paidBadge.classList.toggle('hidden', !paid);
       }
+      function __pulse(){ try{ li.classList.add('pay-pulse'); setTimeout(()=> li.classList.remove('pay-pulse'), 650); }catch{} }
       __updatePaidCardStyle();
 
       // Klik kartu untuk toggle paid (editor/admin)
@@ -103,6 +104,7 @@ function renderPlayersList() {
         togglePlayerPaid(name);
         _refreshPaidBtn();
         __updatePaidCardStyle();
+        __pulse();
       });
 
       // Toggle paid by clicking the whole card for admin/editor
