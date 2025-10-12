@@ -107,6 +107,7 @@ async function loadAccessRoleFromCloud(){
     const uiRole = (memRole === 'editor') ? 'editor' : 'viewer';
     setAccessRole(uiRole);
     roleDebug('membership', { memRole, _isOwnerUser: window._isOwnerUser, _isCashAdmin: window._isCashAdmin, uiRole });
+    try{ renderWasitBadge?.(); }catch{}
     // Load event settings (max_players, location) once role known
     try{ ensureMaxPlayersField(); await loadMaxPlayersFromDB(); }catch{}
     try{ ensureLocationFields(); await loadLocationFromDB(); }catch{}
@@ -137,6 +138,7 @@ async function ensureCashAdminFlag(){
     window._isCashAdmin = (!!window._isOwnerUser) || (memRole === 'admin');
     try{ window._viewerScoreOnly = (memRole === 'wasit'); }catch{}
     roleDebug('ensureCashAdminFlag', { memRole, _isOwnerUser: window._isOwnerUser, _isCashAdmin: window._isCashAdmin, event: currentEventId, cloud:isCloudMode() });
+    try{ renderWasitBadge?.(); }catch{}
     // Jika membership sudah editor dan tidak forced viewer, naikkan UI ke editor
     try{
       const forced = !!window._forceViewer;
