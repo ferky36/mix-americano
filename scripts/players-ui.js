@@ -14,8 +14,11 @@ function renderPlayersList() {
   ul.innerHTML = "";
   players.forEach((name, idx) => {
     const li = document.createElement("li");
+    const __paidInit = isPlayerPaid(name);
     li.className =
-      "flex items-center gap-2 px-3 py-2 rounded-lg border bg-white dark:bg-gray-900 dark:border-gray-700";
+      "relative flex items-center justify-between gap-2 px-3 py-3 rounded-2xl border " +
+      (__paidInit ? 'bg-emerald-50 border-emerald-300 dark:bg-emerald-900/20 dark:border-emerald-500'
+                  : 'bg-white dark:bg-gray-900 dark:border-gray-700');
     li.innerHTML =
       "<span class='player-name flex-1'>" +
       escapeHtml(name) +
@@ -52,7 +55,7 @@ function renderPlayersList() {
       const nameSpan = li.querySelector('.player-name');
       const delBtn   = li.querySelector('.del');
       if (isViewer()) delBtn.style.display = 'none';
-      // Tombol toggle "Paid" (khusus editor)
+      // Tombol toggle "Paid" (khusus editor) — akan disembunyikan, kita gunakan klik kartu
       const pBtn = document.createElement('button');
       function _refreshPaidBtn(){
         const paid = isPlayerPaid(name);
@@ -69,10 +72,38 @@ function renderPlayersList() {
         togglePlayerPaid(name);
         _refreshPaidBtn();
       });
-      if (isViewer() && !(typeof isCashAdmin==='function' && isCashAdmin())) pBtn.style.display = 'none';
+      // Sembunyikan tombol; gunakan klik kartu
+      pBtn.style.display = 'none';
       _refreshPaidBtn();
 
-      nameSpan.after(gSel, lSel, pBtn);
+      nameSpan.after(gSel, lSel);
+
+      // Badge Paid (bottom-right)
+      const paidBadge = document.createElement('span');
+      paidBadge.className = 'absolute -bottom-2 right-3 px-2 py-0.5 text-[11px] rounded-full bg-emerald-600 text-white shadow hidden';
+      paidBadge.textContent = 'Paid';
+      li.appendChild(paidBadge);
+
+      function __updatePaidCardStyle(){
+        const paid = isPlayerPaid(name);
+        li.className = 'relative flex items-center justify-between gap-2 px-3 py-3 rounded-2xl border ' +
+          (paid ? 'bg-emerald-50 border-emerald-300 dark:bg-emerald-900/20 dark:border-emerald-500'
+                : 'bg-white dark:bg-gray-900 dark:border-gray-700');
+        paidBadge.classList.toggle('hidden', !paid);
+      }
+      __updatePaidCardStyle();
+
+      // Klik kartu untuk toggle paid (editor/admin)
+      li.classList.add('cursor-pointer');
+      li.addEventListener('click', (e)=>{
+        const tg = (e.target && e.target.tagName) ? e.target.tagName.toUpperCase() : '';
+        if (['BUTTON','SELECT','OPTION','INPUT','TEXTAREA','A','SVG','PATH'].includes(tg)) return;
+        const allow = (!isViewer()) || (typeof isCashAdmin==='function' && isCashAdmin());
+        if (!allow) return;
+        togglePlayerPaid(name);
+        _refreshPaidBtn();
+        __updatePaidCardStyle();
+      });
 
       // Toggle paid by clicking the whole card for admin/editor
       function __updatePaidCardStyle(){
