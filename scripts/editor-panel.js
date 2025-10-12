@@ -88,13 +88,13 @@ function renderViewerPlayersList(){
   const ul = byId('viewerPlayersList');
   if (!ul) return;
   ul.innerHTML = '';
+  const canToggle = (typeof isCashAdmin==='function' && isCashAdmin());
   (players || []).forEach((name) => {
     const li = document.createElement('li');
     const paid = isPlayerPaid(name);
-    li.className = 'flex items-center gap-2 px-3 py-2 rounded-lg border ' +
-    (paid
-      ? 'bg-emerald-50 border-emerald-300 dark:bg-emerald-900/20 dark:border-emerald-500'
-      : 'bg-white dark:bg-gray-900 dark:border-gray-700');
+    li.className = 'relative flex items-center justify-between gap-2 px-3 py-3 rounded-2xl border ' +
+      (paid ? 'bg-emerald-50 border-emerald-300 dark:bg-emerald-900/20 dark:border-emerald-500'
+            : 'bg-white dark:bg-gray-900 dark:border-gray-700');
     const meta = (playerMeta && playerMeta[name]) ? playerMeta[name] : {};
     const g = meta.gender || '';
     const lv = meta.level || '';
@@ -103,7 +103,29 @@ function renderViewerPlayersList(){
       g ? badge(g, 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200') : '',
       lv ? badge(lv, 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200') : ''
     ].filter(Boolean).join('');
-    li.innerHTML = `<span class='flex-1'>${escapeHtml(name)}</span><span class='flex gap-1'>${badges}</span>`;
+    li.innerHTML = `<span class='flex-1 font-semibold'>${escapeHtml(name)}</span><span class='flex gap-1'>${badges}</span>`;
+    const paidBadge = document.createElement('span');
+    paidBadge.className = 'absolute -bottom-2 right-3 px-2 py-0.5 text-[11px] rounded-full bg-emerald-600 text-white shadow ' + (paid? '' : 'hidden');
+    paidBadge.textContent = 'Paid';
+    li.appendChild(paidBadge);
+    function update(){
+      const p = isPlayerPaid(name);
+      li.className = 'relative flex items-center justify-between gap-2 px-3 py-3 rounded-2xl border ' +
+        (p ? 'bg-emerald-50 border-emerald-300 dark:bg-emerald-900/20 dark:border-emerald-500'
+           : 'bg-white dark:bg-gray-900 dark:border-gray-700');
+      paidBadge.classList.toggle('hidden', !p);
+    }
+    function pulse(){ try{ li.classList.add('pay-pulse'); setTimeout(()=> li.classList.remove('pay-pulse'), 650); }catch{} }
+    if (canToggle){
+      li.classList.add('cursor-pointer');
+      li.addEventListener('click', (e)=>{
+        const tg = (e.target && e.target.tagName) ? e.target.tagName.toUpperCase() : '';
+        if (['BUTTON','SELECT','OPTION','INPUT','TEXTAREA','A','SVG','PATH'].includes(tg)) return;
+        togglePlayerPaid(name);
+        update();
+        pulse();
+      });
+    }
     ul.appendChild(li);
   });
   // waiting list for viewer
