@@ -50,6 +50,7 @@ function applyAccessMode(){
     'btnMakeEventLink',       // buat link event
     'btnShareEvent',          // share & undang
     'btnLeaveEvent',          // keluar event
+    // Hide Filter/Jadwal for viewer and not-logged-in
     'btnFilterToggle',        // toggle filter
     'filterPanel',            // panel filter input tanggal/waktu/durasi
     'globalInfo',             // ringkasan global pemain/match
@@ -60,6 +61,15 @@ function applyAccessMode(){
     'btnClearScoresAll'
   ];
   hideGeneralIds.forEach(id=>{ const el = byId(id); if (el) el.classList.toggle('hidden', isViewer()); });
+  // Filter/Jadwal toggle visibility:
+  // - Editor/Owner: disembunyikan (sudah dipindah ke popup)
+  // - Selain editor (viewer/wasit/admin kas): pertahankan perilaku lama (tidak disembunyikan di sini)
+  try{
+    if (!isViewer()){
+      const btn = byId('btnFilterToggle'); if (btn) btn.classList.add('hidden');
+      const panel = byId('filterPanel');   if (panel) panel.classList.add('hidden');
+    }
+  }catch{}
   // Show viewer-only search button
   try{ const vb = byId('btnViewerSearchEvent'); if (vb) vb.classList.toggle('hidden', !isViewer()); }catch{}
 

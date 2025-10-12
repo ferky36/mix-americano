@@ -7,10 +7,20 @@ function ensureEditorPlayersSection(){
   if (!main) return null;
   host = document.createElement('section');
   host.id = 'editorPlayersSection';
-  host.className = 'bg-white dark:bg-gray-800 p-4 rounded-2xl shadow hidden';
+  // Initial visibility: show for editor on desktop; show on mobile only when tab=jadwal
+  let hide = true;
+  try{
+    const viewer = (typeof isViewer==='function') ? isViewer() : true;
+    const isMobile = window.matchMedia && window.matchMedia('(max-width: 640px)').matches;
+    const tab = (typeof window !== 'undefined' && window.__mobileTabKey) ? window.__mobileTabKey : 'jadwal';
+    hide = viewer || (isMobile && tab!=='jadwal');
+  }catch{}
+  host.className = 'bg-white dark:bg-gray-800 p-4 rounded-2xl shadow' + (hide ? ' hidden' : '');
   // place at top of main
   if (main.firstElementChild) main.insertBefore(host, main.firstElementChild);
   else main.appendChild(host);
+  // After create, align with current tab visibility if helper exists
+  try{ enforcePlayersSectionVisibility?.(); }catch{}
   return host;
 }
 
@@ -33,6 +43,17 @@ function relocateEditorPlayersPanel(){
   } catch {}
   try{ setupPlayersToolbarUI?.(); }catch{}
 }
+
+// Keep players panel outside filter toggle on mobile/desktop
+(function ensurePlayersPanelDetachedFromFilter(){
+  function isViewer(){ try{ return typeof window.isViewer==='function' ? window.isViewer() : (window.accessRole!=='editor'); }catch{ return true; } }
+  function tick(){ if (!isViewer()) try{ relocateEditorPlayersPanel(); }catch{} }
+  if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', tick); else tick();
+  try{
+    const mo = new MutationObserver(()=>{ tick(); });
+    mo.observe(document.body, { childList:true, subtree:true });
+  }catch{}
+})();
 
 // Replace players toolbar texts with icon+label; labels hidden on mobile portrait via CSS
 function setupPlayersToolbarUI(){
