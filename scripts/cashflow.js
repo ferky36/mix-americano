@@ -672,7 +672,14 @@
     if (!confirm('Hapus baris ini?')) return;
     try{
       if (isCloudMode() && window.sb && currentEventId){
-        await sb.from('event_cashflows').delete().eq('id', id);
+        // Prefer RPC (security definer) to bypass RLS visibility issues
+        try{
+          const { error: rpcErr } = await sb.rpc('delete_cashflow', { p_event_id: currentEventId, p_id: id });
+          if (rpcErr) throw rpcErr;
+        }catch(e){
+          // Fallback to direct delete (policy must allow)
+          await sb.from('event_cashflows').delete().eq('id', id);
+        }
         await loadFromCloud();
       } else {
         // local fallback per event
@@ -791,10 +798,23 @@
     };
     try{
       if (isCloudMode() && window.sb && currentEventId){
-        if (editing.id){
-          await sb.from('event_cashflows').update(payload).eq('id', editing.id);
-        } else {
-          await sb.from('event_cashflows').insert(payload);
+        try{
+          const { error: rpcErr } = await sb.rpc('upsert_cashflow', {
+            p_event_id: currentEventId,
+            p_kind: payload.kind,
+            p_label: payload.label,
+            p_amount: payload.amount,
+            p_pax: payload.pax,
+            p_id: editing.id || null
+          });
+          if (rpcErr) throw rpcErr;
+        }catch(e){
+          // Fallback to direct table op
+          if (editing.id){
+            await sb.from('event_cashflows').update(payload).eq('id', editing.id);
+          } else {
+            await sb.from('event_cashflows').insert(payload);
+          }
         }
         await loadFromCloud();
       } else {

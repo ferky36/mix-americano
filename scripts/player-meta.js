@@ -14,6 +14,9 @@ function setPlayerPaid(name, val, opts){
   // Selalu refresh UI lokal
   try { renderPlayersList?.(); renderViewerPlayersList?.(); refreshJoinUI?.(); } catch {}
 
+  // Sinkronkan ke Cashflow (owner/admin saja)
+  try{ syncPaidToCashflow?.(name, !!val); }catch{}
+
   // Simpan + broadcast hanya jika bukan update "silent" (datang dari broadcast)
   if (!opts || !opts.silent) {
     markDirty?.();
@@ -52,4 +55,57 @@ function getPaidChannel(){
     }
     return window.__paidCh;
   }catch{ return null; }
+}
+
+// === Integrasi Paid -> Cashflow ======================================
+async function syncPaidToCashflow(name, paid){
+  try{
+    // Hanya owner atau admin kas
+    const allow = (typeof isCashAdmin==='function') ? isCashAdmin() : (!!window._isCashAdmin || !!window._isOwnerUser);
+    if (!allow) return;
+    if (!isCloudMode || !isCloudMode() || !window.sb || !currentEventId) return;
+
+    // Ambil nominal HTM (localStorage berbasis event)
+    function readHTM(){ try { return Number(localStorage.getItem('event.htm.'+(currentEventId||'local'))||0) || 0; } catch { return 0; } }
+    const amount = readHTM();
+
+    if (paid){
+      // Try RPC (SECURITY DEFINER) first for RLS-safe upsert
+      let ok = false;
+      try{
+        const { error: rpcErr } = await sb.rpc('add_paid_income', { p_event_id: currentEventId, p_label: name, p_amount: amount>0?amount:0, p_pax: 1 });
+        if (!rpcErr) ok = true; else console.warn('add_paid_income RPC error', rpcErr);
+      }catch{}
+      if (!ok){
+        // Fallback direct upsert via client if policy allows
+        const { data: existing } = await sb
+          .from('event_cashflows')
+          .select('id')
+          .eq('event_id', currentEventId)
+          .eq('kind','masuk')
+          .eq('label', name)
+          .maybeSingle();
+        const payload = { event_id: currentEventId, kind:'masuk', label: name, amount: amount>0?amount:0, pax: 1 };
+        if (existing && existing.id){
+          await sb.from('event_cashflows').update(payload).eq('id', existing.id);
+        } else {
+          await sb.from('event_cashflows').insert(payload);
+        }
+      }
+    } else {
+      // Hapus via RPC; fallback direct
+      let ok = false;
+      try{
+        const { error: rpcErr } = await sb.rpc('remove_paid_income', { p_event_id: currentEventId, p_label: name });
+        if (!rpcErr) ok = true; else console.warn('remove_paid_income RPC error', rpcErr);
+      }catch{}
+      if (!ok){
+        await sb.from('event_cashflows')
+          .delete()
+          .eq('event_id', currentEventId)
+          .eq('kind','masuk')
+          .eq('label', name);
+      }
+    }
+  }catch(e){ console.warn('syncPaidToCashflow failed', e); }
 }

@@ -26,17 +26,23 @@ alter table if exists public.event_cashflows enable row level security;
 
 -- 2) SELECT policy for cashflows (public OR member of event)
 do $$ begin
-  if not exists (
-    select 1 from pg_policies
-    where schemaname='public' and tablename='event_cashflows' and policyname='event_cashflows_select_public_or_member'
+  -- Replace SELECT policy to also allow event owner
+  if exists (
+    select 1 from pg_policies where schemaname='public' and tablename='event_cashflows' and policyname='event_cashflows_select_public_or_member'
   ) then
-    create policy event_cashflows_select_public_or_member on public.event_cashflows
+    drop policy event_cashflows_select_public_or_member on public.event_cashflows;
+  end if;
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='event_cashflows' and policyname='event_cashflows_select_owner_or_member'
+  ) then
+    create policy event_cashflows_select_owner_or_member on public.event_cashflows
       for select using (
         exists (
           select 1 from public.events e
           where e.id = event_cashflows.event_id
             and (
-              coalesce(e.is_public, true)
+              e.owner_id = auth.uid()
+              or coalesce(e.is_public, true)
               or exists (
                 select 1 from public.event_members em
                 where em.event_id = e.id and em.user_id = auth.uid()
@@ -47,7 +53,7 @@ do $$ begin
   end if;
 end $$;
 
--- 3) Role checks: add 'admin' (does not remove existing roles)
+-- 3) Role checks: add 'admin' (and keep existing 'wasit' if used)
 do $$ begin
   if exists (
     select 1 from information_schema.table_constraints
@@ -55,8 +61,16 @@ do $$ begin
   ) then
     alter table public.event_members drop constraint event_members_role_check;
   end if;
+  -- Use NOT VALID to avoid blocking when historical data exists; includes 'wasit' to be backward-compatible
   alter table public.event_members
-    add constraint event_members_role_check check (role = any (array['owner','editor','viewer','admin']));
+    add constraint event_members_role_check check (role = any (array['owner','editor','viewer','admin','wasit'])) not valid;
+  -- Validate in case existing rows already conform (safe to run repeatedly)
+  begin
+    alter table public.event_members validate constraint event_members_role_check;
+  exception when others then
+    -- keep as NOT VALID if legacy rows exist; new rows will still be checked
+    null;
+  end;
 
   if exists (
     select 1 from information_schema.table_constraints
@@ -64,8 +78,14 @@ do $$ begin
   ) then
     alter table public.event_invites drop constraint event_invites_role_check;
   end if;
+  -- Accept 'wasit' invites too; make it NOT VALID to be reusable
   alter table public.event_invites
-    add constraint event_invites_role_check check (role = any (array['viewer','editor','admin']));
+    add constraint event_invites_role_check check (role = any (array['viewer','editor','admin','wasit'])) not valid;
+  begin
+    alter table public.event_invites validate constraint event_invites_role_check;
+  exception when others then
+    null;
+  end;
 end $$;
 
 -- 4) CUD policy for cashflows: only owner or 'admin'

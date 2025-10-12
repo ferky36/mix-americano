@@ -63,11 +63,13 @@ function renderPlayersList() {
         pBtn.innerHTML = (paid ? '✓ ' : '') + 'Paid';
       }
       pBtn.addEventListener('click', () => {
-        if (isViewer()) return;              // safety
+        // Allow editor OR cash-admin (owner/admin)
+        const allow = (!isViewer()) || (typeof isCashAdmin==='function' && isCashAdmin());
+        if (!allow) return;              // safety
         togglePlayerPaid(name);
         _refreshPaidBtn();
       });
-      if (isViewer()) pBtn.style.display = 'none';
+      if (isViewer() && !(typeof isCashAdmin==='function' && isCashAdmin())) pBtn.style.display = 'none';
       _refreshPaidBtn();
 
       nameSpan.after(gSel, lSel, pBtn);
