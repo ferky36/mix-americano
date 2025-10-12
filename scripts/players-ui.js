@@ -74,6 +74,27 @@ function renderPlayersList() {
 
       nameSpan.after(gSel, lSel, pBtn);
 
+      // Toggle paid by clicking the whole card for admin/editor
+      function __updatePaidCardStyle(){
+        const paid = isPlayerPaid(name);
+        const cls = paid ? 'bg-emerald-50 border-emerald-300 dark:bg-emerald-900/20 dark:border-emerald-500'
+                         : 'bg-white dark:bg-gray-900 dark:border-gray-700';
+        li.className = 'flex items-center gap-2 px-3 py-2 rounded-lg border ' + cls;
+      }
+      const __canToggleCard = (!isViewer()) || (typeof isCashAdmin==='function' && isCashAdmin());
+      if (__canToggleCard){
+        li.classList.add('cursor-pointer');
+        li.addEventListener('click', (e)=>{
+          const tg = (e.target && e.target.tagName) ? e.target.tagName.toUpperCase() : '';
+          if (['BUTTON','SELECT','OPTION','INPUT','TEXTAREA','A','SVG','PATH'].includes(tg)) return;
+          togglePlayerPaid(name);
+          _refreshPaidBtn();
+          __updatePaidCardStyle();
+        });
+      }
+      // Ensure initial style reflects paid state
+      try { __updatePaidCardStyle(); } catch {}
+
 
     li.querySelector(".del").addEventListener("click", () => {
       if (!confirm("Hapus " + name + "?")) return;
