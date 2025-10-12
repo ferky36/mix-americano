@@ -150,6 +150,12 @@ function applyAccessMode(){
     if (!isViewer()) relocateEditorPlayersPanel();
     const host = document.getElementById('editorPlayersSection');
     if (host) host.classList.toggle('hidden', isViewer());
+    // Additionally, ensure the original collapsible wrapper isn't visible for viewers
+    const collapseBtn = byId('btnCollapsePlayers');
+    if (collapseBtn){
+      const wrapper = collapseBtn.closest('.p-3') || collapseBtn.parentElement?.parentElement;
+      if (wrapper) wrapper.classList.toggle('hidden', isViewer());
+    }
   } catch {}
 
   // As a safety, recompute cash-admin flag after mode changes

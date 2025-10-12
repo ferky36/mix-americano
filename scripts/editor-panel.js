@@ -7,7 +7,7 @@ function ensureEditorPlayersSection(){
   if (!main) return null;
   host = document.createElement('section');
   host.id = 'editorPlayersSection';
-  host.className = 'bg-white dark:bg-gray-800 p-4 rounded-2xl shadow';
+  host.className = 'bg-white dark:bg-gray-800 p-4 rounded-2xl shadow hidden';
   // place at top of main
   if (main.firstElementChild) main.insertBefore(host, main.firstElementChild);
   else main.appendChild(host);
