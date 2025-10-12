@@ -97,7 +97,8 @@ async function loadAccessRoleFromCloud(){
       .eq('event_id', currentEventId)
       .eq('user_id', uid)
       .maybeSingle();
-    const memRole = mem?.role || null;
+    const memRoleRaw = mem?.role || null;
+    const memRole = String(memRoleRaw||'').toLowerCase();
     window._memberRole = memRole;
     window._isCashAdmin = (!!window._isOwnerUser) || (memRole === 'admin');
     // If wasit, enable score-only mode behavior (equivalent to legacy ?view=1)
@@ -130,7 +131,8 @@ async function ensureCashAdminFlag(){
       .eq('event_id', currentEventId)
       .eq('user_id', uid)
       .maybeSingle();
-    const memRole = mem?.role || null;
+    const memRoleRaw = mem?.role || null;
+    const memRole = String(memRoleRaw||'').toLowerCase();
     window._memberRole = memRole;
     window._isCashAdmin = (!!window._isOwnerUser) || (memRole === 'admin');
     try{ window._viewerScoreOnly = (memRole === 'wasit'); }catch{}
