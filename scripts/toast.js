@@ -100,6 +100,8 @@ async function loadAccessRoleFromCloud(){
     const memRole = mem?.role || null;
     window._memberRole = memRole;
     window._isCashAdmin = (!!window._isOwnerUser) || (memRole === 'admin');
+    // If wasit, enable score-only mode behavior (equivalent to legacy ?view=1)
+    try{ window._viewerScoreOnly = (memRole === 'wasit'); }catch{}
     // Admin adalah role khusus kas; untuk akses umum tetap viewer
     const uiRole = (memRole === 'editor') ? 'editor' : 'viewer';
     setAccessRole(uiRole);
@@ -131,6 +133,7 @@ async function ensureCashAdminFlag(){
     const memRole = mem?.role || null;
     window._memberRole = memRole;
     window._isCashAdmin = (!!window._isOwnerUser) || (memRole === 'admin');
+    try{ window._viewerScoreOnly = (memRole === 'wasit'); }catch{}
     roleDebug('ensureCashAdminFlag', { memRole, _isOwnerUser: window._isOwnerUser, _isCashAdmin: window._isCashAdmin, event: currentEventId, cloud:isCloudMode() });
     // Jika membership sudah editor dan tidak forced viewer, naikkan UI ke editor
     try{
