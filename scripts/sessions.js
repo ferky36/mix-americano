@@ -54,9 +54,13 @@ function renderFilterSummary(){
   const br = byId('breakPerRound')?.value || '0';
   const showBr = !!byId('showBreakRows')?.checked;
   const r = byId('roundCount')?.value || '';
-  // Ambil HTM dari localStorage (per event) agar terlihat di ringkasan
+  // Ambil HTM: prioritas dari input popup (spHTM) jika ada, lalu localStorage
   let htm = 0;
-  try { htm = Number(localStorage.getItem('event.htm.' + (window.currentEventId||'local'))||0) || 0; } catch {}
+  try {
+    const inp = document.getElementById('spHTM');
+    if (inp && inp.value) htm = Number(inp.value)||0;
+    else if (typeof window.__htmAmount!=='undefined'){ htm = Number(window.__htmAmount)||0; } else { htm = Number(localStorage.getItem('event.htm.' + (window.currentEventId||'local'))||0) || 0; }
+  } catch {}
   try { window.__htmAmount = htm; } catch {}
 
   function fmtDateLabel(iso){
@@ -174,7 +178,7 @@ function initCloudFromUrl() {
       try{
         const meta = await fetchEventMetaFromDB(currentEventId);
         if (meta?.title) setAppTitle(meta.title);
-        renderEventLocation(meta?.location_text || '', meta?.location_url || '');
+        renderEventLocation(meta?.location_text || '', meta?.location_url || ''); try{ window.__htmAmount = Number(meta?.htm||0)||0; const s=document.getElementById('summaryHTM'); if(s){ s.textContent='Rp'+(window.__htmAmount||0).toLocaleString('id-ID'); } }catch{};
         try{ ensureLocationFields(); await loadLocationFromDB(); }catch{}
         try{ renderHeaderChips(); }catch{}
       }catch{}
@@ -509,3 +513,6 @@ function startAutoSave() {
     }
   }, 1800000); // 30 menit
 }
+
+
+

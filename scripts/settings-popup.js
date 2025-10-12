@@ -135,7 +135,7 @@
     }catch{}
 
     // HTM
-    try{ const h=byId('spHTM'); if (h){ h.value = getHTM(); h.oninput = ()=>setHTM(h.value||''); } }catch{}
+    try{ const h=byId('spHTM'); if (h){ h.value = getHTM(); const saveDB=(val)=>{ try{ if(!window.sb||!window.currentEventId||!window.isCloudMode||!isCloudMode()) return; const n=Number(val||0)||0; sb.from('events').update({ htm:n }).eq('id', currentEventId).then(()=>{}).catch(()=>{}); }catch{} }; h.oninput=()=>{ setHTM(h.value||''); try{ const n=Number(h.value||0)||0; const s=document.getElementById('summaryHTM'); if(s){ s.textContent='Rp'+n.toLocaleString('id-ID'); } window.__htmAmount=n; }catch{}; saveDB(h.value||''); }; } }catch{}
   }
 
   function toggleBtnVisibility(){
@@ -158,3 +158,5 @@
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
+
+

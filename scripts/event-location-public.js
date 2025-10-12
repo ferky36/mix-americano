@@ -112,7 +112,7 @@ async function fetchEventMetaFromDB(eventId){
     showLoading('Memuat info event…');
     const { data, error } = await sb
       .from('events')
-      .select('title, location_text, location_url')
+      .select('title, location_text, location_url, htm')
       .eq('id', eventId)
       .maybeSingle();
     if (error) return null;
@@ -189,3 +189,4 @@ try {
     };
   }
 } catch {}
+
