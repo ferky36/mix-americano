@@ -1,7 +1,8 @@
 "use strict";
 // ================== Access Control ================== //
 // role: 'editor' (full access) | 'viewer' (read-only)
-let accessRole = 'editor';
+// Default to 'viewer' to avoid briefly showing editor-only UI before role loads.
+let accessRole = 'viewer';
 // flag owner event (true jika user saat ini adalah owner dari event aktif)
 let _isOwnerUser = false;
 // waiting list container (shared) – ensure single shared array reference
