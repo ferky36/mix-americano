@@ -11,7 +11,7 @@ create table if not exists public.event_invites (
   constraint event_invites_event_id_fkey foreign KEY (event_id) references events (id) on delete CASCADE,
   constraint event_invites_role_check check (
     (
-      role = any (array['viewer'::text, 'editor'::text])
+      role = any (array['viewer'::text, 'editor'::text, 'admin'::text, 'wasit'::text])
     )
   )
 ) TABLESPACE pg_default;
@@ -27,7 +27,7 @@ create table if not exists public.event_members (
   constraint event_members_role_check check (
     (
       role = any (
-        array['owner'::text, 'editor'::text, 'viewer'::text]
+        array['owner'::text, 'editor'::text, 'viewer'::text, 'admin'::text, 'wasit'::text]
       )
     )
   )
@@ -191,7 +191,7 @@ do $$ begin
           select 1 from public.event_members em
           where em.event_id = event_states.event_id
             and em.user_id = auth.uid()
-            and em.role in ('owner','editor')
+            and em.role in ('owner','editor','wasit')
         )
       );
   end if;
@@ -207,7 +207,7 @@ do $$ begin
           select 1 from public.event_members em
           where em.event_id = event_states.event_id
             and em.user_id = auth.uid()
-            and em.role in ('owner','editor')
+            and em.role in ('owner','editor','wasit')
         )
       )
       with check (
@@ -215,7 +215,7 @@ do $$ begin
           select 1 from public.event_members em
           where em.event_id = event_states.event_id
             and em.user_id = auth.uid()
-            and em.role in ('owner','editor')
+            and em.role in ('owner','editor','wasit')
         )
       );
   end if;

@@ -9,7 +9,10 @@ if (!Array.isArray(window.waitingList)) window.waitingList = [];
 var waitingList = window.waitingList;
 function roleDebug(){ try{ if (window.__debugRole) console.debug('[role]', ...arguments); }catch{} }
 function isViewer(){ return accessRole !== 'editor'; }
-function isScoreOnlyMode(){ return !!window._viewerScoreOnly; }
+function isScoreOnlyMode(){
+  try{ if (window._memberRole === 'wasit') return true; }catch{}
+  return !!window._viewerScoreOnly;
+}
 function canEditScore(){ return !isViewer() || isScoreOnlyMode(); }
 function isOwnerNow(){
   try{

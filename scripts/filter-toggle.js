@@ -564,7 +564,7 @@ function openShareEventModal(){
       <div class="text-xs text-gray-500 dark:text-gray-300">Masukkan email Supabase user (yang digunakan login), pilih role, lalu buat link undangan.</div>
       <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
         <input id="inviteEmail" type="email" placeholder="email@example.com" class="flex-1 border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100" />
-        <select id="inviteRole" class="border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100">\n          <option value="editor">editor</option>\n          <option value="admin">admin</option>\n        </select>
+        <select id="inviteRole" class="border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100">\n          <option value="editor">editor</option>\n          <option value="wasit">wasit</option>\n          <option value="admin">admin</option>\n        </select>
         <button id="btnInviteMember" class="px-3 py-2 rounded-lg bg-emerald-600 text-white text-sm">Buat Link Undangan</button>
       </div>
       <div class="flex items-center gap-2 hidden" id="inviteLinkRow">
@@ -702,7 +702,7 @@ byId('eventCreateBtn')?.addEventListener('click', async () => {
         <div class="text-xs text-gray-500 dark:text-gray-300">Masukkan email Supabase user (yang digunakan login), pilih role, lalu buat link undangan.</div>
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
           <input id="inviteEmail" type="email" placeholder="email@example.com" class="flex-1 border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100" />
-          <select id="inviteRole" class="border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100">\n          <option value="editor">editor</option>\n          <option value="admin">admin</option>\n        </select>
+          <select id="inviteRole" class="border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100">\n          <option value="editor">editor</option>\n          <option value="wasit">wasit</option>\n          <option value="admin">admin</option>\n        </select>
           <button id="btnInviteMember" class="px-3 py-2 rounded-lg bg-emerald-600 text-white text-sm">Buat Link Undangan</button>
         </div>
         <div class="flex items-center gap-2 hidden" id="inviteLinkRow">
