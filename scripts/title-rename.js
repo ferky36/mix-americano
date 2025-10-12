@@ -20,8 +20,7 @@ function ensureTitleEditor(){
 }
 
 function startTitleEdit(){
-  if (isViewer && isViewer()) return;
-  if (!currentEventId || !isCloudMode()) return;
+  try{ if (typeof isViewer==='function' && isViewer()) return; }catch{}
   const h = byId('appTitle');
   const wrap = byId('titleEditWrap');
   if (!h || !wrap) return;
@@ -59,15 +58,42 @@ function startTitleEdit(){
   });
   btnOk.addEventListener('click', async ()=>{
     const val = (input.value||'').trim();
-    if (!val){ showToast?.('Nama event tidak boleh kosong','warn'); return; }
+    if (!val){ try{ showToast?.('Nama event tidak boleh kosong','warn'); }catch{} return; }
     try{
-      showLoading('Menyimpan nama event…');
-      const { data, error } = await sb.from('events').update({ title: val }).eq('id', currentEventId).select('id').maybeSingle();
-      if (error) throw error;
-      setAppTitle(val);
-      showToast?.('Nama event disimpan','success');
-    }catch(e){ console.error(e); showToast?.('Gagal menyimpan: ' + (e?.message||''), 'error'); }
-    finally{ hideLoading(); cleanup(); }
+      // Cloud mode: simpan ke DB, lainnya: set local saja
+      const inCloud = (typeof isCloudMode==='function' && isCloudMode() && !!window.currentEventId);
+      if (inCloud){
+        showLoading?.('Menyimpan nama event…');
+        const { error } = await sb.from('events').update({ title: val }).eq('id', currentEventId);
+        if (error) throw error;
+        setAppTitle(val);
+        try{ showToast?.('Nama event disimpan','success'); }catch{}
+        try{ await maybeAutoSaveCloud?.(); }catch{}
+      } else {
+        setAppTitle(val);
+        try{ markDirty?.(); }catch{}
+        try{ showToast?.('Nama event diubah','success'); }catch{}
+      }
+    }catch(e){ console.error(e); try{ showToast?.('Gagal menyimpan: ' + (e?.message||''), 'error'); }catch{} }
+    finally{ hideLoading?.(); cleanup(); }
   });
   try{ input.focus(); input.select(); }catch{}
 }
+
+// Ensure document.title uses clean separator regardless of prior encoding
+try{
+  if (typeof setAppTitle === 'function'){
+    const _orig = setAppTitle;
+    setAppTitle = function(title){
+      _orig(title);
+      if (title) document.title = title + ' – Mix Americano';
+    };
+  }
+}catch{}
+
+// Ensure editor button exists after DOM ready (in case other scripts didn't call it)
+(function ensureTitleBoot(){
+  function boot(){ try{ ensureTitleEditor(); }catch{} }
+  if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
