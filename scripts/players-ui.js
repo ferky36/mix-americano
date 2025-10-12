@@ -63,7 +63,7 @@ function renderPlayersList() {
                         (paid ? 'bg-emerald-600 text-white border-emerald-600'
                               : 'bg-transparent border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300');
         pBtn.title = paid ? 'Tandai belum bayar' : 'Tandai sudah bayar';
-        pBtn.innerHTML = (paid ? '✓ ' : '') + 'Paid';
+        pBtn.innerHTML = 'Paid';
       }
       pBtn.addEventListener('click', () => {
         // Allow editor OR cash-admin (owner/admin)
@@ -72,8 +72,8 @@ function renderPlayersList() {
         togglePlayerPaid(name);
         _refreshPaidBtn();
       });
-      // Sembunyikan tombol; gunakan klik kartu
-      pBtn.style.display = 'none';
+      // Editor/Owner: tombol Paid tampil. Viewer disembunyikan.
+      if (!isViewer()) { pBtn.style.display = ''; } else { pBtn.style.display = 'none'; }
       _refreshPaidBtn();
 
       nameSpan.after(gSel, lSel);
@@ -94,27 +94,10 @@ function renderPlayersList() {
       function __pulse(){ try{ li.classList.add('pay-pulse'); setTimeout(()=> li.classList.remove('pay-pulse'), 650); }catch{} }
       __updatePaidCardStyle();
 
-      // Klik kartu untuk toggle paid (editor/admin)
-      li.classList.add('cursor-pointer');
-      li.addEventListener('click', (e)=>{
-        const tg = (e.target && e.target.tagName) ? e.target.tagName.toUpperCase() : '';
-        if (['BUTTON','SELECT','OPTION','INPUT','TEXTAREA','A','SVG','PATH'].includes(tg)) return;
-        const allow = (!isViewer()) || (typeof isCashAdmin==='function' && isCashAdmin());
-        if (!allow) return;
-        togglePlayerPaid(name);
-        _refreshPaidBtn();
-        __updatePaidCardStyle();
-        __pulse();
-      });
+      
 
       // Toggle paid by clicking the whole card for admin/editor
-      function __updatePaidCardStyle(){
-        const paid = isPlayerPaid(name);
-        const cls = paid ? 'bg-emerald-50 border-emerald-300 dark:bg-emerald-900/20 dark:border-emerald-500'
-                         : 'bg-white dark:bg-gray-900 dark:border-gray-700';
-        li.className = 'flex items-center gap-2 px-3 py-2 rounded-lg border ' + cls;
-      }
-      const __canToggleCard = (!isViewer()) || (typeof isCashAdmin==='function' && isCashAdmin());
+      const __canToggleCard = (typeof isViewer==='function' && isViewer()) && (String(window._memberRole||'').toLowerCase()==='admin');
       if (__canToggleCard){
         li.classList.add('cursor-pointer');
         li.addEventListener('click', (e)=>{
@@ -249,3 +232,6 @@ function ensureViewerPlayersPanel(){
   parent.appendChild(wrap);
   return wrap;
 }
+
+
+

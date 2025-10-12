@@ -64,6 +64,38 @@ function renderHeaderChips(){
   }catch{}
 }
 
+// Role chip in header chips row
+function renderRoleChip(){
+  try{
+    const chip = byId('chipRole'); const txt = byId('chipRoleText'); if (!chip || !txt) return;
+    const role = String(window._memberRole||'').toLowerCase();
+    const owner = (typeof isOwnerNow==='function') ? isOwnerNow() : !!window._isOwnerUser;
+    const viewer = (typeof isViewer==='function') ? isViewer() : true;
+    const isAdmin = !!window._isCashAdmin;
+    // Decide label priority
+    let label = 'Viewer';
+    if (owner) label = 'Owner';
+    else if (role==='editor') label = 'Editor';
+    else if (role==='wasit') label = 'Wasit';
+    else if (isAdmin) label = 'Admin';
+    else label = viewer ? 'Viewer' : 'Editor';
+
+    txt.textContent = label;
+    chip.classList.remove('hidden');
+    // color cue: owner/admin -> green; editor -> indigo; wasit -> amber; viewer -> gray
+    const map = {
+      'Owner':   'bg-emerald-100/60 text-emerald-900 dark:bg-emerald-900/30 dark:text-emerald-200',
+      'Admin':   'bg-emerald-100/60 text-emerald-900 dark:bg-emerald-900/30 dark:text-emerald-200',
+      'Editor':  'bg-indigo-100/60 text-indigo-900 dark:bg-indigo-900/30 dark:text-indigo-200',
+      'Wasit':   'bg-amber-100/60 text-amber-900 dark:bg-amber-900/30 dark:text-amber-200',
+      'Viewer':  'bg-gray-100/60 text-gray-900 dark:bg-gray-800/60 dark:text-gray-200'
+    };
+    // base chip already styled; add hint color by toggling inline class
+    chip.dataset.role = label;
+    chip.className = 'chip ' + (map[label]||'');
+  }catch{}
+}
+
 function openSchedulePanelAndScroll(){
   try{
     const panel = byId('filterPanel');

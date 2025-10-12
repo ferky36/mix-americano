@@ -54,6 +54,10 @@ function renderFilterSummary(){
   const br = byId('breakPerRound')?.value || '0';
   const showBr = !!byId('showBreakRows')?.checked;
   const r = byId('roundCount')?.value || '';
+  // Ambil HTM dari localStorage (per event) agar terlihat di ringkasan
+  let htm = 0;
+  try { htm = Number(localStorage.getItem('event.htm.' + (window.currentEventId||'local'))||0) || 0; } catch {}
+  try { window.__htmAmount = htm; } catch {}
 
   function fmtDateLabel(iso){
     if (!iso) return '-';
@@ -90,6 +94,10 @@ function renderFilterSummary(){
           <div>
             <div class="block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Match/Lapangan</div>
             <div class="mt-1 font-medium">${r || '-'}</div>
+          </div>
+          <div>
+            <div class="block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">HTM</div>
+            <div class="mt-1 font-medium" id="summaryHTM">Rp${(htm||0).toLocaleString('id-ID')}</div>
           </div>
         </div>
       </div>

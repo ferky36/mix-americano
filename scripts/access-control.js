@@ -125,6 +125,8 @@ function applyAccessMode(){
   updateAuthUI?.();
   // Refresh Join/Leave controls visibility when role changes
   try{ refreshJoinUI?.(); }catch{}
+  // Update role chip indicator
+  try{ renderRoleChip?.(); renderWasitBadge?.(); }catch{}
   // Viewer "Cari Event" button visibility
   try{ const vb = byId('btnViewerSearchEvent'); if (vb) vb.classList.toggle('hidden', !isViewer()); }catch{}
 
