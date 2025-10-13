@@ -5,6 +5,9 @@
 -- 0) PRAGMAS
 set search_path = public;
 
+-- Ensure pgcrypto is available for gen_random_bytes()
+create extension if not exists pgcrypto;
+
 -- 1) Table: event_cashflows (if absent)
 create table if not exists public.event_cashflows (
   id uuid primary key default gen_random_uuid(),
@@ -146,7 +149,7 @@ as $$
 declare
   v_uid uuid := auth.uid();
   v_role text := lower(coalesce(p_role,'viewer'));
-  v_token text := encode(gen_random_bytes(16), 'hex');
+  v_token text := md5(random()::text || clock_timestamp()::text || coalesce(v_uid::text,'') || coalesce(p_email,'') || coalesce(p_role,''));
   v_ok boolean := false;
 begin
   if v_uid is null then

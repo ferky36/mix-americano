@@ -215,7 +215,12 @@ async function saveStateToCloud() {
     try {
       if (isCloudMode() && window.sb?.from && currentEventId) {
         const mp = (Number.isInteger(currentMaxPlayers) && currentMaxPlayers > 0) ? currentMaxPlayers : null;
-        await sb.from('events').update({ max_players: mp }).eq('id', currentEventId);
+        // Baca HTM dari input popup / cache runtime / localStorage
+        let htmVal = 0;
+        try{ const x = document.getElementById('spHTM'); if (x && x.value) htmVal = Number(x.value)||0; }catch{}
+        try{ if (!htmVal && typeof window.__htmAmount!=='undefined') htmVal = Number(window.__htmAmount)||0; }catch{}
+        try{ if (!htmVal) htmVal = Number(localStorage.getItem('event.htm.' + (window.currentEventId||'local'))||0)||0; }catch{}
+        await sb.from('events').update({ max_players: mp, htm: htmVal }).eq('id', currentEventId);
       }
     } catch {}
     
@@ -333,6 +338,18 @@ async function loadStateFromCloudSilent() {
     _serverVersion = data.version || 0;
     applyPayload(data.state);
     if (data.state.eventTitle) setAppTitle(data.state.eventTitle);
+    // Rebuild viewer/admin/wasit summary in realtime when owner/editor updates
+    try {
+      // Update HTM runtime cache from state if provided
+      if (typeof data.state.htm !== 'undefined' && data.state.htm !== null) {
+        const n = Number(data.state.htm)||0;
+        window.__htmAmount = n;
+        const s = document.getElementById('summaryHTM');
+        if (s) s.textContent = 'Rp'+n.toLocaleString('id-ID');
+      }
+      if (typeof renderFilterSummary === 'function') renderFilterSummary();
+      if (typeof renderHeaderChips === 'function') renderHeaderChips();
+    } catch {}
     markSaved?.(data.updated_at);
     try{ refreshJoinUI?.(); }catch{}
     return true;

@@ -12,6 +12,12 @@ function currentPayload(){
     playerMeta,             // <<< tambahkan ini
     // simpan limit pemain dalam state juga (null = tak terbatas)
     maxPlayers: (Number.isInteger(currentMaxPlayers) && currentMaxPlayers > 0) ? currentMaxPlayers : null,
+    // simpan HTM agar ikut terserialisasi ke state
+    htm: (function(){
+      try{ const x = document.getElementById('spHTM'); if (x && x.value) return Number(x.value)||0; }catch{}
+      try{ if (typeof window.__htmAmount !== 'undefined') return Number(window.__htmAmount)||0; }catch{}
+      try{ return Number(localStorage.getItem('event.htm.' + (window.currentEventId||'local'))||0)||0; }catch{ return 0; }
+    })(),
 
     // 🔹 format baru
     roundsByCourt,

@@ -6,6 +6,7 @@
 
   function isViewer(){ try{ return typeof window.isViewer==='function' ? window.isViewer() : (window.accessRole!=='editor'); }catch{ return true; } }
   function isMobile(){ try{ return window.matchMedia('(max-width: 640px)').matches; } catch { return false; } }
+  const debounce = (fn, ms=600)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; };
 
   // Local HTM persistence (best-effort). No DB coupling.
   function lsKey(){ try{ return 'event.htm.'+(window.currentEventId||'local'); }catch{ return 'event.htm.local'; } }
@@ -91,8 +92,8 @@
       </div>`;
     document.body.appendChild(wrap);
     // Close handlers
-    qs('#spClose', wrap)?.addEventListener('click', ()=>hide());
-    wrap.addEventListener('click', (e)=>{ if ((e.target).getAttribute && (e.target).getAttribute('data-act')==='close') hide(); });
+    qs('#spClose', wrap)?.addEventListener('click', ()=>{ try{ byId('spHTM')?.dispatchEvent(new Event('blur',{bubbles:true})); }catch{} hide(); });
+    wrap.addEventListener('click', (e)=>{ if ((e.target).getAttribute && (e.target).getAttribute('data-act')==='close') { try{ byId('spHTM')?.dispatchEvent(new Event('blur',{bubbles:true})); }catch{} hide(); } });
     return wrap;
   }
 
@@ -148,6 +149,7 @@
             else { try{ showToast?.('Gagal menyimpan HTM', 'error'); }catch{} }
           }catch{ try{ showToast?.('Gagal menyimpan HTM', 'error'); }catch{} }
         };
+        const debSave = debounce((v)=> saveDB(v), 600);
         h.oninput = ()=>{
           setHTM(h.value||'');
           try{
@@ -155,8 +157,9 @@
             const s=document.getElementById('summaryHTM'); if(s){ s.textContent='Rp'+n.toLocaleString('id-ID'); }
             window.__htmAmount=n;
           }catch{}
+          debSave(h.value||'');
         };
-        // Kurangi trafik: commit ke DB saat blur
+        // Pastikan flush ketika keluar input / menutup modal
         h.onblur = ()=> saveDB(h.value||'');
       }
     }catch{}
