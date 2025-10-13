@@ -248,6 +248,23 @@ body { font-size: clamp(14px, calc(14px * var(--ui-zoom) / 100), 20px); }
   .court-wrapper td, .court-wrapper th { white-space:normal!important; }
 }
 
+/* ===============================
+   App Splash Overlay (Android-like gradient)
+   =============================== */
+.app-splash{ position:fixed; inset:0; z-index:9999; display:grid; place-items:center;
+  background:
+    radial-gradient( circle at 50% 50%, rgba(0,0,0,.15) 0%, rgba(0,0,0,.12) 40%, rgba(0,0,0,0) 60% ),
+    linear-gradient( 45deg, #d946ef 0%, #8b5cf6 50%, #4f46e5 100% );
+  transition: opacity .35s ease, visibility .35s ease;
+}
+.app-splash.hide{ opacity:0; visibility:hidden; pointer-events:none; }
+.app-splash-center{ width:160px; height:160px; border-radius:9999px; display:grid; place-items:center;
+  background: rgba(255,255,255,.14);
+  box-shadow: 0 0 0 12px rgba(255,255,255,.07), 0 18px 50px rgba(0,0,0,.30);
+  backdrop-filter: blur(2px);
+}
+.app-splash-center img{ width:100px; height:100px; border-radius:24px; }
+
 /* Waiting List: one item per row on mobile */
 @media (max-width: 767px){
   #waitingList{ grid-template-columns: 1fr !important; }

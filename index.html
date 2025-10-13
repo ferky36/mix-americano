@@ -1,9 +1,18 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <link rel="manifest" href="pwa-manifest.webmanifest" />
+  <link rel="manifest" href="pwa-manifest.webmanifest?v=2025-10-13" />
   <meta name="theme-color" content="#4f46e5" />
-  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-192.png" />
+  <!-- iOS startup images (optional, add actual files under /splash) -->
+  <link rel="apple-touch-startup-image" href="splash/iphone-1284x2778.png" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/iphone-1170x2532.png" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/iphone-1125x2436.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/iphone-828x1792.png"  media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/iphone-750x1334.png"  media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/ipad-2048x2732.png"   media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/ipad-1668x2388.png"   media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/ipad-1536x2048.png"   media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta charset="UTF-8" />
@@ -15,6 +24,12 @@
   <script> tailwind.config = { darkMode: 'class' };</script>
 </head>
 <body class="bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
+  <!-- App Splash (soft gradient overlay). Auto hides after window load. -->
+  <div id="appSplash" class="app-splash">
+    <div class="app-splash-center">
+      <img src="icons/icon-192.png" alt="App" />
+    </div>
+  </div>
   <!-- HEADER -->
   <header class="sticky top-0 z-10 shadow-sm">
     <div class="bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 text-white rounded-b-3xl">
@@ -673,5 +688,13 @@
   <script src="app.js?v=2025-08-29"></script>
   <script src="app-responsive-addon.js?v=2025-08-29"></script>
   <script src="scripts/mobile-nav.js"></script>
+  <script>
+    (function(){
+      function hide(){ try{ var el=document.getElementById('appSplash'); if(!el) return; el.classList.add('hide'); setTimeout(function(){ try{ el.remove(); }catch{} }, 420); }catch{} }
+      if (document.readyState === 'complete') setTimeout(hide, 120);
+      else window.addEventListener('load', function(){ setTimeout(hide, 150); });
+      try{ window.hideAppSplash = hide; }catch{}
+    })();
+  </script>
 </body>
 </html>
