@@ -70,8 +70,22 @@ function applyAccessMode(){
       const panel = byId('filterPanel');   if (panel) panel.classList.add('hidden');
     }
   }catch{}
-  // Show viewer-only search button
-  try{ const vb = byId('btnViewerSearchEvent'); if (vb) vb.classList.toggle('hidden', !isViewer()); }catch{}
+  // Show search button for: viewer OR editor-non-owner
+  try{
+    const vb = byId('btnViewerSearchEvent');
+    if (vb){
+      const showViewerSearch = isViewer() || (!isViewer() && !isOwnerNow());
+      vb.classList.toggle('hidden', !showViewerSearch);
+    }
+  }catch{}
+
+  // Create Event button: only visible for owner (regardless of editor/viewer toggle above)
+  try{
+    const mk = byId('btnMakeEventLink');
+    if (mk && !isViewer()){
+      mk.classList.toggle('hidden', !isOwnerNow());
+    }
+  }catch{}
 
   // 2) Score controls container: sembunyikan untuk viewer biasa, TAPI tampilkan untuk view=1
   const hideScoreIds = [ 'scoreControlsLeft', 'btnFinishScore', 'btnRecalc', 'scoreButtonsA', 'scoreButtonsB' ];
@@ -127,8 +141,14 @@ function applyAccessMode(){
   try{ refreshJoinUI?.(); }catch{}
   // Update role chip indicator
   try{ renderRoleChip?.(); renderWasitBadge?.(); }catch{}
-  // Viewer "Cari Event" button visibility
-  try{ const vb = byId('btnViewerSearchEvent'); if (vb) vb.classList.toggle('hidden', !isViewer()); }catch{}
+  // "Cari Event" button visibility (viewer or editor-non-owner)
+  try{
+    const vb = byId('btnViewerSearchEvent');
+    if (vb){
+      const showViewerSearch = isViewer() || (!isViewer() && !isOwnerNow());
+      vb.classList.toggle('hidden', !showViewerSearch);
+    }
+  }catch{}
 
   // Title editor (rename) visibility: only in cloud mode, only for editor
   try {

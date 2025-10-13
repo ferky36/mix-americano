@@ -848,7 +848,15 @@ function ensureViewerSearchButton(){
     b.addEventListener('click', ()=>{ openSearchEventModal(); });
     bar.appendChild(b);
   }
-  try{ const btn = byId('btnViewerSearchEvent'); if (btn) btn.classList.toggle('hidden', !(typeof isViewer==='function' && isViewer())); }catch{}
+  try{
+    const btn = byId('btnViewerSearchEvent');
+    if (btn){
+      const viewer = (typeof isViewer==='function') ? isViewer() : false;
+      const owner  = (typeof isOwnerNow==='function') ? isOwnerNow() : false;
+      const show   = viewer || (!viewer && !owner); // viewer OR editor-non-owner
+      btn.classList.toggle('hidden', !show);
+    }
+  }catch{}
 }
 
 
