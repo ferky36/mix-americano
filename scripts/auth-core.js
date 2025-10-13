@@ -17,18 +17,38 @@ async function getCurrentUser(){
   try{ const { data } = await sb.auth.getUser(); return data?.user || null; }catch{ return null; }
 }
 
-// Subscribe ke perubahan sesi agar role/owner ter-update setelah refresh/token refresh
+// Subscribe ke perubahan sesi: reload sederhana saat login sukses
 try {
   if (window.sb && !window.__authRoleWatcher){
-    window.__authRoleWatcher = sb.auth.onAuthStateChange((_event, _session)=>{
+    window.__authRoleWatcher = sb.auth.onAuthStateChange((event, _session)=>{
       // Event bisa: INITIAL_SESSION, SIGNED_IN, TOKEN_REFRESHED, USER_UPDATED, SIGNED_OUT
-      try{ updateAuthUI?.(); }catch{}
+      try{
+        if (event === 'SIGNED_IN') { location.reload(); return; }
+        updateAuthUI?.();
+      }catch{}
     });
   }
 } catch {}
 
 async function updateAuthUI(){
   const user = await getCurrentUser();
+  // Simple reload-on-login: only when transitioning from logged-out → logged-in within this session
+  try{
+    const inited = sessionStorage.getItem('auth.init') === '1';
+    const prev = sessionStorage.getItem('auth.prevUser') === '1';
+    const now = !!user;
+    if (!inited){
+      sessionStorage.setItem('auth.init','1');
+      sessionStorage.setItem('auth.prevUser', now ? '1' : '0');
+    } else {
+      if (!prev && now){
+        sessionStorage.setItem('auth.prevUser','1');
+        location.reload();
+        return;
+      }
+      sessionStorage.setItem('auth.prevUser', now ? '1' : '0');
+    }
+  }catch{}
   try{ window.__hasUser = !!user; }catch{}
   const loginBtn = byId('btnLogin'); const logoutBtn = byId('btnLogout'); const info = byId('authInfo'); const email = byId('authUserEmail');
   if (user){
