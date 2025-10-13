@@ -111,7 +111,10 @@ window.renderPlayersList = function(...args){
 // Open Create Event modal (extracted)
 function setEventModalTab(mode){
   const viewerMode = (typeof isViewer==='function' && isViewer());
-  const isCreate = (!viewerMode) && (mode !== "search");
+  const ownerMode  = (typeof isOwnerNow==='function' && isOwnerNow());
+  // Only owners may create; editors non-owner and viewers are search-only
+  const canCreate  = (!viewerMode) && ownerMode;
+  const isCreate   = canCreate && (mode !== "search");
   const tCreate = document.getElementById("tabCreateEvent");
   const tSearch = document.getElementById("tabSearchEvent");
   const fCreate = document.getElementById("eventForm");
@@ -124,13 +127,15 @@ function setEventModalTab(mode){
   // Ensure tabs are visible and title set for Create/Search context
   const tabs = document.getElementById('eventTabs'); if (tabs) tabs.classList.remove('hidden');
   const titleEl = document.querySelector('#eventModal h3');
-  if (viewerMode){
+  if (!canCreate){
+    // Non-owner (viewer or editor non-owner): show only Search tab and content
     if (tCreate) tCreate.classList.add('hidden');
-    if (tSearch) tSearch.classList.add('hidden');
+    if (tSearch) tSearch.classList.remove('hidden');
     if (fCreate) fCreate.classList.add('hidden');
     if (titleEl) titleEl.textContent = 'Cari Event';
   } else {
     if (tCreate) tCreate.classList.remove('hidden');
+    if (tSearch) tSearch.classList.remove('hidden');
     if (titleEl) titleEl.textContent = 'Buat/Cari Event';
   }
   // If editor link row exists from previous share, show it back in create/search context
@@ -475,15 +480,20 @@ function openSearchEventModal(){ setEventModalTab('search');
   const evSel = byId('searchEventSelect'); if (evSel) { evSel.innerHTML = '<option value="">- Pilih tanggal dulu -</option>'; }
   const btn = byId('openEventBtn'); if (btn) btn.disabled = true;
   ensureDeleteEventButton();
-  // In viewer mode, hide create tab and form
+  // For non-owner (viewer or editor non-owner): show only Search tab
   try{
-    if (typeof isViewer==='function' && isViewer()){
+    const viewer = (typeof isViewer==='function' && isViewer());
+    const owner  = (typeof isOwnerNow==='function' && isOwnerNow());
+    const canCreate = (!viewer) && owner;
+    if (!canCreate){
       byId('tabCreateEvent')?.classList.add('hidden');
-      byId('tabSearchEvent')?.classList.add('hidden');
+      byId('tabSearchEvent')?.classList.remove('hidden');
       byId('eventForm')?.classList.add('hidden');
+      const titleEl = m.querySelector('h3'); if (titleEl) titleEl.textContent = 'Cari Event';
     } else {
       byId('tabCreateEvent')?.classList.remove('hidden');
       byId('tabSearchEvent')?.classList.remove('hidden');
+      const titleEl = m.querySelector('h3'); if (titleEl) titleEl.textContent = 'Buat/Cari Event';
     }
   }catch{}
   // load dates then events for initial selection
