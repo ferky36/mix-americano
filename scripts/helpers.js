@@ -283,23 +283,23 @@ function __applyFairnessFilter(){
     try{ const el = byId('btnLeaveEvent'); if (el) el.textContent = 'Keluar Event'; }catch{}
     try{ const el = byId('filterChevron'); if (el){ const open = !!byId('filterPanel')?.classList.contains('open'); el.textContent = open ? '▾' : '▸'; } }catch{}
   }
-  // Small badge for Wasit (score-only) in header chips
-  try {
-    window.renderWasitBadge = function(){
-      const chips = byId('hdrChips'); if (!chips) return;
-      let el = byId('chipWasit');
-      if (!el) {
-        el = document.createElement('span');
-        el.id = 'chipWasit';
-        el.className = 'chip hidden';
-        // simple whistle-ish icon
-        el.innerHTML = '<svg class="chip-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="3"/><path d="M9 12h8a3 3 0 0 1 0 6h-4"/></svg><span>Wasit</span>';
-        chips.appendChild(el);
-      }
-      const isWasit = String(window._memberRole||'').toLowerCase() === 'wasit';
-      el.classList.toggle('hidden', !isWasit);
-    };
-  } catch {}
+  // // Small badge for Wasit (score-only) in header chips
+  // try {
+  //   window.renderWasitBadge = function(){
+  //     const chips = byId('hdrChips'); if (!chips) return;
+  //     let el = byId('chipWasit');
+  //     if (!el) {
+  //       el = document.createElement('span');
+  //       el.id = 'chipWasit';
+  //       el.className = 'chip hidden';
+  //       // simple whistle-ish icon
+  //       el.innerHTML = '<svg class="chip-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="3"/><path d="M9 12h8a3 3 0 0 1 0 6h-4"/></svg><span>Wasit</span>';
+  //       chips.appendChild(el);
+  //     }
+  //     const isWasit = String(window._memberRole||'').toLowerCase() === 'wasit';
+  //     el.classList.toggle('hidden', !isWasit);
+  //   };
+  // } catch {}
   function overrideFairness(){
     try{
       window.renderFairnessInfo = __fairnessFromRounds;
