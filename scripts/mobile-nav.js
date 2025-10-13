@@ -651,7 +651,7 @@ function matchCardMobile(m){
   const a = teamBox('TEAM A', `${m.a1} & ${m.a2}`, m.winner==='A', m.winner==='D');
   const b = teamBox('TEAM B', `${m.b1} & ${m.b2}`, m.winner==='B', m.winner==='D');
   const score = document.createElement('div');
-  score.className='col-span-1 text-center text-xl font-extrabold leading-none select-none';
+  score.className='col-span-1 text-center text font-extrabold leading-none select-none';
   score.textContent=`${m.saN}–${m.sbN}`;
   grid.appendChild(a); grid.appendChild(score); grid.appendChild(b);
   card.appendChild(top); card.appendChild(grid);
