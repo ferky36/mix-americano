@@ -522,32 +522,8 @@ function openShareEventModal(){
   const viewerLink = buildPublicViewerUrl(currentEventId, d);
   const out = byId('eventLinkOutput'); if (out) out.value = viewerLink;
 
-  // ensure extra field: Viewer (Hitung Skor) dengan ?view=1
-  (function ensureScoreViewerField(){
-    const successBox = byId('eventSuccess'); if (!successBox) return;
-    let row = byId('eventViewerCalcRow');
-    if (!row){
-      row = document.createElement('div');
-      row.id = 'eventViewerCalcRow';
-      row.className = 'space-y-1';
-      row.innerHTML = `
-        <div class="text-xs text-gray-600 dark:text-gray-300">Link Viewer (boleh hitung skor)</div>
-        <div class="flex items-center gap-2">
-          <input id="eventViewerCalcLinkOutput" readonly class="flex-1 border rounded-lg px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100" />
-          <button id="eventViewerCalcCopyBtn" class="px-3 py-2 rounded-lg bg-green-600 text-white text-sm">Copy</button>
-        </div>`;
-      successBox.appendChild(row);
-      try{
-        byId('eventViewerCalcCopyBtn').addEventListener('click', async ()=>{
-          const v = byId('eventViewerCalcLinkOutput')?.value || '';
-          await copyToClipboard(v);
-          const btn = byId('eventViewerCalcCopyBtn'); if (btn){ btn.textContent='Copied!'; setTimeout(()=>btn.textContent='Copy', 1200); }
-        });
-      }catch{}
-    }
-    const v2 = buildViewerUrl(currentEventId, d);
-    const o2 = byId('eventViewerCalcLinkOutput'); if (o2) o2.value = v2;
-  })();
+  // remove deprecated score-viewer link row if exists
+  try{ byId('eventViewerCalcRow')?.remove(); }catch{}
   // hide editor link row in Share view to keep only viewer link and Invite
   (function hideEditorLinkInShare(){
     const inp = byId('eventEditorLinkOutput');
@@ -664,30 +640,8 @@ byId('eventCreateBtn')?.addEventListener('click', async () => {
       if (info) info.textContent = 'Event berhasil dibuat! Bagikan link berikut:';
     })();
     byId('eventLinkOutput').value = link;
-    // Set also the score-only viewer link
-    try{
-      (function ensureScoreViewerField(){
-        const successBox = byId('eventSuccess'); if (!successBox) return;
-        let row = byId('eventViewerCalcRow');
-        if (!row){
-          row = document.createElement('div'); row.id='eventViewerCalcRow'; row.className='space-y-1';
-          row.innerHTML = `
-            <div class="text-xs text-gray-600 dark:text-gray-300">Link Viewer (boleh hitung skor)</div>
-            <div class="flex items-center gap-2">
-              <input id="eventViewerCalcLinkOutput" readonly class="flex-1 border rounded-lg px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100" />
-              <button id="eventViewerCalcCopyBtn" class="px-3 py-2 rounded-lg bg-green-600 text-white text-sm">Copy</button>
-            </div>`;
-          successBox.appendChild(row);
-          byId('eventViewerCalcCopyBtn').addEventListener('click', async ()=>{
-            const v = byId('eventViewerCalcLinkOutput')?.value || '';
-            await copyToClipboard(v);
-            const btn = byId('eventViewerCalcCopyBtn'); if (btn){ btn.textContent='Copied!'; setTimeout(()=>btn.textContent='Copy', 1200); }
-          });
-        }
-        const v2 = buildViewerUrl(id, date);
-        const o2 = byId('eventViewerCalcLinkOutput'); if (o2) o2.value = v2;
-      })();
-    }catch{}
+    // Deprecated: score-viewer link row no longer used
+    try{ byId('eventViewerCalcRow')?.remove(); }catch{}
 
     // HAPUS: tidak ada lagi editor link copy
 
