@@ -63,7 +63,7 @@ function renderPlayersList() {
                         (paid ? 'bg-emerald-600 text-white border-emerald-600'
                               : 'bg-transparent border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300');
         pBtn.title = paid ? 'Tandai belum bayar' : 'Tandai sudah bayar';
-        pBtn.innerHTML = 'Paid';
+        pBtn.innerHTML = (paid ? '✓ ' : '') + 'Paid';
       }
       pBtn.addEventListener('click', () => {
         // Allow editor OR cash-admin (owner/admin)
@@ -71,18 +71,19 @@ function renderPlayersList() {
         if (!allow) return;              // safety
         togglePlayerPaid(name);
         _refreshPaidBtn();
+        try{ __updatePaidCardStyle(); }catch{}
       });
       // Editor/Owner: tombol Paid tampil. Viewer disembunyikan.
       if (!isViewer()) { pBtn.style.display = ''; } else { pBtn.style.display = 'none'; }
       _refreshPaidBtn();
 
-      nameSpan.after(gSel, lSel);
+      nameSpan.after(gSel, lSel, pBtn);
 
       // Badge Paid (bottom-right)
       const paidBadge = document.createElement('span');
-      paidBadge.className = 'absolute -bottom-2 right-3 px-2 py-0.5 text-[11px] rounded-full bg-emerald-600 text-white shadow hidden';
+      paidBadge.className = 'absolute -bottom-3 right-3 px-2 py-0.5 text-[11px] rounded-full bg-emerald-600 text-white shadow hidden';
       paidBadge.textContent = 'Paid';
-      li.appendChild(paidBadge);
+      if (isViewer()) li.appendChild(paidBadge);
 
       function __updatePaidCardStyle(){
         const paid = isPlayerPaid(name);
