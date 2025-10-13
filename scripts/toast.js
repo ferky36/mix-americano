@@ -75,21 +75,22 @@ async function loadAccessRoleFromCloud(){
     // Note: do NOT auto-upgrade UI to editor based solely on global owner flag.
     // UI role must follow per-event membership; global owner is handled via specific admin buttons.
 
-    // 1) event owner shortcut (optional) — do NOT overwrite global owner flag
+    // 1) event owner shortcut (prefer cached meta to avoid extra query)
     try{
-      const { data: ev } = await sb.from('events').select('owner_id').eq('id', currentEventId).maybeSingle();
-      const isEventOwner = !!(ev?.owner_id && ev.owner_id === uid);
+      let ownerId = null; try{ ownerId = window.getEventMetaCache?.(currentEventId)?.owner_id || null; }catch{}
+      if (!ownerId){
+        const { data: ev } = await sb.from('events').select('owner_id').eq('id', currentEventId).maybeSingle();
+        ownerId = ev?.owner_id || null; try{ if (ownerId) window.setEventMetaCache?.(currentEventId, { ...(window.getEventMetaCache?.(currentEventId)||{}), owner_id: ownerId }); }catch{}
+      }
+      const isEventOwner = !!(ownerId && ownerId === uid);
       if (isEventOwner) { setAccessRole('editor'); roleDebug('event-owner=true -> editor full'); return; }
     }catch{}
 
     // 2) membership check
-    const { data: mem } = await sb
-      .from('event_members')
-      .select('role')
-      .eq('event_id', currentEventId)
-      .eq('user_id', uid)
-      .maybeSingle();
-    const memRoleRaw = mem?.role || null;
+    const memRoleRaw = await (window.getMemberRoleCached ? getMemberRoleCached(currentEventId) : (async()=>{
+      const { data: m } = await sb.from('event_members').select('role').eq('event_id', currentEventId).eq('user_id', uid).maybeSingle();
+      return m?.role || null;
+    })());
     const memRole = String(memRoleRaw||'').toLowerCase();
     window._memberRole = memRole;
     window._isCashAdmin = (!!window._isOwnerUser) || (memRole === 'admin');
@@ -118,13 +119,10 @@ async function ensureCashAdminFlag(){
     const userData = await (window.getAuthUserCached ? getAuthUserCached() : sb.auth.getUser().then(r=>r.data));
     const uid = userData?.user?.id || null;
     if (!uid) return;
-    const { data: mem } = await sb
-      .from('event_members')
-      .select('role')
-      .eq('event_id', currentEventId)
-      .eq('user_id', uid)
-      .maybeSingle();
-    const memRoleRaw = mem?.role || null;
+    const memRoleRaw = await (window.getMemberRoleCached ? getMemberRoleCached(currentEventId) : (async()=>{
+      const { data: m } = await sb.from('event_members').select('role').eq('event_id', currentEventId).eq('user_id', uid).maybeSingle();
+      return m?.role || null;
+    })());
     const memRole = String(memRoleRaw||'').toLowerCase();
     window._memberRole = memRole;
     window._isCashAdmin = (!!window._isOwnerUser) || (memRole === 'admin');

@@ -390,3 +390,26 @@ window.getAuthUserCached = async function(ttlMs = 2000){
 window.__eventMetaCache = window.__eventMetaCache || {};
 window.setEventMetaCache = function(eventId, meta){ try{ if (!eventId) return; window.__eventMetaCache[eventId] = { meta, ts: Date.now() }; }catch{} };
 window.getEventMetaCache = function(eventId){ try{ return window.__eventMetaCache[eventId]?.meta || null; }catch{ return null; } };
+
+// Cache per-event membership role to avoid repeated SELECT event_members
+window.__memberRoleCache = window.__memberRoleCache || {};
+window.getMemberRoleCached = async function(eventId, ttlMs = 2000){
+  try{
+    if (!eventId || !window.sb) return null;
+    const now = Date.now();
+    const hit = window.__memberRoleCache[eventId];
+    if (hit && (now - (hit.ts||0) < ttlMs)) return hit.role;
+    if (hit && hit.promise) return await hit.promise;
+    const p = (async()=>{
+      try{
+        const data = await (window.getAuthUserCached ? getAuthUserCached() : sb.auth.getUser().then(r=>r.data));
+        const uid = data?.user?.id || null; if (!uid) return null;
+        const { data: mem } = await sb.from('event_members').select('role').eq('event_id', eventId).eq('user_id', uid).maybeSingle();
+        return mem?.role || null;
+      }catch{ return null; }
+    })();
+    window.__memberRoleCache[eventId] = { promise: p };
+    const role = await p; window.__memberRoleCache[eventId] = { role, ts: now };
+    return role;
+  }catch{ return null; }
+};

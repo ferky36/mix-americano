@@ -120,6 +120,16 @@ async function fetchEventMetaFromDB(eventId){
       .maybeSingle();
     if (error) return null;
     try{ window.setEventMetaCache?.(eventId, data||null); }catch{}
+    // Early owner promotion to reduce viewer→owner flicker
+    try{
+      const u = await (window.getAuthUserCached ? getAuthUserCached() : sb.auth.getUser().then(r=>r.data));
+      const uid = u?.user?.id || null;
+      if (uid && data?.owner_id === uid){
+        window._isOwnerUser = true;
+        if (typeof setAccessRole==='function') setAccessRole('editor');
+        try{ renderRoleChip?.(); }catch{}
+      }
+    }catch{}
     return data || null;
   }catch{ return null; }
   finally { hideLoading(); }
