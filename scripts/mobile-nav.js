@@ -105,7 +105,7 @@
     const aloud = isCashflowAllowed();
     let hostKas = null;
     if (aloud){
-      tabs.push({ key:'kas', label:'Kas', icon: moneyIcon() });
+      tabs.push({ key:'kas', label:'Cashflow', icon: moneyIcon() });
       hostKas = document.createElement('section');
       hostKas.id = 'section-kas';
       hostKas.className = 'bg-white dark:bg-gray-800 p-4 rounded-2xl shadow hidden';
@@ -243,7 +243,7 @@
         try{ document.querySelector('main')?.appendChild(hostKasLocal); }catch{}
       }
       // Append tab item at the end
-      ul.appendChild(tabItem('kas','Kas', moneyIcon()));
+      ul.appendChild(tabItem('kas','Cashflow', moneyIcon()));
     } else if (!allowed && hasTab){
       // If currently on kas, move away to jadwal first
       const key = (typeof window !== 'undefined' && window.__mobileTabKey) ? window.__mobileTabKey : null;
@@ -289,8 +289,10 @@
         // Prefer calling public opener (does not depend on hidden header button)
         if (typeof window.openCashflow === 'function') window.openCashflow();
         else document.getElementById('btnCashflow')?.click();
+        // Immediately keep overlay hidden to avoid flicker before we hijack content
+        try{ const m = getCashModal(); if (m){ m.classList.add('hidden'); m.style.display='none'; m.style.pointerEvents='none'; m.style.visibility='hidden'; } }catch{}
         // wait a bit longer to allow render
-        setTimeout(()=> mountCashflowInto(host, tries+1), 140);
+        setTimeout(()=> mountCashflowInto(host, tries+1), 120);
         return;
       }
     }catch{}
