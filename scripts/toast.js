@@ -32,7 +32,7 @@ async function refreshJoinUI(){
       statusWrap && statusWrap.classList.add('hidden');
       return;
     }
-    let user=null; try{ const { data } = await sb.auth.getUser(); user = data?.user || null; }catch{}
+    let user=null; try{ const data = await (window.getAuthUserCached ? getAuthUserCached() : sb.auth.getUser().then(r=>r.data)); user = data?.user || null; }catch{}
     if (!user){
       if (joinBtn) { joinBtn.classList.remove('hidden'); joinBtn.disabled=false; }
       statusWrap && statusWrap.classList.add('hidden');
@@ -68,7 +68,7 @@ async function loadAccessRoleFromCloud(){
   try{
     showLoading('Memuat akses…');
     if (!isCloudMode() || !window.sb?.auth || !currentEventId) { setAccessRole('editor'); return; }
-    const { data: userData } = await sb.auth.getUser();
+    const userData = await (window.getAuthUserCached ? getAuthUserCached() : sb.auth.getUser().then(r=>r.data));
     const uid = userData?.user?.id || null;
     if (!uid){ setAccessRole('viewer'); return; }
 
@@ -115,7 +115,7 @@ async function loadAccessRoleFromCloud(){
 async function ensureCashAdminFlag(){
   try{
     if (!isCloudMode() || !window.sb?.auth || !currentEventId) return;
-    const { data: userData } = await sb.auth.getUser();
+    const userData = await (window.getAuthUserCached ? getAuthUserCached() : sb.auth.getUser().then(r=>r.data));
     const uid = userData?.user?.id || null;
     if (!uid) return;
     const { data: mem } = await sb

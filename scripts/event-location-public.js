@@ -109,13 +109,17 @@ function openSchedulePanelAndScroll(){
 
 async function fetchEventMetaFromDB(eventId){
   try{
+    // Memoize to avoid duplicate SELECTs on reload
+    const cached = (window.getEventMetaCache ? getEventMetaCache(eventId) : null);
+    if (cached) return cached;
     showLoading('Memuat info event…');
     const { data, error } = await sb
       .from('events')
-      .select('title, location_text, location_url, htm')
+      .select('title, location_text, location_url, htm, max_players, join_open_at, owner_id')
       .eq('id', eventId)
       .maybeSingle();
     if (error) return null;
+    try{ window.setEventMetaCache?.(eventId, data||null); }catch{}
     return data || null;
   }catch{ return null; }
   finally { hideLoading(); }

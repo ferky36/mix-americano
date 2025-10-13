@@ -43,7 +43,7 @@ function ensureJoinControls(){
 async function openJoinFlow(){
   if (!currentEventId){ alert('Buka event terlebih dahulu.'); return; }
   try{
-    const { data } = await sb.auth.getUser();
+    const data = await (window.getAuthUserCached ? getAuthUserCached() : sb.auth.getUser().then(r=>r.data));
     const user = data?.user || null;
     if (!user){ byId('loginModal')?.classList.remove('hidden'); return; }
   }catch{}
@@ -104,7 +104,7 @@ async function openJoinModal(){
   let suggestedName = '';
   let g = '', lv = '';
   try{
-    const { data } = await sb.auth.getUser();
+    const data = await (window.getAuthUserCached ? getAuthUserCached() : sb.auth.getUser().then(r=>r.data));
     const u = data?.user || null;
     const uid = u?.id || '';
     const found = findJoinedPlayerByUid(uid);

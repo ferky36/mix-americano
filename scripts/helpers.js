@@ -371,3 +371,22 @@ function __applyFairnessFilter(){
   if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', run);
   else run();
 })();
+// ======= Lightweight shared caches =======
+// Cached Supabase auth user to avoid /user being called repeatedly on load.
+window.getAuthUserCached = async function(ttlMs = 2000){
+  try{
+    const now = Date.now();
+    const cache = window.__authUserCache || {};
+    if (cache.data && (now - (cache.ts||0) < ttlMs)) return cache.data;
+    if (cache.promise) return await cache.promise;
+    const p = (async()=>{ try{ const { data } = await sb.auth.getUser(); return data||null; }catch{ return null; } })();
+    window.__authUserCache = { promise: p };
+    const data = await p; window.__authUserCache = { data, ts: now };
+    return data;
+  }catch{ return null; }
+};
+
+// Simple per-event meta cache to dedupe repeated SELECTs on reload.
+window.__eventMetaCache = window.__eventMetaCache || {};
+window.setEventMetaCache = function(eventId, meta){ try{ if (!eventId) return; window.__eventMetaCache[eventId] = { meta, ts: Date.now() }; }catch{} };
+window.getEventMetaCache = function(eventId){ try{ return window.__eventMetaCache[eventId]?.meta || null; }catch{ return null; } };

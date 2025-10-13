@@ -53,12 +53,16 @@ function ensureLocationFields(){
 async function loadLocationFromDB(){
   try{
     if (!isCloudMode() || !window.sb?.from || !currentEventId) return;
-    const { data, error } = await sb.from('events').select('location_text, location_url').eq('id', currentEventId).maybeSingle();
-    if (error) return;
+    // Try cached meta first
+    let meta = null; try{ meta = window.getEventMetaCache?.(currentEventId) || null; }catch{}
+    if (!meta){
+      const { data } = await sb.from('events').select('location_text, location_url').eq('id', currentEventId).maybeSingle();
+      meta = data || null; try{ if (meta) window.setEventMetaCache?.(currentEventId, { ...(window.getEventMetaCache?.(currentEventId)||{}), ...meta }); }catch{}
+    }
     const input1 = byId('locationTextInput');
     const input2 = byId('locationUrlInput');
-    if (input1) input1.value = data?.location_text || '';
-    if (input2) input2.value = data?.location_url || '';
+    if (input1) input1.value = meta?.location_text || '';
+    if (input2) input2.value = meta?.location_url || '';
   }catch{}
 }
 
@@ -178,9 +182,13 @@ async function loadJoinOpenFromDB(){
 async function loadMaxPlayersFromDB(){
   try{
     if (!isCloudMode() || !window.sb?.from || !currentEventId) return;
-    const { data, error } = await sb.from('events').select('max_players').eq('id', currentEventId).maybeSingle();
-    if (error) return;
-    currentMaxPlayers = Number.isInteger(data?.max_players) ? data.max_players : null;
+    // Use cached meta if available
+    let meta = null; try{ meta = window.getEventMetaCache?.(currentEventId) || null; }catch{}
+    if (!meta){
+      const { data } = await sb.from('events').select('max_players').eq('id', currentEventId).maybeSingle();
+      meta = data || null; try{ if (meta) window.setEventMetaCache?.(currentEventId, { ...(window.getEventMetaCache?.(currentEventId)||{}), ...meta }); }catch{}
+    }
+    currentMaxPlayers = Number.isInteger(meta?.max_players) ? meta.max_players : null;
     const input = byId('maxPlayersInput');
     if (input) input.value = currentMaxPlayers ? String(currentMaxPlayers) : ''; try{ renderHeaderChips?.(); }catch{}
   }catch{}
