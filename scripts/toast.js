@@ -131,9 +131,6 @@ async function ensureCashAdminFlag(){
     try{ window._viewerScoreOnly = (memRole === 'wasit'); }catch{}
     roleDebug('ensureCashAdminFlag', { memRole, _isOwnerUser: window._isOwnerUser, _isCashAdmin: window._isCashAdmin, event: currentEventId, cloud:isCloudMode() });
     try{ renderWasitBadge?.(); renderRoleChip?.(); }catch{}
-    // If role info changed while UI is forced viewer (e.g., from viewer link),
-    // re-apply access mode so score-only (wasit) controls reflect correctly.
-    try{ applyAccessMode?.(); }catch{}
     // Jika membership sudah editor dan tidak forced viewer, naikkan UI ke editor
     try{
       const forced = !!window._forceViewer;

@@ -68,7 +68,7 @@ body { font-size: clamp(14px, calc(14px * var(--ui-zoom) / 100), 20px); }
   header .mx-auto{ gap: 18px; }
   #hdrChips{ align-items:center; gap:10px; }
   #hdrControls{
-    display:flex; align-items:center; gap:10px;
+    display:flex; align-items:center; gap:10px; justify-content:flex-end;
     background:linear-gradient(90deg, rgba(255,255,255,.18), rgba(255,255,255,.12));
     padding:.5rem .6rem; border-radius:8px; /* slight rounded */
     backdrop-filter:none; /* remove blur */
@@ -98,13 +98,21 @@ body { font-size: clamp(14px, calc(14px * var(--ui-zoom) / 100), 20px); }
 /* Keep Logout at far-right on desktop, bottom-right on mobile */
 @media (min-width:768px){
   #hdrControls{ display:flex; }
-  #hdrControls #btnViewerSearchEvent{ order: 998; }
-  #hdrControls #btnLogout{ order: 999; margin-left:auto; }
+  #hdrControls #btnLogout{ order: 999; }
+  #hdrControls #btnLogin{ order: 999; }
+  #hdrControls #btnAdminLogin{ order: 998; }
+  #hdrControls #authInfo{ order: 998; }
+  #hdrControls #joinStatus{ order: 997; }
+  #hdrControls #btnViewerSearchEvent{ order: 996; }
 }
 @media (max-width: 767px){
   #hdrControls.hdr-mobile-panel{ display:grid; grid-template-columns: 1fr 1fr; }
-  #hdrControls #btnViewerSearchEvent{ order: 998; }
   #hdrControls #btnLogout{ order: 999; justify-self: end; }
+  #hdrControls #btnLogin{ order: 999; justify-self: end; }
+  #hdrControls #btnAdminLogin{ order: 998; justify-self: end; }
+  #hdrControls #btnViewerSearchEvent{ order: 998; }
+  #hdrControls #joinStatus{ order: 997; }
+  #hdrControls #authInfo{ order: 996; }
 }
 
 /* Header Location pill */
