@@ -156,7 +156,7 @@
     // Texts
     const texts = document.createElement('div');
     texts.style.cssText = 'flex:1 1 auto; min-width:0;';
-    const h = document.createElement('div'); h.style.cssText='font-weight:700;'; h.textContent='Pasang mix-americano ke perangkat?';
+    const h = document.createElement('div'); h.style.cssText='font-weight:700;'; h.textContent='Pasang ScoreMate ke perangkat?';
     const p = document.createElement('div'); p.style.cssText='opacity:.9;color:#cbd5e1;'; p.textContent='Akses lebih cepat, hemat data, bisa offline.';
     texts.appendChild(h); texts.appendChild(p);
 
