@@ -43,16 +43,17 @@ function renderCourt(container, arr) {
     const tr = document.createElement("tr");
     tr.className =
       "border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/40";
-    tr.draggable = !isViewer();
+    // Allow wasit (score-only) to drag rows like editor
+    tr.draggable = (!isViewer() || (typeof isScoreOnlyMode==='function' && isScoreOnlyMode()));
     tr.dataset.index = i;
     tr.addEventListener("dragstart", (e) => {
-      if (isViewer()) { e.preventDefault(); return; }
+      if (isViewer() && !(typeof isScoreOnlyMode==='function' && isScoreOnlyMode())) { e.preventDefault(); return; }
       tr.classList.add("row-dragging");
       e.dataTransfer.setData("text/plain", String(i));
     });
     tr.addEventListener("dragend", () => tr.classList.remove("row-dragging"));
     tr.addEventListener("dragover", (e) => {
-      if (isViewer()) { e.preventDefault(); return; }
+      if (isViewer() && !(typeof isScoreOnlyMode==='function' && isScoreOnlyMode())) { e.preventDefault(); return; }
       e.preventDefault();
       tr.classList.add("row-drop-target");
     });
@@ -60,7 +61,7 @@ function renderCourt(container, arr) {
       tr.classList.remove("row-drop-target")
     );
     tr.addEventListener("drop", (e) => {
-      if (isViewer()) { e.preventDefault(); return; }
+      if (isViewer() && !(typeof isScoreOnlyMode==='function' && isScoreOnlyMode())) { e.preventDefault(); return; }
       e.preventDefault();
       tr.classList.remove("row-drop-target");
       const from = Number(e.dataTransfer.getData("text/plain"));
@@ -112,7 +113,8 @@ function renderCourt(container, arr) {
       sel.appendChild(new Option("—", ""));
       players.forEach((p) => sel.appendChild(new Option(p, p)));
       sel.value = r[k] || "";
-      sel.disabled = isViewer();
+      // Wasit may change pairings in court container
+      sel.disabled = (isViewer() && !(typeof isScoreOnlyMode==='function' && isScoreOnlyMode()));
       sel.addEventListener("change", (e) => {
         arr[i] = { ...arr[i], [k]: e.target.value };
         markDirty();

@@ -37,7 +37,10 @@
       <div class="relative mx-auto ${isMobile()? 'mt-4' : 'mt-10'} w-[95%] max-w-4xl rounded-2xl bg-white dark:bg-gray-800 border dark:border-gray-700 shadow p-3 md:p-6 max-h-[90vh] md:max-h-[85vh] overflow-y-auto">
         <div class="flex items-center justify-between mb-3">
           <h3 class="text-lg md:text-xl font-semibold">Pengaturan</h3>
-          <button id="spClose" class="px-3 py-1.5 rounded-lg border dark:border-gray-700">Tutup</button>
+          <div class="flex items-center gap-2">
+            <button id="spSave" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-semibold">Simpan</button>
+            <button id="spClose" class="px-3 py-1.5 rounded-lg border dark:border-gray-700">Tutup</button>
+          </div>
         </div>
         <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3" id="spGrid">
           <div>
@@ -91,9 +94,9 @@
         </div>
       </div>`;
     document.body.appendChild(wrap);
-    // Close handlers
-    qs('#spClose', wrap)?.addEventListener('click', ()=>{ try{ byId('spHTM')?.dispatchEvent(new Event('blur',{bubbles:true})); }catch{} hide(); });
-    wrap.addEventListener('click', (e)=>{ if ((e.target).getAttribute && (e.target).getAttribute('data-act')==='close') { try{ byId('spHTM')?.dispatchEvent(new Event('blur',{bubbles:true})); }catch{} hide(); } });
+    // Close handlers (no implicit save on blur)
+    qs('#spClose', wrap)?.addEventListener('click', ()=>{ hide(); });
+    wrap.addEventListener('click', (e)=>{ if ((e.target).getAttribute && (e.target).getAttribute('data-act')==='close') { hide(); } });
     return wrap;
   }
 
@@ -122,7 +125,8 @@
       ['joinOpenDateInput','spJoinDate'],
       ['joinOpenTimeInput','spJoinTime']
     ];
-    map.forEach(([sid, did])=>{ const s=byId(sid), d=byId(did); if (s&&d){ setVal(d, s.value||''); d.oninput=null; pipe(s,d); }});
+    // Only set initial values; do not live-sync back to source (save via spSave only)
+    map.forEach(([sid, did])=>{ const s=byId(sid), d=byId(did); if (s&&d){ setVal(d, s.value||''); d.oninput=null; }});
 
     // Checkbox showBreak: disembunyikan dan selalu aktif
     try{
@@ -140,16 +144,6 @@
       const h = byId('spHTM');
       if (h){
         h.value = getHTM();
-        const saveDB = async (val)=>{
-          try{
-            if(!window.sb || !window.currentEventId || !window.isCloudMode || !isCloudMode()) return;
-            const n = Number(val||0)||0;
-            const { error } = await sb.from('events').update({ htm:n }).eq('id', currentEventId);
-            if (!error) { try{ showToast?.('HTM tersimpan', 'success'); }catch{} }
-            else { try{ showToast?.('Gagal menyimpan HTM', 'error'); }catch{} }
-          }catch{ try{ showToast?.('Gagal menyimpan HTM', 'error'); }catch{} }
-        };
-        const debSave = debounce((v)=> saveDB(v), 600);
         h.oninput = ()=>{
           setHTM(h.value||'');
           try{
@@ -157,12 +151,81 @@
             const s=document.getElementById('summaryHTM'); if(s){ s.textContent='Rp'+n.toLocaleString('id-ID'); }
             window.__htmAmount=n;
           }catch{}
-          debSave(h.value||'');
         };
-        // Pastikan flush ketika keluar input / menutup modal
-        h.onblur = ()=> saveDB(h.value||'');
+        h.onblur = null; // no direct DB save from popup
       }
     }catch{}
+  }
+
+  // Push current popup values to real inputs and persist to cloud
+  async function saveAll(){
+    try{
+      try{ window.ensureMaxPlayersField?.(); }catch{}
+      try{ window.ensureLocationFields?.(); }catch{}
+      try{ window.ensureJoinOpenFields?.(); }catch{}
+
+      const pairs = [
+        ['sessionDate','spDate'],
+        ['startTime','spStart'],
+        ['minutesPerRound','spMinutes'],
+        ['breakPerRound','spBreak'],
+        ['roundCount','spRounds'],
+        ['maxPlayersInput','spMaxPlayers'],
+        ['locationTextInput','spLocText'],
+        ['locationUrlInput','spLocUrl'],
+        ['joinOpenDateInput','spJoinDate'],
+        ['joinOpenTimeInput','spJoinTime']
+      ];
+      // Set source input values without firing change handlers to avoid side-effects/toasts
+      pairs.forEach(([sid,did])=>{ const s=byId(sid), d=byId(did); if (s && d){ s.value = d.value||''; }});
+
+      // Ensure runtime variables mirror popup without relying on input handlers
+      try{
+        const rawMp = (byId('spMaxPlayers')?.value||'').trim();
+        if (rawMp==='') { currentMaxPlayers = null; }
+        else {
+          const v = parseInt(rawMp,10); currentMaxPlayers = (Number.isFinite(v) && v>0) ? v : null;
+        }
+        try{ renderHeaderChips?.(); }catch{}
+      }catch{}
+      try{
+        const jd = byId('spJoinDate')?.value||''; const jt = byId('spJoinTime')?.value||'';
+        window.joinOpenAt = (jd && jt && typeof combineDateTimeToISO==='function') ? combineDateTimeToISO(jd,jt) : null;
+      }catch{}
+      // Use global variable (not window prop) since currentEventId is declared with let
+      if (window.sb && (typeof currentEventId !== 'undefined') && currentEventId){
+        const locText = (byId('spLocText')?.value||'').trim();
+        const locUrl  = (byId('spLocUrl')?.value||'').trim();
+        const jd = byId('spJoinDate')?.value||'';
+        const jt = byId('spJoinTime')?.value||'';
+        let joinAt = null; try{ joinAt = (jd && jt && typeof combineDateTimeToISO==='function') ? combineDateTimeToISO(jd,jt) : null; }catch{ joinAt = null; }
+        // Read max players directly from popup to avoid stale runtime
+        let mp = null; try{
+          const rawMp = (byId('spMaxPlayers')?.value||'').trim();
+          if (rawMp==='') mp = null; else { const v = parseInt(rawMp,10); mp = (Number.isFinite(v) && v>0) ? v : null; }
+          // mirror to runtime
+          currentMaxPlayers = mp;
+        }catch{ mp = null; }
+        let htm = 0; try{ htm = Number(byId('spHTM')?.value ?? window.__htmAmount ?? 0) || 0; }catch{ htm = 0; }
+        const updatePayload = {
+          location_text: locText || null,
+          location_url:  locUrl  || null,
+          join_open_at:  joinAt,
+          max_players:   mp,
+          htm
+        };
+        try{
+          
+          const { error } = await sb.from('events').update(updatePayload).eq('id', currentEventId);
+          if (error) throw error;
+        }catch(e){ console.warn('Save events meta failed', e); try{ showToast?.('Gagal menyimpan ke tabel events', 'error'); }catch{} }
+      }
+
+      try{ if (typeof maybeAutoSaveCloud==='function') maybeAutoSaveCloud(true); else if (typeof saveStateToCloud==='function') await saveStateToCloud(); }catch{}
+      try{ showToast?.('Pengaturan disimpan', 'success'); }catch{}
+      try{ renderEventLocation?.(byId('spLocText')?.value||'', byId('spLocUrl')?.value||''); }catch{}
+      try{ hide(); }catch{}
+    }catch(e){ console.warn(e); try{ showToast?.('Gagal menyimpan pengaturan', 'error'); }catch{} }
   }
 
   function toggleBtnVisibility(){
@@ -175,6 +238,7 @@
     const btn = ensureButton();
     buildModal();
     btn && btn.addEventListener('click', (e)=>{ e.preventDefault(); if (!isViewer()) show(); });
+    document.getElementById('spSave')?.addEventListener('click', (e)=>{ e.preventDefault(); if (!isViewer()) saveAll(); });
     // React to role changes via html[data-readonly]
     toggleBtnVisibility();
     try{
@@ -185,5 +249,3 @@
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
-
-
