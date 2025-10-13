@@ -42,6 +42,22 @@ body { font-size: clamp(14px, calc(14px * var(--ui-zoom) / 100), 20px); }
   header .mx-auto .flex.items-start > div:first-child{ display:none !important; }
 }
 
+/* Full-width Menu button on mobile */
+@media (max-width: 767px){
+  #btnHdrMenu{
+    display:block;
+    width: calc(100% - 2rem); /* align with header px-4 */
+    margin: 6px 1rem 0 1rem;
+    background:#ffffff !important;
+    color:#4f46e5 !important; /* indigo-600 */
+    border:2px solid #ffffff !important; /* inner white ring */
+    box-shadow: 0 0 0 2px rgba(99,102,241,1) !important; /* outer purple ring */
+    border-radius: 14px !important;
+    font-weight:700;
+    text-align:center;
+  }
+}
+
 /* Make header action buttons full-width on mobile without changing HTML */
 #hdrControls > button { width:100%; }
 @media (min-width:768px){ #hdrControls > button { width:auto; border-radius:12px; } }
@@ -75,6 +91,8 @@ body { font-size: clamp(14px, calc(14px * var(--ui-zoom) / 100), 20px); }
   /* Make green/indigo buttons slightly softer */
   #hdrControls #btnMakeEventLink{ background:#0ea463 !important; }
   #hdrControls #btnShareEvent{ background:#4f46e5 !important; }
+  /* Viewer search should share the same green intent (create/find event) */
+  #hdrControls #btnViewerSearchEvent{ background:#0ea463 !important; }
 }
 
 /* Header Location pill */
