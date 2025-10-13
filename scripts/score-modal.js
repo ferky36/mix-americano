@@ -314,18 +314,18 @@ byId('btnSave')?.addEventListener('click', async ()=>{
   }
 });
 
-// Header menu toggle (HP)
+// Header menu toggle (HP) - use wrapper so desktop toggle works too
 const btnHdrMenu = document.getElementById("btnHdrMenu");
 if (btnHdrMenu) {
   btnHdrMenu.addEventListener("click", () => {
-    const panel = document.getElementById("hdrControls");
-    panel.classList.toggle("hidden");
-    if (!panel.classList.contains("hidden")) panel.classList.add("hdr-slide");
-    setTimeout(() => panel.classList.remove("hdr-slide"), 220);
+    const panel = document.getElementById("hdrControlsWrap") || document.getElementById("hdrControls");
+    if (!panel) return;
+    panel.classList.toggle("open"); // use collapsible animation
   });
   window.addEventListener("resize", () => {
-    const panel = document.getElementById("hdrControls");
-    if (window.innerWidth >= 768) panel.classList.remove("hidden");
+    const panel = document.getElementById("hdrControlsWrap") || document.getElementById("hdrControls");
+    if (!panel) return;
+    if (window.innerWidth >= 768) panel.classList.remove("open");
   });
 }
 

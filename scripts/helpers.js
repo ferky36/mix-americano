@@ -73,6 +73,75 @@ function shuffleInPlace(a){
 }
 const teamKey=(a,b)=>[a,b].sort().join(' & ');
 const vsKey  =(a,b)=>[a,b].sort().join(' vs ');
+
+// -------- UI polish for header labels/icons (fix encoding artifacts) --------
+// Run once after DOM ready
+(function normalizeHeaderUI(){
+  function run(){
+    try{ const el = byId('btnTheme'); if (el && /[^\w\s]/.test(el.textContent||'')) el.textContent = 'Tema'; }catch{}
+    const labelFix = {
+      btnSave: 'Save',
+      btnMakeEventLink: 'Buat/Cari Event',
+      btnReport: 'Report',
+      btnHdrMenu: 'Menu',
+      btnLeaveEvent: 'Keluar Event'
+    };
+    Object.keys(labelFix).forEach(id=>{
+      try{
+        const b = byId(id); if (!b) return;
+        const t = (b.textContent||'').trim();
+        if (!t || /[^\p{L}\p{N}\s\/:,&.-]/u.test(t)) b.textContent = labelFix[id];
+      }catch{}
+    });
+    // Replace title edit button glyph with a clean SVG pencil
+    try{
+      const e = byId('btnTitleEdit');
+      if (e){
+        e.className = 'p-1.5 rounded-full bg-white/20 text-white hover:bg-white/30 shadow';
+        e.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16.862 3.487a2.25 2.25 0 113.182 3.183L7.5 19.214 3 21l1.786-4.5L16.862 3.487z"/></svg>';
+      }
+    }catch{}
+
+    // Replace left header square with app icon from /icons
+    try{
+      const logo = document.querySelector('header .grid.place-items-center.shadow');
+      if (logo && !logo.dataset.logoEnhanced){
+        // If already has an <img>, keep it. Otherwise, inject app icon image.
+        if (!logo.querySelector('img')){
+          logo.innerHTML = '<img src="icons/icon-192.png" alt="Logo" class="app-logo w-8 h-8 md:w-10 md:h-10" />';
+        }
+        logo.dataset.logoEnhanced = '1';
+      }
+    }catch{}
+
+    // (btnLang removed by request)
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
+  else run();
+})();
+
+// ===== Desktop controls toggle with fluid animation =====
+(function desktopControlsToggle(){
+  function init(){
+    const btn = document.getElementById('btnHdrControlsToggle');
+    const wrap = document.getElementById('hdrControlsWrap') || document.getElementById('hdrControls');
+    if (!btn || !wrap) return;
+    // Start closed on desktop
+    if (window.matchMedia('(min-width: 768px)').matches){ wrap.classList.remove('open'); }
+    btn.addEventListener('click', ()=>{
+      wrap.classList.toggle('open');
+    });
+    // On resize to desktop, keep it hidden by default
+    window.addEventListener('resize', ()=>{
+      if (window.matchMedia('(min-width: 768px)').matches){ wrap.classList.remove('open'); }
+    });
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+
+// (width alignment via classes on #hdrControlsWrap)
 // Sequential start guard: only allow starting round i when previous finished
 function canStartRoundBySequence(courtIdx, roundIdx){
   try{

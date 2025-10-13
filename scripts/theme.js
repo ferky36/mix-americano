@@ -24,3 +24,10 @@ function toggleTheme() {
   const dark = document.documentElement.classList.toggle("dark");
   localStorage.setItem(THEME_KEY, dark ? "dark" : "light"); try{ updateThemeToggleIcon(); }catch{}
 }
+
+// Apply stored theme on load to ensure correct header icon/contrast
+(function initTheme(){
+  function run(){ try{ applyThemeFromStorage(); }catch{} }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
+  else run();
+})();

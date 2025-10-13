@@ -44,7 +44,7 @@ body { font-size: clamp(14px, calc(14px * var(--ui-zoom) / 100), 20px); }
 
 /* Make header action buttons full-width on mobile without changing HTML */
 #hdrControls > button { width:100%; }
-@media (min-width:768px){ #hdrControls > button { width:auto; } }
+@media (min-width:768px){ #hdrControls > button { width:auto; border-radius:12px; } }
 .filter-slide { animation:slideDown .18s ease-out; }
 /* Make controls look like soft pills */
 @media (min-width:768px){
@@ -54,12 +54,12 @@ body { font-size: clamp(14px, calc(14px * var(--ui-zoom) / 100), 20px); }
   #hdrControls{
     display:flex; align-items:center; gap:10px;
     background:linear-gradient(90deg, rgba(255,255,255,.18), rgba(255,255,255,.12));
-    padding:.5rem .6rem; border-radius:9999px;
-    backdrop-filter:saturate(140%) blur(3px);
+    padding:.5rem .6rem; border-radius:8px; /* slight rounded */
+    backdrop-filter:none; /* remove blur */
     box-shadow: inset 0 0 0 1px rgba(255,255,255,.18);
   }
   #hdrControls > button{
-    border-radius:9999px !important;
+    border-radius:8px !important;
     padding:.55rem .9rem !important;
     line-height:1.1;
     box-shadow: 0 1px 0 rgba(0,0,0,.06), 0 1px 8px rgba(0,0,0,.08);
