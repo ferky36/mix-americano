@@ -249,6 +249,24 @@ body { font-size: clamp(14px, calc(14px * var(--ui-zoom) / 100), 20px); }
 }
 
 /* ===============================
+   Players list: style delete badge
+   =============================== */
+/* Hanya untuk tombol hapus di kartu pemain editor (class 'del') */
+#playersList li .del{
+  display:inline-flex; align-items:center; gap:6px;
+  /* padding:4px 10px; border-radius:9999px; */
+  background:#ef4444; color:#fff !important; text-decoration:none !important;
+  font-weight:600; font-size:12px;
+}
+#playersList li .del:hover{ background:#dc2626; text-decoration:none !important; }
+#playersList li .del::before{
+  content:""; width:14px; height:14px; display:inline-block;
+  background-color: currentColor;
+  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 6h18'/><path d='M8 6V4h8v2'/><path d='M19 6l-1 14H6L5 6'/><path d='M10 10v8'/><path d='M14 10v8'/></svg>") no-repeat center / contain;
+          mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 6h18'/><path d='M8 6V4h8v2'/><path d='M19 6l-1 14H6L5 6'/><path d='M10 10v8'/><path d='M14 10v8'/></svg>") no-repeat center / contain;
+}
+
+/* ===============================
    App Splash Overlay (Android-like gradient)
    =============================== */
 .app-splash{ position:fixed; inset:0; z-index:9999; display:grid; place-items:center;

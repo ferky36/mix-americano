@@ -22,7 +22,7 @@ function renderPlayersList() {
     li.innerHTML =
       "<span class='player-name flex-1'>" +
       escapeHtml(name) +
-      "</span><button class='del text-red-600 hover:underline text-xs'>hapus</button>";
+      "</span><button class='del px-2 py-0.5 text-xs rounded border flex items-center gap-1 bg-emerald-600 text-white border-red-600'>hapus</button>";
       // === meta mini controls (gender + level)
       const meta = playerMeta[name] || { gender:'', level:'' };
 
