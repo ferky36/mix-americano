@@ -65,6 +65,8 @@ async function refreshJoinUI(){
 }
 // Fetch role from Supabase based on current user and event membership
 async function loadAccessRoleFromCloud(){
+  if (window.__roleLoadingBusy) { try{ roleDebug('loadAccessRole dedup'); }catch{} return; }
+  window.__roleLoadingBusy = true;
   try{
     showLoading('Memuat akses…');
     if (!isCloudMode() || !window.sb?.auth || !currentEventId) { setAccessRole('editor'); return; }
@@ -109,7 +111,7 @@ async function loadAccessRoleFromCloud(){
     // Sync mobile cash tab visibility
     try{ updateMobileCashTab?.(); }catch{}
   }catch{ setAccessRole('viewer'); }
-  finally { hideLoading(); }
+  finally { hideLoading(); window.__roleLoadingBusy = false; }
 }
 
 // Compute cash-admin flag even if UI stays viewer (e.g., forced viewer via URL)

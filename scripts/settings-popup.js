@@ -222,8 +222,14 @@
       }
 
       try{ if (typeof maybeAutoSaveCloud==='function') maybeAutoSaveCloud(true); else if (typeof saveStateToCloud==='function') await saveStateToCloud(); }catch{}
-      try{ showToast?.('Pengaturan disimpan', 'success'); }catch{}
+      // Refresh UI across desktop/mobile without reload
+      try{ renderHeaderChips?.(); }catch{}
+      try{ ensureRoundsLengthForAllCourts?.(); }catch{}
+      try{ renderAll?.(); }catch{}
+      try{ refreshFairness?.(); }catch{}
+      try{ renderFilterSummary?.(); }catch{}
       try{ renderEventLocation?.(byId('spLocText')?.value||'', byId('spLocUrl')?.value||''); }catch{}
+      try{ showToast?.('Pengaturan disimpan', 'success'); }catch{}
       try{ hide(); }catch{}
     }catch(e){ console.warn(e); try{ showToast?.('Gagal menyimpan pengaturan', 'error'); }catch{} }
   }

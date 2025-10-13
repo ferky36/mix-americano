@@ -373,7 +373,7 @@ function __applyFairnessFilter(){
 })();
 // ======= Lightweight shared caches =======
 // Cached Supabase auth user to avoid /user being called repeatedly on load.
-window.getAuthUserCached = async function(ttlMs = 2000){
+window.getAuthUserCached = async function(ttlMs = 5000){
   try{
     const now = Date.now();
     const cache = window.__authUserCache || {};
@@ -393,7 +393,7 @@ window.getEventMetaCache = function(eventId){ try{ return window.__eventMetaCach
 
 // Cache per-event membership role to avoid repeated SELECT event_members
 window.__memberRoleCache = window.__memberRoleCache || {};
-window.getMemberRoleCached = async function(eventId, ttlMs = 2000){
+window.getMemberRoleCached = async function(eventId, ttlMs = 5000){
   try{
     if (!eventId || !window.sb) return null;
     const now = Date.now();
