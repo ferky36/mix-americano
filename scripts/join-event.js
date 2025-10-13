@@ -15,7 +15,7 @@ function ensureJoinControls(){
     wrap.id='joinStatus';
     wrap.className='flex items-center gap-2 text-sm hidden';
     const label = document.createElement('span');
-    label.textContent = 'Sudah Join sebagai';
+    label.textContent = 'Joined as';
     const name = document.createElement('span'); name.id='joinedPlayerName'; name.className='font-semibold';
     const leave = document.createElement('button');
     leave.id='btnLeaveSelf';

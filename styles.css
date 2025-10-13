@@ -100,19 +100,19 @@ body { font-size: clamp(14px, calc(14px * var(--ui-zoom) / 100), 20px); }
   #hdrControls{ display:flex; }
   #hdrControls #btnLogout{ order: 999; }
   #hdrControls #btnLogin{ order: 999; }
+  #hdrControls #authInfo{ order: 998; }            /* Signed in: next to Logout */
   #hdrControls #btnAdminLogin{ order: 998; }
-  #hdrControls #authInfo{ order: 998; }
-  #hdrControls #joinStatus{ order: 997; }
-  #hdrControls #btnViewerSearchEvent{ order: 996; }
+  #hdrControls #btnViewerSearchEvent{ order: 997; }
+  #hdrControls #joinStatus{ order: 996; }
 }
 @media (max-width: 767px){
   #hdrControls.hdr-mobile-panel{ display:grid; grid-template-columns: 1fr 1fr; }
   #hdrControls #btnLogout{ order: 999; justify-self: end; }
   #hdrControls #btnLogin{ order: 999; justify-self: end; }
+  #hdrControls #authInfo{ order: 998; }            /* Signed in near Logout */
   #hdrControls #btnAdminLogin{ order: 998; justify-self: end; }
-  #hdrControls #btnViewerSearchEvent{ order: 998; }
-  #hdrControls #joinStatus{ order: 997; }
-  #hdrControls #authInfo{ order: 996; }
+  #hdrControls #btnViewerSearchEvent{ order: 997; }
+  #hdrControls #joinStatus{ order: 996; }
 }
 
 /* Header Location pill */

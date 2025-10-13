@@ -27,7 +27,7 @@ async function refreshJoinUI(){
     const joinBtn = byId('btnJoinEvent');
     const statusWrap = byId('joinStatus');
     const nameEl = byId('joinedPlayerName');
-    if (!hasEvent || !isViewer()){
+    if (!hasEvent){
       joinBtn && joinBtn.classList.add('hidden');
       statusWrap && statusWrap.classList.add('hidden');
       return;
