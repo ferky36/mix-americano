@@ -761,11 +761,14 @@ function ensureDeleteEventButton(){
   if (!container) return;
   // Viewer tidak boleh menghapus event: sembunyikan tombol jika ada dan jangan buat baru
   try{
-    if (typeof isViewer==='function' && isViewer()){
+    const viewer = (typeof isViewer==='function' && isViewer());
+    const owner  = (typeof isOwnerNow==='function' && isOwnerNow());
+    if (viewer || !owner){
       const ex = byId('deleteEventBtn'); if (ex) ex.classList.add('hidden');
       return;
     }
   }catch{}
+  // Only owner reaches here; show existing button or create
   if (byId('deleteEventBtn')) { byId('deleteEventBtn').classList.remove('hidden'); return; }
   const openBtn = byId('openEventBtn');
   const del = document.createElement('button');
