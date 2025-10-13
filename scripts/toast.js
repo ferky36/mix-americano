@@ -72,16 +72,8 @@ async function loadAccessRoleFromCloud(){
     const uid = userData?.user?.id || null;
     if (!uid){ setAccessRole('viewer'); return; }
 
-    // Global owner (from auth-core): always editor, regardless of event ownership/membership
-    if (window._isOwnerUser) {
-      setAccessRole('editor');
-      roleDebug('global-owner=true -> editor full');
-      try{ ensureMaxPlayersField(); await loadMaxPlayersFromDB(); }catch{}
-      try{ ensureLocationFields(); await loadLocationFromDB(); }catch{}
-      try{ ensureJoinOpenFields();  await loadJoinOpenFromDB(); }catch{}
-      try{ getPaidChannel(); }catch{}
-      return;
-    }
+    // Note: do NOT auto-upgrade UI to editor based solely on global owner flag.
+    // UI role must follow per-event membership; global owner is handled via specific admin buttons.
 
     // 1) event owner shortcut (optional) — do NOT overwrite global owner flag
     try{
@@ -139,6 +131,9 @@ async function ensureCashAdminFlag(){
     try{ window._viewerScoreOnly = (memRole === 'wasit'); }catch{}
     roleDebug('ensureCashAdminFlag', { memRole, _isOwnerUser: window._isOwnerUser, _isCashAdmin: window._isCashAdmin, event: currentEventId, cloud:isCloudMode() });
     try{ renderWasitBadge?.(); renderRoleChip?.(); }catch{}
+    // If role info changed while UI is forced viewer (e.g., from viewer link),
+    // re-apply access mode so score-only (wasit) controls reflect correctly.
+    try{ applyAccessMode?.(); }catch{}
     // Jika membership sudah editor dan tidak forced viewer, naikkan UI ke editor
     try{
       const forced = !!window._forceViewer;
