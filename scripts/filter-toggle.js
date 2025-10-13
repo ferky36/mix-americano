@@ -128,9 +128,9 @@ function setEventModalTab(mode){
   const tabs = document.getElementById('eventTabs'); if (tabs) tabs.classList.remove('hidden');
   const titleEl = document.querySelector('#eventModal h3');
   if (!canCreate){
-    // Non-owner (viewer or editor non-owner): show only Search tab and content
+    // Non-owner (viewer or editor non-owner): hide both tabs, show Search content
     if (tCreate) tCreate.classList.add('hidden');
-    if (tSearch) tSearch.classList.remove('hidden');
+    if (tSearch) tSearch.classList.add('hidden');
     if (fCreate) fCreate.classList.add('hidden');
     if (titleEl) titleEl.textContent = 'Cari Event';
   } else {
@@ -487,7 +487,7 @@ function openSearchEventModal(){ setEventModalTab('search');
     const canCreate = (!viewer) && owner;
     if (!canCreate){
       byId('tabCreateEvent')?.classList.add('hidden');
-      byId('tabSearchEvent')?.classList.remove('hidden');
+      byId('tabSearchEvent')?.classList.add('hidden');
       byId('eventForm')?.classList.add('hidden');
       const titleEl = m.querySelector('h3'); if (titleEl) titleEl.textContent = 'Cari Event';
     } else {
