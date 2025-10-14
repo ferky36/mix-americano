@@ -923,3 +923,26 @@ input[type="time"].join-open-input {
     transition: transform .2s ease, background-color .2s ease, opacity .2s ease;
   }
 }
+
+/* Generic modal/popup open animations (CSS-only) */
+@media (prefers-reduced-motion: no-preference){
+  /* fade backdrop when container becomes visible */
+  [id$="Modal"]:not(.hidden),
+  [id$="Popup"]:not(.hidden),
+  #textModal:not(.hidden){
+    animation: modal-backdrop .22s ease both;
+  }
+  /* pop-in the dialog panel (assume last child is the panel) */
+  [id$="Modal"]:not(.hidden) > div:last-child,
+  [id$="Popup"]:not(.hidden) > div:last-child{
+    animation: modal-pop .22s cubic-bezier(.22,.61,.36,1) both;
+    transform-origin: center top;
+  }
+  /* inline small editor text popup */
+  #textModal:not(.hidden){
+    animation: modal-pop .18s cubic-bezier(.22,.61,.36,1) both;
+    transform-origin: center top;
+  }
+  @keyframes modal-backdrop{ from{ opacity:0 } to{ opacity:1 } }
+  @keyframes modal-pop{ from{ transform: translateY(10px) scale(.98); opacity:0 } to{ transform: translateY(0) scale(1); opacity:1 } }
+}
