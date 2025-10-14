@@ -15,6 +15,9 @@
     // Avoid double attach
     if (byId('mobileTabbar')) return;
 
+    // Initialize header chips mobile toggle before other DOM moves
+    try{ initHdrChipsToggleMobile(); }catch{}
+
     // Sections (do not change markup, just reference)
     const main = document.querySelector('main');
     if (!main) return;
@@ -146,6 +149,61 @@
     // Ensure Kas tab reflects current role after init
     try{ updateMobileCashTab?.(); }catch{}
     setTimeout(()=>{ try{ updateMobileCashTab?.(); }catch{} }, 300);
+
+    // --- helpers ---
+    function initHdrChipsToggleMobile(){
+      const chips = byId('hdrChips');
+      const title = byId('appTitle');
+      if (!chips || !title) return;
+      const row = title.parentElement || chips.parentElement || title;
+      try{ row.classList.add('relative'); }catch{}
+      // Add a small toggle button next to title (mobile only)
+      let btn = document.getElementById('btnHdrChipsToggle');
+      if (!btn){
+        btn = document.createElement('button');
+        btn.id = 'btnHdrChipsToggle';
+        btn.type = 'button';
+        // Absolutely align at the right edge of the title row (mobile only)
+        btn.className = 'absolute right-0 md:hidden w-9 h-9 grid place-items-center rounded-xl bg-white/20 text-white shadow hover:bg-white/30';
+        btn.title = 'Tampilkan/sembunyikan info header';
+        // append into the same row container so we can position absolute relative to it
+        row.appendChild(btn);
+      }
+      function setIcon(hidden){
+        // up = collapse available; down = expand
+        const up = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><polyline points="18 15 12 9 6 15"/></svg>';
+        const down = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><polyline points="6 9 12 15 18 9"/></svg>';
+        btn.innerHTML = hidden ? down : up;
+        btn.setAttribute('aria-label', hidden ? 'Tampilkan info' : 'Sembunyikan info');
+        btn.setAttribute('aria-expanded', hidden ? 'false' : 'true');
+      }
+      function alignBtn(){
+        try{
+          const pr = row.getBoundingClientRect();
+          const tr = title.getBoundingClientRect();
+          const bh = btn.getBoundingClientRect().height || 36;
+          const y = Math.max(0, Math.round((tr.top - pr.top) + ((tr.height - bh)/2)));
+          btn.style.top = y + 'px';
+        }catch{}
+      }
+      function apply(){
+        const hidden = localStorage.getItem('ui.hdrChips.hidden') === '1';
+        const mobile = isMobile();
+        chips.classList.toggle('chips-collapsed', hidden && mobile);
+        // keep button visible only on mobile, then align it
+        btn.classList.toggle('hidden', !mobile);
+        setIcon(hidden && mobile);
+        if (mobile) alignBtn();
+      }
+      btn.addEventListener('click', ()=>{
+        const prev = localStorage.getItem('ui.hdrChips.hidden') === '1';
+        localStorage.setItem('ui.hdrChips.hidden', prev ? '0' : '1');
+        apply();
+      });
+      apply();
+      window.addEventListener('resize', apply);
+      window.addEventListener('orientationchange', apply);
+    }
 
     function tabItem(key, label, iconSvg){
       const li = document.createElement('li');
@@ -803,3 +861,5 @@ function setupRecapAutoRefresh(host){
 }
 
 // (layout for filter grid is now handled statically by field creators)
+    // Mobile-only toggle to hide header chips (hdrChips) without touching other logic
+    try{ initHdrChipsToggleMobile(); }catch{}

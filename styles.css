@@ -904,3 +904,22 @@ input[type="time"].join-open-input {
   -webkit-appearance: none;
   appearance: textfield;
 }
+/* Mobile header chips collapse with smooth ease-in/out */
+@media (max-width: 640px){
+  #hdrChips{
+    overflow: hidden;
+    transition: max-height .25s ease, opacity .2s ease, margin-top .25s ease;
+  }
+  #hdrChips.chips-collapsed{
+    max-height: 0 !important;
+    opacity: 0;
+    margin-top: 0 !important;
+  }
+  #hdrChips:not(.chips-collapsed){
+    max-height: 160px;
+    opacity: 1;
+  }
+  #btnHdrChipsToggle{
+    transition: transform .2s ease, background-color .2s ease, opacity .2s ease;
+  }
+}

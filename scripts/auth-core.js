@@ -7,6 +7,7 @@ async function handleAuthRedirect(){
     const hasCode = /[?#&](code|access_token)=/.test(location.href) || hash.includes('type=recovery');
     if (hasCode && sb?.auth?.exchangeCodeForSession) {
       await sb.auth.exchangeCodeForSession(window.location.href);
+      try{ sessionStorage.setItem('auth.justExchanged','1'); }catch{}
       history.replaceState({}, '', location.pathname + location.search);
     }
   }catch(e){ console.warn('auth redirect handling failed', e); }
@@ -23,7 +24,12 @@ try {
     window.__authRoleWatcher = sb.auth.onAuthStateChange((event, _session)=>{
       // Event bisa: INITIAL_SESSION, SIGNED_IN, TOKEN_REFRESHED, USER_UPDATED, SIGNED_OUT
       try{
-        if (event === 'SIGNED_IN') { location.reload(); return; }
+        if (event === 'SIGNED_IN') {
+          const hash = location.hash || '';
+          const viaCode = /[?#&](code|access_token)=/.test(location.href) || hash.includes('type=recovery') || sessionStorage.getItem('auth.justExchanged')==='1';
+          const once = sessionStorage.getItem('auth.reloadOnce')==='1';
+          if (viaCode && !once){ sessionStorage.setItem('auth.reloadOnce','1'); location.reload(); return; }
+        }
         updateAuthUI?.();
       }catch{}
     });
@@ -43,8 +49,7 @@ async function updateAuthUI(){
     } else {
       if (!prev && now){
         sessionStorage.setItem('auth.prevUser','1');
-        location.reload();
-        return;
+        // reload handled once in onAuthStateChange
       }
       sessionStorage.setItem('auth.prevUser', now ? '1' : '0');
     }
