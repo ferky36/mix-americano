@@ -507,6 +507,28 @@ function normalizeLoadedSession(data){
 }
 
 
+// Ensure the latest visible score inputs in the active court table are reflected in roundsByCourt before serializing
+function syncVisibleScoresToState(){
+  try{
+    const table = document.querySelector('.rnd-table tbody');
+    if (!table) return;
+    const rows = table.querySelectorAll('tr[data-index]');
+    rows.forEach(tr => {
+      const idx = Number(tr.getAttribute('data-index'));
+      if (!Number.isFinite(idx)) return;
+      const aInp = tr.querySelector('.rnd-scoreA input');
+      const bInp = tr.querySelector('.rnd-scoreB input');
+      const aVal = aInp ? onlyDigits(aInp.value) : '';
+      const bVal = bInp ? onlyDigits(bInp.value) : '';
+      const arr = roundsByCourt[activeCourt] || [];
+      const r = arr[idx];
+      if (!r) return;
+      r.scoreA = aVal;
+      r.scoreB = bVal;
+    });
+  }catch{}
+}
+
 function startAutoSave() {
   clearInterval(window._autosaveTick);
   window._autosaveTick = setInterval(async () => {
@@ -522,3 +544,5 @@ function startAutoSave() {
 
 
 
+
+// (removed getEffectiveRoundsSnapshot wrapper to follow original score-modal flow)

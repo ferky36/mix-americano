@@ -848,7 +848,12 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 
 });
 
-document.addEventListener('DOMContentLoaded', boot);
+// Guarded boot hook: only attach if a global boot() exists
+try {
+  if (typeof boot === 'function') {
+    document.addEventListener('DOMContentLoaded', boot);
+  }
+} catch {}
 
 // Viewer-only quick access button to open Search modal
 function ensureViewerSearchButton(){

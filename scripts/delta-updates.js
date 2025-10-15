@@ -144,7 +144,13 @@ function highlightPlayer(name){
 
   function handleRowChange(payload){
     try{
+      try{ if (window.__suppressCloudUntil && Date.now() < window.__suppressCloudUntil) return; }catch{}
       const row = payload?.new || payload?.old || {};
+      try {
+        if (typeof _serverVersion !== 'undefined' && row && typeof row.version === 'number'){
+          if (row.version < _serverVersion) return; // ignore stale alt realtime payload
+        }
+      } catch {}
       const raw = (row && (row.session_date ?? row.sessionDate)) ?? null;
       if (raw){
         let key = '';

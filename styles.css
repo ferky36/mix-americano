@@ -946,3 +946,121 @@ input[type="time"].join-open-input {
   @keyframes modal-backdrop{ from{ opacity:0 } to{ opacity:1 } }
   @keyframes modal-pop{ from{ transform: translateY(10px) scale(.98); opacity:0 } to{ transform: translateY(0) scale(1); opacity:1 } }
 }
+/* ===== Modal/Popup ease-in animations (applies to new tennis score modals too) ===== */
+/* Animate any element whose id ends with "-modal" when it becomes visible (not .hidden) */
+[id$="-modal"]{
+  will-change: opacity, transform;
+}
+[id$="-modal"]:not(.hidden){
+  animation: modal-backdrop-in .18s ease-out both;
+}
+[id$="-modal"]:not(.hidden) > div{
+  animation: modal-zoom-in .22s cubic-bezier(.16,.84,.44,1) both;
+}
+
+/* Tennis score overlay container */
+#tsOverlay{
+  will-change: opacity, transform;
+}
+#tsOverlay:not(.hidden){
+  animation: modal-backdrop-in .18s ease-out both;
+}
+/* Animate the white panel inside overlay (the relative container) */
+#tsOverlay:not(.hidden) > div.relative{
+  animation: modal-zoom-in .22s cubic-bezier(.16,.84,.44,1) both;
+}
+
+@keyframes modal-backdrop-in{
+  from{ opacity: 0; }
+  to  { opacity: 1; }
+}
+@keyframes modal-zoom-in{
+  from{ opacity: 0; transform: translateY(8px) scale(.98); }
+  to  { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ===== Dark mode polish for Tennis Score overlay ===== */
+.dark #tsOverlay .relative{
+  background-color:#0f172a; /* slate-900 (softer) */
+  color:#e5e7eb;            /* slate-200 text */
+  border-color:#243044;     /* custom soft border */
+}
+.dark #tsTitle{ color:#e2e8f0; }
+.dark #game-score-display{
+  background-color:#0b1220; /* slightly lighter than base */
+  border-color:#2b374a;     /* soft slate border */
+}
+.dark #status-message{ color:#9ca3af; }
+.dark #mode-selector{
+  background-color:#1f2937; /* gray-800 */
+  color:#e5e7eb;
+  border-color:#475569;     /* slate-600 */
+  box-shadow: inset 0 0 0 2px rgba(51,65,85,.35);
+}
+.dark #tsOverlay label[for="mode-selector"]{ color:#c7d2fe; }
+.dark #timer-display{
+  background-color:#3a2a16; /* softer brown */
+  color:#fde68a;            /* amber-200 */
+  box-shadow: inset 0 0 0 2px #b98d4a; /* soft golden border */
+}
+.dark #start-match-btn{
+  background-color:#4f46e5; /* indigo-600 */
+  box-shadow:0 10px 20px rgba(79,70,229,.35);
+}
+.dark #finish-match-btn{ background-color:#10b981; } /* emerald-500 */
+.dark #force-reset-btn{ background-color:#dc2626; }  /* red-600 */
+.dark #score-t1{ color:#60a5fa; } /* blue-400 */
+.dark #score-t2{ color:#f87171; } /* red-400 */
+.dark #tsOverlay .score-btn[data-delta="-1"]{
+  background-color:#0f172a; /* slate-900 */
+  color:#e5e7eb;
+  border-color:#475569;     /* slate-600 */
+}
+
+/* Team panels (softer dark cards) */
+.dark #tsOverlay .flex-1.p-4{
+  background-color:#0f172a !important; /* override light bg-blue-50/70 */
+  border-color:#374151 !important;     /* gray-700 */
+}
+.dark #tsOverlay .flex-1.p-4 h2{ color:#93c5fd; }        /* blue title for A */
+.dark #tsOverlay .flex-1.p-4 + .flex-1.p-4 h2{ color:#fca5a5; } /* red title for B */
+
+/* ===== Light mode: soften tennis-score buttons (scoped to overlay) ===== */
+#tsOverlay #start-match-btn{
+  background-color:#6366f1; /* indigo-500 */
+  box-shadow:0 8px 16px rgba(99,102,241,.25);
+}
+#tsOverlay #start-match-btn:hover{ background-color:#4f46e5; }
+
+#tsOverlay #finish-match-btn{
+  background-color:#22c55e; /* emerald-500 */
+  box-shadow:0 8px 16px rgba(16,185,129,.22);
+}
+#tsOverlay #finish-match-btn:hover{ background-color:#16a34a; }
+
+#tsOverlay #force-reset-btn{
+  background-color:#ef4444; /* red-500 */
+  box-shadow:0 8px 16px rgba(239,68,68,.22);
+}
+#tsOverlay #force-reset-btn:hover{ background-color:#dc2626; }
+
+/* Score buttons: plus (team A/B) and minus */
+#tsOverlay .score-btn[data-team="1"][data-delta="1"]{
+  background-color:#3b82f6; /* blue-500 */
+  box-shadow:0 8px 16px rgba(59,130,246,.22);
+}
+#tsOverlay .score-btn[data-team="1"][data-delta="1"]:hover{ background-color:#2563eb; }
+
+#tsOverlay .score-btn[data-team="2"][data-delta="1"]{
+  background-color:#ef4444; /* red-500 */
+  box-shadow:0 8px 16px rgba(239,68,68,.22);
+}
+#tsOverlay .score-btn[data-team="2"][data-delta="1"]:hover{ background-color:#dc2626; }
+
+/* Minus buttons: neutral soft */
+#tsOverlay .score-btn[data-delta="-1"]{
+  background-color:#f3f4f6; /* gray-100 */
+  color:#374151;            /* gray-700 */
+  border:1px solid #d1d5db; /* gray-300 */
+}
+#tsOverlay .score-btn[data-delta="-1"]:hover{ background-color:#e5e7eb; }

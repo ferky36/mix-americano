@@ -173,6 +173,12 @@ async function loadStateFromCloud() {
   if (error) { console.error(error); hideLoading(); return false; }
 
   if (data && data.state) {
+    try {
+      if (typeof _serverVersion !== 'undefined' && typeof data.version === 'number' && data.version < _serverVersion) {
+        hideLoading();
+        return false; // ignore older snapshot
+      }
+    } catch {}
     console.log('Loaded state from Cloud, version', data);
     _serverVersion = data.version || 0;
     applyPayload(data.state);               // ← fungsi kamu yg sudah ada
@@ -190,6 +196,8 @@ async function loadStateFromCloud() {
 // Save (upsert) dengan optimistic concurrency
 async function saveStateToCloud() {
   try {
+    try{ if (typeof syncVisibleScoresToState === 'function') syncVisibleScoresToState(); }catch{}
+    try{ if (typeof syncVisibleScoresToState === 'function') syncVisibleScoresToState(); }catch{}
     const payload = currentPayload();       // ← fungsi kamu yg sudah ada
     // Gunakan waitingList lokal apa adanya (lokal otoritatif).
     const { data, error } = await sb.from('event_states')
@@ -246,7 +254,13 @@ function subscribeRealtimeForState(){
       table: 'event_states',
       filter: `event_id=eq.${currentEventId}`
     }, (payload) => {
+      try{ if (window.__suppressCloudUntil && Date.now() < window.__suppressCloudUntil) return; }catch{}
       const row = payload.new || payload.old || {};
+      try {
+        if (typeof _serverVersion !== 'undefined' && row && typeof row.version === 'number'){
+          if (row.version < _serverVersion) return; // ignore stale realtime payload
+        }
+      } catch {}
       // Be robust: row.session_date may be undefined or a Date-like value
       const raw = (row && (row.session_date ?? row.sessionDate)) ?? null;
       if (raw) {
@@ -320,6 +334,7 @@ function subscribeRealtimeForState(){
 
 // Versi tanpa overlay/loading untuk panggilan realtime agar tidak "flash" satu halaman
 async function loadStateFromCloudSilent() {
+  try{ if (window.__suppressCloudUntil && Date.now() < window.__suppressCloudUntil) return false; }catch{}
   const { data, error } = await sb.from('event_states')
     .select('state, version, updated_at')
     .eq('event_id', currentEventId)
@@ -327,6 +342,11 @@ async function loadStateFromCloudSilent() {
     .maybeSingle();
   if (error) { console.error(error); return false; }
   if (data && data.state) {
+    try {
+      if (typeof _serverVersion !== 'undefined' && typeof data.version === 'number' && data.version < _serverVersion) {
+        return false; // ignore older snapshot
+      }
+    } catch {}
     _serverVersion = data.version || 0;
     applyPayload(data.state);
     if (data.state.eventTitle) setAppTitle(data.state.eventTitle);
