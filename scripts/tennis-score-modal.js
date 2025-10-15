@@ -94,6 +94,7 @@
             </div>
             <p class="text-xl text-gray-700 font-semibold mt-4">Pemenang Pertandingan:</p>
             <p id="match-winner-text" class="text-2xl font-extrabold text-green-700 mt-1"></p>
+            <p id="event-finished-note" class="mt-4 text-sm text-gray-500 hidden">Permainan di event ini sudah selesai.</p>
             <button id="new-match-btn" class="mt-6 w-full py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg">Mulai Pertandingan Baru</button>
           </div>
         </div>
@@ -754,8 +755,23 @@ function scorePoint(team, delta){
             }
             // Restyle close button to gray + label
             if (closeBtn){
-              closeBtn.textContent = 'Tidak, nanti dulu';
-              closeBtn.className = 'w-full py-3 bg-gray-300 hover:bg-gray-400 text-gray-900 font-semibold rounded-lg';
+              // Determine if there is a next match; if none, show only a single close button
+              const c = tsCtx.court||0; const next = (tsCtx.round||0)+1;
+              const courtArr = roundsByCourt?.[c]||[];
+              const hasNext = !!courtArr[next];
+              const nb = modalBox?.querySelector('#next-match-btn');
+              const note = modalBox?.querySelector('#event-finished-note');
+              if (!hasNext){
+                if (nb) nb.classList.add('hidden');
+                closeBtn.textContent = 'Tutup';
+                closeBtn.className = 'w-full py-3 bg-gray-300 hover:bg-gray-400 text-gray-900 font-semibold rounded-lg';
+                if (note) note.classList.remove('hidden');
+              } else {
+                if (nb) nb.classList.remove('hidden');
+                closeBtn.textContent = 'Tidak, nanti dulu';
+                closeBtn.className = 'w-full py-3 bg-gray-300 hover:bg-gray-400 text-gray-900 font-semibold rounded-lg';
+                if (note) note.classList.add('hidden');
+              }
             }
           }
         } catch {}

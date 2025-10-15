@@ -984,8 +984,13 @@ input[type="time"].join-open-input {
   background-color:#0f172a; /* slate-900 (softer) */
   color:#e5e7eb;            /* slate-200 text */
   border-color:#243044;     /* custom soft border */
+  box-shadow: 0 10px 30px rgba(0,0,0,.35);
 }
 .dark #tsTitle{ color:#e2e8f0; }
+.dark #tsOverlay .mb-4.flex{
+  background-color:#0b1220 !important;   /* soft dark panel */
+  border-color:#2b374a !important;       /* soft slate border */
+}
 .dark #game-score-display{
   background-color:#0b1220; /* slightly lighter than base */
   border-color:#2b374a;     /* soft slate border */
@@ -998,6 +1003,9 @@ input[type="time"].join-open-input {
   box-shadow: inset 0 0 0 2px rgba(51,65,85,.35);
 }
 .dark #tsOverlay label[for="mode-selector"]{ color:#c7d2fe; }
+.dark #game-score-display .text-blue-700{ color:#60a5fa !important; }
+.dark #game-score-display .text-red-700{ color:#f87171 !important; }
+.dark #set-score-label{ color:#cbd5e1; }
 .dark #timer-display{
   background-color:#3a2a16; /* softer brown */
   color:#fde68a;            /* amber-200 */
@@ -1007,8 +1015,11 @@ input[type="time"].join-open-input {
   background-color:#4f46e5; /* indigo-600 */
   box-shadow:0 10px 20px rgba(79,70,229,.35);
 }
+.dark #start-match-btn:hover{ background-color:#4338ca; }
 .dark #finish-match-btn{ background-color:#10b981; } /* emerald-500 */
+.dark #finish-match-btn:hover{ background-color:#059669; }
 .dark #force-reset-btn{ background-color:#dc2626; }  /* red-600 */
+.dark #force-reset-btn:hover{ background-color:#b91c1c; }
 .dark #score-t1{ color:#60a5fa; } /* blue-400 */
 .dark #score-t2{ color:#f87171; } /* red-400 */
 .dark #tsOverlay .score-btn[data-delta="-1"]{
@@ -1021,9 +1032,22 @@ input[type="time"].join-open-input {
 .dark #tsOverlay .flex-1.p-4{
   background-color:#0f172a !important; /* override light bg-blue-50/70 */
   border-color:#374151 !important;     /* gray-700 */
+  box-shadow: inset 0 0 0 1px rgba(55,65,81,.35), 0 6px 16px rgba(0,0,0,.25);
 }
 .dark #tsOverlay .flex-1.p-4 h2{ color:#93c5fd; }        /* blue title for A */
 .dark #tsOverlay .flex-1.p-4 + .flex-1.p-4 h2{ color:#fca5a5; } /* red title for B */
+
+/* Player names visibility in dark mode */
+/* Non-serving players get a lighter slate tone for better contrast */
+.dark #tsOverlay .player-name.text-gray-600{ color:#cbd5e1 !important; } /* slate-300 */
+/* Serving player keeps orange highlight; add slight glow for readability */
+.dark #tsOverlay .player-name.text-orange-600{ text-shadow: 0 0 6px rgba(251,146,60,.25); }
+
+/* ===== Tennis Score overlay: enlarge player names for readability ===== */
+#tsOverlay .player-name{
+  font-size: 1.05rem !important; /* ~16-17px */
+  line-height: 1.35rem !important; /* ~22px */
+}
 
 /* ===== Light mode: soften tennis-score buttons (scoped to overlay) ===== */
 #tsOverlay #start-match-btn{
