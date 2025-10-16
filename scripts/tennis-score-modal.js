@@ -427,6 +427,15 @@ function showConfirmationModal(actionType, opts){
   }
   function startMatch(){
     if (state.timerInterval || state.isMatchFinished) return;
+    // Validasi: pastikan nama pemain di ronde ini sudah lengkap sebelum mulai
+    try{
+      const r = (roundsByCourt?.[tsCtx.court]||[])[tsCtx.round] || {};
+      const ready = !!(r.a1 && r.a2 && r.b1 && r.b2);
+      if (!ready){
+        tsShowToast('Nama pemain belum lengkap untuk ronde ini. Lengkapi Tim A dan Tim B terlebih dahulu.', 'error');
+        return;
+      }
+    }catch{}
     resetMatch(true,false);
     state.timerSeconds = getRoundMinutes()*60;
     state.isMatchRunning = true;
