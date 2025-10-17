@@ -457,18 +457,19 @@ async function switchToEvent(eventId, dateStr){
     currentEventId = eventId; currentSessionDate = normalizeDateKey(dateStr);
     const url = new URL(location.href); url.searchParams.set('event', eventId); url.searchParams.set('date', currentSessionDate); history.replaceState({}, '', url);
     const meta = await fetchEventMetaFromDB(eventId);
-    if (meta?.title) setAppTitle(meta.title);
-    renderEventLocation(meta?.location_text || '', meta?.location_url || '');
-    try{ ensureLocationFields(); await loadLocationFromDB(); }catch{}
-    const ok = await loadStateFromCloud();
+    // if (meta?.title) setAppTitle(meta.title);
+    // renderEventLocation(meta?.location_text || '', meta?.location_url || '');
+    // try{ ensureLocationFields(); await loadLocationFromDB(); }catch{}
+    // const ok = await loadStateFromCloud();
+    const ok = window.location.reload();
     if (!ok){ seedDefaultIfEmpty?.(); }
-    renderPlayersList?.(); renderAll?.(); validateNames?.();
-    subscribeRealtimeForState?.();
-    startAutoSave?.();
-    loadAccessRoleFromCloud?.();
-    refreshEventButtonLabel?.();
-    updateEventActionButtons?.();
-    refreshJoinUI?.();
+    // renderPlayersList?.(); renderAll?.(); validateNames?.();
+    // subscribeRealtimeForState?.();
+    // startAutoSave?.();
+    // loadAccessRoleFromCloud?.();
+    // refreshEventButtonLabel?.();
+    // updateEventActionButtons?.();
+    // refreshJoinUI?.();
   }catch(e){ console.warn('switchToEvent failed', e); }
   finally { hideLoading(); }
 }
@@ -609,6 +610,17 @@ byId('eventCreateBtn')?.addEventListener('click', async () => {
       alert('Event dengan nama itu di tanggal tersebut sudah ada.\nSilakan pilih nama lain atau tanggal lain.');
       return;
     }
+
+     players = [];
+    try{
+      if (!Array.isArray(waitingList)) waitingList = [];
+      waitingList.splice(0, waitingList.length);
+      window.waitingList = waitingList;
+    }catch{}
+    try{ Object.keys(playerMeta||{}).forEach(k => delete playerMeta[k]); }catch{}
+    markDirty();
+    renderPlayersList?.();
+    try{ renderViewerPlayersList?.(); }catch{}
 
     // update title
     setAppTitle(name);

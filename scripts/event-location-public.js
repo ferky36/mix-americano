@@ -136,21 +136,47 @@ async function fetchEventMetaFromDB(eventId){
 }
 
 // Show/Hide admin-only buttons based on URL flags and event context
-function updateAdminButtonsVisibility(){
-  try{
-    const p = getUrlParams?.() || {};
-    const forceViewer = String(p.view||'') === '1';
-    const hasEvent = !!currentEventId;
-    const adminFlag = String(p.owner||'').toLowerCase() === 'yes';
+async function updateAdminButtonsVisibility() {
+  let isOwner = false;
+
+  // Ambil user dengan fallback aman
+  let user = null;
+  try {
+    user = await getCurrentUser();
+  } catch (e) {
+    console.warn('getCurrentUser() failed:', e);
+  }
+
+  // Deklarasikan role dgn const/let, dan pakai optional chaining di user
+  const role = String(
+    user?.app_metadata?.role ?? user?.user_metadata?.role ?? ''
+  ).toLowerCase();
+
+  // Global owner hanya jika is_owner true atau role === 'owner'
+  isOwner = Boolean(
+    user?.app_metadata?.is_owner || user?.user_metadata?.is_owner || role === 'owner'
+  );
+
+  try {
+    const p = (typeof getUrlParams === 'function' ? getUrlParams() : {}) || {};
+    const forceViewer = String(p.view || '') === '1';
+    const hasEvent = Boolean(typeof currentEventId !== 'undefined' && currentEventId);
     const viewerNow = (typeof isViewer === 'function') ? isViewer() : false;
-    const isAdmin = adminFlag && !forceViewer && !viewerNow;
-    const btnCreate = byId('btnMakeEventLink');
-    const btnSave = byId('btnSave');
-    // In any viewer mode (including view=1), hide admin-centric buttons
+
+    const isAdmin = isOwner && !forceViewer && !viewerNow;
+
+    const btnCreate = byId?.('btnMakeEventLink');
+    const btnSave = byId?.('btnSave');
+
+    console.log('Updating admin buttons visibility:', { forceViewer, hasEvent, viewerNow, isAdmin });
+
     if (btnCreate) btnCreate.classList.toggle('hidden', !isAdmin);
-    if (btnSave) btnSave.classList.toggle('hidden', viewerNow || ! (isAdmin || hasEvent));
-  }catch{}
+    if (btnSave) btnSave.classList.toggle('hidden', viewerNow || !(isAdmin || hasEvent));
+  } catch (e) {
+    console.warn('updateAdminButtonsVisibility UI toggle failed:', e);
+  }
 }
+
 
 function leaveEventMode(clearLS = true) {
   // 1. Hapus parameter event & date dari URL
