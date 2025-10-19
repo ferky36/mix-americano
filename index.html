@@ -563,13 +563,13 @@
         <div>
           <label class="block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Tanggal</label>
           <select id="searchDateSelect" class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100">
-            <option value="">Pilih tanggal�</option>
+            <option value="">Pilih tanggal…</option>
           </select>
         </div>
         <div>
           <label class="block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Event di tanggal tersebut</label>
           <select id="searchEventSelect" class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100">
-            <option value="">� Pilih tanggal dulu �</option>
+            <option value="">Pilih tanggal dulu</option>
           </select>
         </div>
         <button id="openEventBtn" class="w-full px-3 py-2 rounded-xl bg-indigo-600 text-white font-semibold" disabled>
@@ -642,14 +642,22 @@
   <!-- <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script> -->
   <!-- Supabase SDK dari CDN -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-  <script type="module" id="supabase-init">
-
-    const SUPABASE_URL = 'https://edyneqtxtxdweczvcvvt.supabase.co';   // <- ganti dengan Project URL
-    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVkeW5lcXR4dHhkd2VjenZjdnZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYzNzM1MjgsImV4cCI6MjA3MTk0OTUyOH0.J_tYzbZ6fM4hw8QSiOaVcQwnPkUNC-uAZKe7W5i81DY'; // <- ganti dengan anon key
-
-    window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-    console.log('[Supabase] client ready:', !!window.sb);
-
+  <script id="supabase-init">
+    (function initSupabase(){
+      const SUPABASE_URL = 'https://edyneqtxtxdweczvcvvt.supabase.co';   // <- ganti dengan Project URL
+      const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVkeW5lcXR4dHhkd2VjenZjdnZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYzNzM1MjgsImV4cCI6MjA3MTk0OTUyOH0.J_tYzbZ6fM4hw8QSiOaVcQwnPkUNC-uAZKe7W5i81DY'; // <- ganti dengan anon key
+      if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+        console.error('[Supabase] global client library belum siap');
+        return;
+      }
+      window.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+      console.log('[Supabase] client ready:', !!window.sb);
+      try {
+        window.dispatchEvent(new CustomEvent('supabase-ready', { detail: window.sb }));
+      } catch (err) {
+        console.warn('[Supabase] gagal dispatch supabase-ready event', err);
+      }
+    })();
   </script>
   <script src="scripts/helpers.js?v=2025-08-29"></script>
   <script src="scripts/join-open.js?v=2025-08-29"></script>

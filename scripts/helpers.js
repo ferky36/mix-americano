@@ -331,14 +331,13 @@ function __applyFairnessFilter(){
     try{
       const sels = ['.rnd-col-time','[id^="tab-"]','[id^="section-"] h3','[id^="section-"] .text-xs','button','th','td','label','span'];
       document.querySelectorAll(sels.join(',')).forEach(el=>{
-        if (!el || el.children && el.children.length>0) return;
-        let t = String(el.textContent||'');
-        if (!t) return;
-        const orig = t;
-        t = t.replace(/�?"/g,'–').replace(/�?�/g,'·');
-        if (t !== orig) el.textContent = t;
+        if (!el || (el.children && el.children.length>0)) return;
+        const text = String(el.textContent||'');
+        if (!text) return;
+        const cleaned = text.replace(/\uFFFD+/g, '');
+        if (cleaned !== text) el.textContent = cleaned;
       });
-    }catch{}
+    }catch(err){ console.warn('sweepSeparators gagal', err); }
   }
   function ensureFairnessMobileStyles(){
     try{

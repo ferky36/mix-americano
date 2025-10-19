@@ -84,8 +84,17 @@ function clearScoresActive(){
   if (arr.length && arr.some(r => r && (r.scoreA || r.scoreB))) {
     if (!confirm('Hapus skor di lapangan aktif?')) return;
   }
-  arr.forEach(r => { if (r) { r.scoreA = ''; r.scoreB = ''; } });
-  markDirty(); renderAll(); computeStandings();
+  arr.forEach(r => {
+    if (r) {
+      r.scoreA = '';
+      r.scoreB = '';
+      try{ delete r.startedAt; }catch{}
+      try{ delete r.finishedAt; }catch{}
+    }
+  });
+  markDirty();
+  renderAll();
+  computeStandings();
 }
 
 function clearScoresAll(){

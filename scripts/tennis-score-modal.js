@@ -17,6 +17,7 @@
           <h1 id="tsTitle" class="text-2xl md:text-3xl font-extrabold text-gray-800">Penghitung Skor</h1>
           <button id="tsCloseBtn" class="px-3 py-1.5 rounded-lg border text-sm">Tutup</button>
         </div>
+        <p id="tsSchedule" class="text-sm text-gray-500 mb-3 hidden">Waktu Main Terjadwal: -</p>
 
         <div class="mb-4 flex flex-col md:flex-row justify-center items-center gap-2 md:gap-3 p-3 rounded-xl border border-indigo-200">
           <label for="mode-selector" class="text-sm font-semibold text-indigo-700">Pilih Metode Skor:</label>
@@ -94,6 +95,14 @@
             </div>
             <p class="text-xl text-gray-700 font-semibold mt-4">Pemenang Pertandingan:</p>
             <p id="match-winner-text" class="text-2xl font-extrabold text-green-700 mt-1"></p>
+            <p id="match-winner-names" class="text-lg text-gray-600 mt-1 hidden"></p>
+            <div id="next-match-info" class="mt-6 hidden">
+              <div class="mx-auto max-w-sm rounded-2xl border border-indigo-100 bg-indigo-50/60 px-4 py-3 text-center">
+                <p class="text-xs font-semibold uppercase tracking-wide text-indigo-600">Pertandingan Selanjutnya</p>
+                <p id="next-match-players" class="mt-2 text-base font-semibold text-gray-700"></p>
+                <p id="next-match-time" class="mt-1 text-xs text-gray-500"></p>
+              </div>
+            </div>
             <p id="event-finished-note" class="mt-4 text-sm text-gray-500 hidden">Permainan di event ini sudah selesai.</p>
             <button id="new-match-btn" class="mt-6 w-full py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg">Mulai Pertandingan Baru</button>
           </div>
@@ -179,6 +188,7 @@
       gamesDisplayContainer, gamesDisplayT1, gamesDisplayT2, matchResultsModal, timerDisplayEl, startMatchBtn,
       player1NameEl, player2NameEl, player3NameEl, player4NameEl, modeSelectorEl, setScoreLabelEl,
       actionConfirmModal, confirmActionBtn, confirmModalTitle, confirmModalDesc, currentPendingAction, tsTitleEl,
+      tsScheduleEl, matchWinnerNamesEl, nextMatchInfoEl, nextMatchPlayersEl, nextMatchTimeEl,
       finishBtnEl, forceResetBtnEl;
   let pendingCloseAfterReset = false; // if reset came from close request
 
@@ -204,6 +214,11 @@
     confirmModalTitle = $("confirm-modal-title");
     confirmModalDesc = $("confirm-modal-desc");
     tsTitleEl = $("tsTitle");
+    tsScheduleEl = $("tsSchedule");
+    matchWinnerNamesEl = $("match-winner-names");
+    nextMatchInfoEl = $("next-match-info");
+    nextMatchPlayersEl = $("next-match-players");
+    nextMatchTimeEl = $("next-match-time");
     finishBtnEl = $("finish-match-btn");
     forceResetBtnEl = $("force-reset-btn");
 
@@ -279,6 +294,123 @@
     const minutes = Math.floor(totalSeconds/60);
     const seconds = totalSeconds % 60;
     return `${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
+  }
+  function formatTeamNames(teamId){
+    const ids = teamId===1 ? [1,2] : teamId===2 ? [3,4] : [];
+    const names = ids.map(id => (playerDetails[id]?.name || '').trim()).filter(Boolean);
+    if (!names.length) return teamId===1 ? 'Tim A' : teamId===2 ? 'Tim B' : 'Tim';
+    return names.join(' & ');
+  }
+  function computeScheduledWindow(roundIdx){
+    try{
+      const startInput = byId('startTime');
+      if (!startInput || !startInput.value) return null;
+      const parts = startInput.value.split(':').map(v=>parseInt(v,10));
+      if (parts.length < 2 || parts.some(v=>Number.isNaN(v))) return null;
+      const baseMinutes = parts[0]*60 + parts[1];
+      const perRound = getRoundMinutes();
+      const rawBreak = parseInt(byId('breakPerRound')?.value || '0', 10);
+      const breakMinutes = Number.isFinite(rawBreak) ? Math.max(0, rawBreak) : 0;
+      const index = Math.max(0, Number(roundIdx||0));
+      const offset = index * (perRound + breakMinutes);
+      const startTotal = baseMinutes + offset;
+      const endTotal = startTotal + perRound;
+      const fmt = (total)=>{
+        const dayMinutes = 24*60;
+        const normalized = ((total % dayMinutes) + dayMinutes) % dayMinutes;
+        const h = Math.floor(normalized/60);
+        const m = normalized % 60;
+        return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+      };
+      return { start: fmt(startTotal), end: fmt(endTotal) };
+    }catch{ return null; }
+  }
+  function updateScheduledLabel(roundIdx){
+    if (!tsScheduleEl) return;
+    const slot = computeScheduledWindow(roundIdx);
+    if (slot){
+      tsScheduleEl.textContent = `Waktu Main Terjadwal: ${slot.start} - ${slot.end}`;
+      tsScheduleEl.classList.remove('hidden');
+    } else {
+      tsScheduleEl.textContent = '';
+      tsScheduleEl.classList.add('hidden');
+    }
+  }
+  function updateNextMatchInfo(cIdx = tsCtx.court, roundIdx = tsCtx.round, nextOverride = null){
+    if (!nextMatchInfoEl || !nextMatchPlayersEl) return;
+    if (cIdx == null || roundIdx == null){
+      nextMatchInfoEl.classList.add('hidden');
+      nextMatchPlayersEl.textContent = '';
+      if (nextMatchTimeEl){ nextMatchTimeEl.textContent=''; nextMatchTimeEl.classList.add('hidden'); }
+      return;
+    }
+    const nextRoundIdx = (roundIdx ?? -1) + 1;
+    let nextRound = nextOverride;
+    if (!nextRound) nextRound = (window.roundsByCourt?.[cIdx]||[])[nextRoundIdx];
+    if (!nextRound){
+      // Fallback: deduce from active court table (only one rendered at a time)
+      try{
+        const row = document.querySelector(`.rnd-table tbody tr[data-index="${nextRoundIdx}"]`);
+        if (row){
+          nextRound = {
+            a1: row.querySelector('.rnd-teamA-1 select')?.value || '',
+            a2: row.querySelector('.rnd-teamA-2 select')?.value || '',
+            b1: row.querySelector('.rnd-teamB-1 select')?.value || '',
+            b2: row.querySelector('.rnd-teamB-2 select')?.value || ''
+          };
+        }
+      }catch{}
+    }
+    if (!nextRound || (!nextRound.a1 && !nextRound.a2 && !nextRound.b1 && !nextRound.b2)){
+      nextMatchInfoEl.classList.add('hidden');
+      nextMatchPlayersEl.textContent = '';
+      if (nextMatchTimeEl){ nextMatchTimeEl.textContent=''; nextMatchTimeEl.classList.add('hidden'); }
+      return;
+    }
+    const getTeamNames = (team)=>{
+      const base = team===1
+        ? [nextRound.a1, nextRound.a2]
+        : [nextRound.b1, nextRound.b2];
+      let names = base.map(s => (s || '').trim()).filter(Boolean);
+      if (names.length === 0){
+        try{
+          const row = document.querySelector(`.rnd-table tbody tr[data-index="${nextRoundIdx}"]`);
+          if (row){
+            const cls = team===1 ? ['.rnd-teamA-1 select','.rnd-teamA-2 select'] : ['.rnd-teamB-1 select','.rnd-teamB-2 select'];
+            names = cls.map(sel => (row.querySelector(sel)?.value || '').trim()).filter(Boolean);
+          }
+        }catch{}
+      }
+      return names;
+    };
+    const teamANames = getTeamNames(1);
+    const teamBNames = getTeamNames(2);
+    const safeTeamA = teamANames.length ? teamANames.join(' & ') : 'Tim A';
+    const safeTeamB = teamBNames.length ? teamBNames.join(' & ') : 'Tim B';
+    const hasPlayers = teamANames.length || teamBNames.length;
+    const html = hasPlayers
+      ? `<div class="flex flex-col items-center text-gray-700 text-sm md:text-base gap-1">
+          <span>${safeTeamA}</span>
+          <span class="text-xs uppercase tracking-wide text-indigo-500">vs</span>
+          <span>${safeTeamB}</span>
+        </div>`
+      : '<div class="text-gray-500 text-sm">Pemain belum ditentukan</div>';
+    try{
+      nextMatchPlayersEl.innerHTML = html;
+    }catch{
+      nextMatchPlayersEl.textContent = hasPlayers ? `${safeTeamA} vs ${safeTeamB}` : 'Pemain belum ditentukan';
+    }
+    if (nextMatchTimeEl){
+      const slot = computeScheduledWindow(nextRoundIdx);
+      if (slot){
+        nextMatchTimeEl.textContent = `Terjadwal: ${slot.start} - ${slot.end}`;
+        nextMatchTimeEl.classList.remove('hidden');
+      } else {
+        nextMatchTimeEl.textContent = '';
+        nextMatchTimeEl.classList.add('hidden');
+      }
+    }
+    nextMatchInfoEl.classList.remove('hidden');
   }
   function rotateServer(){
     switch(state.currentPlayerServer){
@@ -357,17 +489,19 @@ function showConfirmationModal(actionType, opts){
       if (typeof computeStandings==='function') computeStandings();
       // Inline table sync
       try{
-        const row = document.querySelector(`.rnd-table tbody tr[data-index="${tsCtx.round}"]`);
-        const aInp = row?.querySelector('.rnd-scoreA input');
-        const bInp = row?.querySelector('.rnd-scoreB input');
-        if (aInp) aInp.value = '';
-        if (bInp) bInp.value = '';
-        const actions = row?.querySelector('.rnd-col-actions');
-        const live = actions?.querySelector('.live-badge');
-        const done = actions?.querySelector('.done-badge');
-        if (live) live.classList.add('hidden');
-        if (done) done.classList.add('hidden');
-        const btn = actions?.querySelector('button'); if (btn){ btn.textContent='Mulai Main'; btn.classList.remove('hidden'); }
+        document.querySelectorAll(`.rnd-table tbody tr[data-index="${tsCtx.round}"]`).forEach(row=>{
+          const aInp = row.querySelector('.rnd-scoreA input');
+          const bInp = row.querySelector('.rnd-scoreB input');
+          if (aInp) aInp.value = '';
+          if (bInp) bInp.value = '';
+          const actions = row.querySelector('.rnd-col-actions');
+          const live = actions?.querySelector('.live-badge');
+          const done = actions?.querySelector('.done-badge');
+          if (live) live.classList.add('hidden');
+          if (done) done.classList.add('hidden');
+          const btn = actions?.querySelector('button');
+          if (btn){ btn.textContent='Mulai Main'; btn.classList.remove('hidden'); }
+        });
       }catch{}
       // Save to Cloud immediately
       (async ()=>{ try{ if (typeof maybeAutoSaveCloud==='function') await maybeAutoSaveCloud(); else if (typeof saveStateToCloud==='function') await saveStateToCloud(); }catch{} })();
@@ -404,17 +538,19 @@ function showConfirmationModal(actionType, opts){
           try{ delete r.finishedAt; }catch{}
           // Sinkronkan tabel & tombol
           try{
-            const row = document.querySelector(`.rnd-table tbody tr[data-index="${tsCtx.round}"]`);
-            const actions = row?.querySelector('.rnd-col-actions');
-            const live = actions?.querySelector('.live-badge');
-            const done = actions?.querySelector('.done-badge');
-            if (live){ live.classList.add('hidden'); }
-            if (done){ done.classList.add('hidden'); }
-            const btn = actions?.querySelector('button'); if (btn){ btn.textContent='Mulai Main'; btn.classList.remove('hidden'); }
-            const aInp = row?.querySelector('.rnd-scoreA input');
-            const bInp = row?.querySelector('.rnd-scoreB input');
-            if (aInp) aInp.value = '';
-            if (bInp) bInp.value = '';
+            document.querySelectorAll(`.rnd-table tbody tr[data-index="${tsCtx.round}"]`).forEach(row=>{
+              const actions = row.querySelector('.rnd-col-actions');
+              const live = actions?.querySelector('.live-badge');
+              const done = actions?.querySelector('.done-badge');
+              if (live){ live.classList.add('hidden'); }
+              if (done){ done.classList.add('hidden'); }
+              const btn = actions?.querySelector('button');
+              if (btn){ btn.textContent='Mulai Main'; btn.classList.remove('hidden'); }
+              const aInp = row.querySelector('.rnd-scoreA input');
+              const bInp = row.querySelector('.rnd-scoreB input');
+              if (aInp) aInp.value = '';
+              if (bInp) bInp.value = '';
+            });
           }catch{}
           if (typeof markDirty==='function') markDirty();
           try{
@@ -492,7 +628,7 @@ function showConfirmationModal(actionType, opts){
     if (modeSelectorEl){
       let dis = false;
       try{
-        const saved = getCourtScoringMode?.(tsCtx.court);
+    const saved = getCourtScoringMode?.(tsCtx.court);
         const isSubsequent = (tsCtx.round||0) > 0;
         dis = state.isMatchRunning || state.isRecalcMode || (saved && isSubsequent);
       }catch{ dis = state.isMatchRunning || state.isRecalcMode; }
@@ -669,15 +805,35 @@ function scorePoint(team, delta){
     if (state.timerInterval){ clearInterval(state.timerInterval); state.timerInterval=null; setStartButtonLabel(); startMatchBtn.classList.remove('bg-red-600','hover:bg-red-700','shadow-red-500/50'); startMatchBtn.classList.add('bg-indigo-600','hover:bg-indigo-700','shadow-indigo-500/50'); if (!fromTimer) state.timerSeconds=0; }
     if (gameWonModal) gameWonModal.classList.add('hidden');
     let matchWinner; const scoreLabel = state.scoringMode==='RALLY' ? 'Total Poin' : 'Total Games';
-    if (state.gamesT1>state.gamesT2) matchWinner='Tim A'; else if (state.gamesT2>state.gamesT1) matchWinner='Tim B'; else matchWinner=`Seri/Tidak ditentukan (${scoreLabel} sama)`;
+    let winnerTeam = 0;
+    if (state.gamesT1>state.gamesT2) { matchWinner='Tim A'; winnerTeam = 1; }
+    else if (state.gamesT2>state.gamesT1) { matchWinner='Tim B'; winnerTeam = 2; }
+    else matchWinner=`Seri/Tidak ditentukan (${scoreLabel} sama)`;
     $("final-score-text").textContent = `${state.gamesT1} - ${state.gamesT2}`;
     $("match-winner-text").textContent = matchWinner; $("final-score-label").textContent = scoreLabel;
+    const winnerNamesTarget = matchWinnerNamesEl || $("match-winner-names");
+    if (winnerNamesTarget){
+      if (winnerTeam){
+        const names = formatTeamNames(winnerTeam);
+        if (names){ winnerNamesTarget.textContent = names; winnerNamesTarget.classList.remove('hidden'); }
+        else { winnerNamesTarget.textContent=''; winnerNamesTarget.classList.add('hidden'); }
+      } else {
+        winnerNamesTarget.textContent='';
+        winnerNamesTarget.classList.add('hidden');
+      }
+    }
+    try{
+      const courtArrForNext = (window.roundsByCourt?.[tsCtx.court] || []);
+      const nextData = courtArrForNext[(tsCtx.round ?? -1) + 1] || null;
+      updateNextMatchInfo(tsCtx.court, tsCtx.round, nextData);
+    }catch{}
     if (matchResultsModal){ matchResultsModal.classList.remove('hidden'); matchResultsModal.classList.add('flex'); }
     // Persist back to round if available
     try{
       if (tsCtx.court!=null && tsCtx.round!=null){
         const r = (roundsByCourt?.[tsCtx.court]||[])[tsCtx.round];
         if (r){
+          try{ r.__scoringMode = state.scoringMode; }catch{}
           if (state.isRecalcMode && state.pendingClearScore){
             r.scoreA = '';
             r.scoreB = '';
@@ -701,37 +857,40 @@ function scorePoint(team, delta){
 
         // Inline update current table row fields without waiting for full re-render
         try {
-          const row = document.querySelector(`.rnd-table tbody tr[data-index="${tsCtx.round}"]`);
-          const aInp = row?.querySelector('.rnd-scoreA input');
-          const bInp = row?.querySelector('.rnd-scoreB input');
-          if (state.isRecalcMode && state.pendingClearScore){
-            if (aInp) aInp.value = '';
-            if (bInp) bInp.value = '';
-          } else {
-            if (aInp) aInp.value = String(state.gamesT1);
-            if (bInp) bInp.value = String(state.gamesT2);
-          }
-          const actions = row?.querySelector('.rnd-col-actions');
-          const live = actions?.querySelector('.live-badge');
-          const done = actions?.querySelector('.done-badge');
-          if (state.isRecalcMode && state.pendingClearScore){
-            if (live) live.classList.add('hidden');
-            if (done) done.classList.add('hidden');
-            const btn = actions?.querySelector('button'); if (btn){ btn.textContent='Mulai Main'; btn.classList.remove('hidden'); }
-          } else {
-            if (live) { live.classList.add('fade-out'); setTimeout(()=>{ live.classList.add('hidden'); live.classList.remove('fade-out'); },150); }
-            if (done) { done.classList.remove('hidden'); done.classList.add('fade-in'); setTimeout(()=>done.classList.remove('fade-in'),200); }
-            const btn = actions?.querySelector('button'); if (btn){ btn.textContent='Hitung Ulang'; btn.classList.remove('hidden'); }
-          }
-          // Show "Hitung Ulang" for owner only after finished
-          const btn = actions?.querySelector('button');
-          const allowRecalc = (typeof window.isOwnerNow === 'function') ? window.isOwnerNow() : !!window._isOwnerUser;
-          if (btn){
-            btn.textContent = 'Hitung Ulang';
-            btn.disabled = false;
-            btn.classList.remove('opacity-50','cursor-not-allowed');
-            btn.classList.toggle('hidden', !allowRecalc);
-          }
+          document.querySelectorAll(`.rnd-table tbody tr[data-index="${tsCtx.round}"]`).forEach(row=>{
+            const aInp = row.querySelector('.rnd-scoreA input');
+            const bInp = row.querySelector('.rnd-scoreB input');
+            if (state.isRecalcMode && state.pendingClearScore){
+              if (aInp) aInp.value = '';
+              if (bInp) bInp.value = '';
+            } else {
+              if (aInp) aInp.value = String(state.gamesT1);
+              if (bInp) bInp.value = String(state.gamesT2);
+            }
+            const actions = row.querySelector('.rnd-col-actions');
+            const live = actions?.querySelector('.live-badge');
+            const done = actions?.querySelector('.done-badge');
+            if (state.isRecalcMode && state.pendingClearScore){
+              if (live) live.classList.add('hidden');
+              if (done) done.classList.add('hidden');
+              const btn = actions?.querySelector('button');
+              if (btn){ btn.textContent='Mulai Main'; btn.classList.remove('hidden'); }
+            } else {
+              if (live) { live.classList.add('fade-out'); setTimeout(()=>{ live.classList.add('hidden'); live.classList.remove('fade-out'); },150); }
+              if (done) { done.classList.remove('hidden'); done.classList.add('fade-in'); setTimeout(()=>done.classList.remove('fade-in'),200); }
+              const btn = actions?.querySelector('button');
+              if (btn){ btn.textContent='Hitung Ulang'; btn.classList.remove('hidden'); }
+            }
+            // Show "Hitung Ulang" for owner only after finished
+            const btn = actions?.querySelector('button');
+            const allowRecalc = (typeof window.isOwnerNow === 'function') ? window.isOwnerNow() : !!window._isOwnerUser;
+            if (btn){
+              btn.textContent = 'Hitung Ulang';
+              btn.disabled = false;
+              btn.classList.remove('opacity-50','cursor-not-allowed');
+              btn.classList.toggle('hidden', !allowRecalc);
+            }
+          });
         } catch {}
         // Post-finish actions: add Next Match button (normal mode only) and restyle close button
         try {
@@ -794,6 +953,10 @@ function scorePoint(team, delta){
     state.gameWinPending=false;
     if (fullReset){ setStartButtonLabel(); startMatchBtn.classList.remove('bg-red-600','hover:bg-red-700','shadow-red-500/50'); startMatchBtn.classList.add('bg-indigo-600','hover:bg-indigo-700','shadow-indigo-500/50'); }
     if (hideModals){ $("game-won-modal").classList.add('hidden'); $("match-results-modal").classList.add('hidden'); $("action-confirm-modal").classList.add('hidden'); }
+    if (matchWinnerNamesEl){ matchWinnerNamesEl.textContent=''; matchWinnerNamesEl.classList.add('hidden'); }
+    if (nextMatchInfoEl) nextMatchInfoEl.classList.add('hidden');
+    if (nextMatchPlayersEl) nextMatchPlayersEl.textContent='';
+    if (nextMatchTimeEl){ nextMatchTimeEl.textContent=''; nextMatchTimeEl.classList.add('hidden'); }
     if (!state.isMatchRunning && !state.isMatchFinished){ statusMessage.textContent='Pilih mode skor dan tekan Mulai Pertandingan.'; statusMessage.className='text-center text-gray-500 mt-2 text-sm'; }
     updateDisplay();
   }
@@ -840,6 +1003,13 @@ function scorePoint(team, delta){
     // Use saved scoring mode if desired; default stays as current
     if (modeSelectorEl) modeSelectorEl.value = state.scoringMode;
     try{ if (tsTitleEl) tsTitleEl.textContent = `Lapangan ${String((courtIdx||0)+1)} • Match ${String((roundIdx||0)+1)}`; }catch{}
+    try{ updateScheduledLabel(roundIdx); }catch{}
+    try{
+      if (matchWinnerNamesEl){ matchWinnerNamesEl.textContent=''; matchWinnerNamesEl.classList.add('hidden'); }
+      if (nextMatchInfoEl) nextMatchInfoEl.classList.add('hidden');
+      if (nextMatchPlayersEl) nextMatchPlayersEl.textContent='';
+      if (nextMatchTimeEl){ nextMatchTimeEl.textContent=''; nextMatchTimeEl.classList.add('hidden'); }
+    }catch{}
     try{ if (timerDisplayEl) timerDisplayEl.textContent = formatTime(getRoundMinutes()*60); }catch{}
     setStartButtonLabel();
     // Detect recalc (finished/have score) and prefill totals from court
@@ -851,7 +1021,9 @@ function scorePoint(team, delta){
         // Open in recalc mode: no timer, edit totals only
         state.isRecalcMode = true;
         state.isMatchRunning = false; state.isMatchFinished = false; state.gameWinPending = false;
-        state.scoringMode = 'RALLY'; if (modeSelectorEl){ modeSelectorEl.value = 'RALLY'; modeSelectorEl.disabled = true; modeSelectorEl.classList.add('disabled-select'); }
+        const savedMode = getCourtScoringMode?.(courtIdx) || r.__scoringMode || state.scoringMode || 'RALLY';
+        state.scoringMode = savedMode;
+        if (modeSelectorEl){ modeSelectorEl.value = savedMode; modeSelectorEl.disabled = true; modeSelectorEl.classList.add('disabled-select'); }
         state.gamesT1 = Number(r.scoreA || 0); state.gamesT2 = Number(r.scoreB || 0); state.pendingClearScore = false;
         // Hide start button and set timer text
         if (startMatchBtn) startMatchBtn.classList.add('hidden');
@@ -866,16 +1038,18 @@ function scorePoint(team, delta){
         // Enforce court scoring mode from Match 1 on subsequent matches
         try{
           const isSubsequent = (roundIdx||0) > 0;
-          const saved = getCourtScoringMode(courtIdx);
+          const savedCourt = getCourtScoringMode(courtIdx);
+          const roundSaved = r.__scoringMode || null;
           if (isSubsequent){
-            const mode = saved || state.scoringMode;
+            const mode = savedCourt || roundSaved || state.scoringMode;
             state.scoringMode = mode;
             if (modeSelectorEl){ modeSelectorEl.value = mode; modeSelectorEl.disabled = true; modeSelectorEl.classList.add('disabled-select'); }
           } else {
-            // Match 1: if already decided previously (e.g., finish of match 1), lock it too
-            if (saved){
-              state.scoringMode = saved;
-              if (modeSelectorEl){ modeSelectorEl.value = saved; modeSelectorEl.disabled = true; modeSelectorEl.classList.add('disabled-select'); }
+            // Match 1: if sudah ditentukan sebelumnya, pakai mode tersebut
+            const mode = savedCourt || roundSaved;
+            if (mode){
+              state.scoringMode = mode;
+              if (modeSelectorEl){ modeSelectorEl.value = mode; modeSelectorEl.disabled = true; modeSelectorEl.classList.add('disabled-select'); }
             } else {
               if (modeSelectorEl){ modeSelectorEl.disabled = false; modeSelectorEl.classList.remove('disabled-select'); }
             }
@@ -893,3 +1067,4 @@ function scorePoint(team, delta){
   };
   window.closeScoreModal = function(){ hideOverlay(); };
 })();
+

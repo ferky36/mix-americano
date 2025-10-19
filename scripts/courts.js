@@ -46,6 +46,7 @@ function renderCourt(container, arr) {
     // Allow wasit (score-only) to drag rows like editor
     tr.draggable = (!isViewer() || (typeof isScoreOnlyMode==='function' && isScoreOnlyMode()));
     tr.dataset.index = i;
+    try{ tr.dataset.court = String(activeCourt ?? 0); }catch{}
     tr.addEventListener("dragstart", (e) => {
       if (isViewer() && !(typeof isScoreOnlyMode==='function' && isScoreOnlyMode())) { e.preventDefault(); return; }
       tr.classList.add("row-dragging");

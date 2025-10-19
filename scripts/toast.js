@@ -197,7 +197,6 @@ async function loadStateFromCloud() {
 async function saveStateToCloud() {
   try {
     try{ if (typeof syncVisibleScoresToState === 'function') syncVisibleScoresToState(); }catch{}
-    try{ if (typeof syncVisibleScoresToState === 'function') syncVisibleScoresToState(); }catch{}
     const payload = currentPayload();       // ← fungsi kamu yg sudah ada
     // Gunakan waitingList lokal apa adanya (lokal otoritatif).
     const { data, error } = await sb.from('event_states')

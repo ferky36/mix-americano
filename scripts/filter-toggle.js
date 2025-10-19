@@ -5,6 +5,8 @@
   const btn = document.getElementById('btnFilterToggle');
   const chevron = document.getElementById('filterChevron');
   const panel = document.getElementById('filterPanel');
+  const CHEVRON_OPEN = '▲';   // chevron saat panel terbuka
+  const CHEVRON_CLOSED = '▼'; // chevron saat panel tertutup
 
   if(!btn || !panel) return;
 
@@ -17,12 +19,12 @@
   }
   open = open === '1';
   if (open) panel.classList.add('open'); else panel.classList.remove('open');
-  chevron.textContent = open ? '▴' : '▾';
+  chevron.textContent = open ? CHEVRON_OPEN : CHEVRON_CLOSED;
 
   btn.addEventListener('click', ()=>{
     panel.classList.toggle('open');
     const nowOpen = panel.classList.contains('open');
-    chevron.textContent = nowOpen ? '▴' : '▾';
+    chevron.textContent = nowOpen ? CHEVRON_OPEN : CHEVRON_CLOSED;
     localStorage.setItem(KEY, nowOpen ? '1' : '0');
   });
 })();
@@ -34,23 +36,30 @@ window.addEventListener('beforeunload', saveToLocalSilent);
 (function fixFilterPanelCollapsible(){
   const panel = document.getElementById('filterPanel');
   const chevron = document.getElementById('filterChevron');
+  const CHEVRON_PANEL_OPEN = '▲';
+  const CHEVRON_PANEL_CLOSED = '▼';
   if (!panel) return;
 
   function refresh(){
     if (panel.classList.contains('open')){
       try{ panel.style.maxHeight = (panel.scrollHeight + 24) + 'px'; panel.style.opacity = '1'; }catch{}
-      try{ if (chevron) chevron.textContent = '▲'; }catch{}
+      try{ if (chevron) chevron.textContent = CHEVRON_PANEL_OPEN; }catch{}
     } else {
       try{ panel.style.maxHeight = '0px'; panel.style.opacity = '0'; }catch{}
-      try{ if (chevron) chevron.textContent = '▼'; }catch{}
+      try{ if (chevron) chevron.textContent = CHEVRON_PANEL_CLOSED; }catch{}
     }
   }
 
   // Initial
   refresh();
-  // When panel content changes or class toggled
-  try{ new MutationObserver(refresh).observe(panel, { childList:true, subtree:true, attributes:true, attributeFilter:['class'] }); }catch{}
+  // When panel visibility toggles, keep inline styles in sync
+  try{
+    const observer = new MutationObserver(refresh);
+    observer.observe(panel, { attributes:true, attributeFilter:['class'] });
+    window.addEventListener('beforeunload', ()=>{ try{ observer.disconnect(); }catch(e){ console.warn('Filter panel observer cleanup failed', e); } });
+  }catch(e){ console.warn('Filter panel observer init failed', e); }
   window.addEventListener('resize', refresh);
+  try{ panel.addEventListener('transitionend', refresh); }catch(e){ console.warn('Filter panel transition hook failed', e); }
 })();
 
 
