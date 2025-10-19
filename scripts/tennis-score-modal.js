@@ -477,10 +477,13 @@ function showConfirmationModal(actionType, opts){
   function cancelAction(){ if (actionConfirmModal) actionConfirmModal.classList.add('hidden'); currentPendingAction=null; updateDisplay(); }
 
   function clearRoundScoreImmediate(){
+    let hasRoundContext = false;
     try{
       if (tsCtx.court==null || tsCtx.round==null) return;
-      const r = (roundsByCourt?.[tsCtx.court]||[])[tsCtx.round] || null;
+      const courtRounds = (roundsByCourt?.[tsCtx.court]||[]);
+      const r = courtRounds[tsCtx.round] || null;
       if (!r) return;
+      hasRoundContext = true;
       r.scoreA = '';
       r.scoreB = '';
       try{ delete r.startedAt; delete r.finishedAt; }catch{}
@@ -505,12 +508,28 @@ function showConfirmationModal(actionType, opts){
       }catch{}
       // Save to Cloud immediately
       (async ()=>{ try{ if (typeof maybeAutoSaveCloud==='function') await maybeAutoSaveCloud(); else if (typeof saveStateToCloud==='function') await saveStateToCloud(); }catch{} })();
-      // Reset local overlay state
-      state.gamesT1 = 0; state.gamesT2 = 0;
-      state.pendingClearScore = false;
-      state.isRecalcMode = true;
-      try{ if (timerDisplayEl) timerDisplayEl.textContent = 'Permainan Selesai'; }catch{}
     }catch{}
+    if (hasRoundContext) transitionToLiveModeAfterForceReset();
+  }
+
+  function transitionToLiveModeAfterForceReset(){
+    state.pendingClearScore = false;
+    state.isRecalcMode = false;
+    state.isMatchFinished = false;
+    state.isMatchRunning = false;
+    if (state.timerInterval){ clearInterval(state.timerInterval); state.timerInterval=null; }
+    try{ if (forceResetBtnEl) forceResetBtnEl.classList.add('hidden'); }catch{}
+    try{
+      if (startMatchBtn){
+        startMatchBtn.classList.remove('hidden');
+        startMatchBtn.disabled = false;
+      }
+    }catch{}
+    resetMatch(true,true);
+    setStartButtonLabel();
+    try{ if (statusMessage) statusMessage.classList.remove('hidden'); }catch{}
+    try{ if (finishBtnEl) finishBtnEl.textContent = 'Selesai & Lihat Hasil Pertandingan'; }catch{}
+    try{ document.querySelectorAll('#tsOverlay button[data-delta="-1"]').forEach(b=>b.classList.add('hidden')); }catch{}
   }
 
   function toggleMatchState(){
@@ -700,7 +719,7 @@ function showConfirmationModal(actionType, opts){
     }
   }
 
-function scorePoint(team, delta){
+  function scorePoint(team, delta){
     const d = (typeof delta==='number' && !isNaN(delta)) ? delta : 1;
     if (!state.isRecalcMode && (state.isMatchFinished || !state.isMatchRunning || (gameWonModal && !gameWonModal.classList.contains('hidden')))){
       statusMessage.textContent = 'Mulai pertandingan terlebih dahulu!';
