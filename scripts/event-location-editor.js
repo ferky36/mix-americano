@@ -223,10 +223,12 @@ function addPlayer(name) {
 
 
 function removePlayerFromRounds(name) {
+  const norm = s => String(s||'').trim().toLowerCase();
+  const target = norm(name);
   roundsByCourt.forEach(arr => {
     arr.forEach(r => {
       ["a1", "a2", "b1", "b2"].forEach(k => {
-        if (r && r[k] === name) r[k] = "";
+        if (r && norm(r[k]) === target) r[k] = "";
       });
     });
   });
@@ -235,9 +237,13 @@ function removePlayerFromRounds(name) {
 // Gantikan nama pemain di semua match (semua lapangan & ronde)
 function replaceNameInRounds(oldName, newName){
   if (!oldName || !newName) return;
+  const norm = s => String(s||'').trim().toLowerCase();
+  const from = norm(oldName);
   roundsByCourt.forEach(arr => {
     arr.forEach(r => {
-      ["a1","a2","b1","b2"].forEach(k=>{ if (r && r[k] === oldName) r[k] = newName; });
+      ["a1","a2","b1","b2"].forEach(k=>{
+        if (r && norm(r[k]) === from) r[k] = newName;
+      });
     });
   });
 }

@@ -114,6 +114,14 @@ function renderCourt(container, arr) {
       sel.appendChild(new Option("—", ""));
       players.forEach((p) => sel.appendChild(new Option(p, p)));
       sel.value = r[k] || "";
+      // If current assigned name is not in active players, keep it selectable
+      try{
+        const cur = r[k] || '';
+        if (cur && sel.value !== cur){
+          sel.appendChild(new Option(cur, cur));
+          sel.value = cur;
+        }
+      }catch{}
       // Wasit may change pairings in court container
       sel.disabled = (isViewer() && !(typeof isScoreOnlyMode==='function' && isScoreOnlyMode()));
       sel.addEventListener("change", (e) => {

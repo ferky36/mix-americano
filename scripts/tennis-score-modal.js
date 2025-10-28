@@ -45,9 +45,15 @@
         <div class="flex flex-col md:flex-row justify-between items-stretch gap-4">
           <div class="flex-1 p-4 bg-blue-50/70 border border-blue-100 rounded-lg flex flex-col items-center">
             <h2 class="text-lg md:text-xl font-extrabold text-blue-800 tracking-wider mb-2">Tim A</h2>
-            <div class="text-xs text-gray-600 mb-2 flex justify-center gap-2 w-full md:text-sm md:gap-4">
-              <p id="player-1-name" data-player-id="1" class="player-name transition duration-150 text-gray-600">P1</p>
-              <p id="player-2-name" data-player-id="2" class="player-name transition duration-150 text-gray-600">P2</p>
+            <div class="text-xs text-gray-600 mb-2 flex justify-center gap-3 w-full md:text-sm md:gap-4">
+              <div class="player-name-wrap">
+                <span class="serve-badge" data-serve-player="1"></span>
+                <p id="player-1-name" data-player-id="1" class="player-name transition duration-150 text-gray-600">P1</p>
+              </div>
+              <div class="player-name-wrap">
+                <span class="serve-badge" data-serve-player="2"></span>
+                <p id="player-2-name" data-player-id="2" class="player-name transition duration-150 text-gray-600">P2</p>
+              </div>
             </div>
             <div class="text-5xl md:text-7xl font-black text-blue-700 tracking-wider" id="score-t1">0</div>
             <div class="mt-4 w-full flex gap-3">
@@ -57,9 +63,15 @@
           </div>
           <div class="flex-1 p-4 bg-red-50/70 border border-red-100 rounded-lg flex flex-col items-center">
             <h2 class="text-lg md:text-xl font-extrabold text-red-800 tracking-wider mb-2">Tim B</h2>
-            <div class="text-xs text-gray-600 mb-2 flex justify-center gap-2 w-full md:text-sm md:gap-4">
-              <p id="player-3-name" data-player-id="3" class="player-name transition duration-150 text-gray-600">P3</p>
-              <p id="player-4-name" data-player-id="4" class="player-name transition duration-150 text-gray-600">P4</p>
+            <div class="text-xs text-gray-600 mb-2 flex justify-center gap-3 w-full md:text-sm md:gap-4">
+              <div class="player-name-wrap">
+                <span class="serve-badge" data-serve-player="3"></span>
+                <p id="player-3-name" data-player-id="3" class="player-name transition duration-150 text-gray-600">P3</p>
+              </div>
+              <div class="player-name-wrap">
+                <span class="serve-badge" data-serve-player="4"></span>
+                <p id="player-4-name" data-player-id="4" class="player-name transition duration-150 text-gray-600">P4</p>
+              </div>
             </div>
             <div class="text-5xl md:text-7xl font-black text-red-700 tracking-wider" id="score-t2">0</div>
             <div class="mt-4 w-full flex gap-3">
@@ -131,6 +143,39 @@
     .score-btn:active{ transform: scale(0.98); }
     .serving-player{ border-bottom:2px solid #f97316; padding-bottom:1px; }
     .disabled-select{ cursor:not-allowed; opacity:0.7; }
+    .player-name-wrap{ display:flex; align-items:center; gap:0.4rem; }
+    .serve-badge{
+      display:none;
+      align-items:center;
+      gap:0.2rem;
+      padding:2px 6px;
+      border-radius:999px;
+      border:1px solid rgba(34,197,94,0.35);
+      background:rgba(187,247,208,0.4);
+      box-shadow:0 2px 6px rgba(34,197,94,0.2);
+    }
+    .serve-badge-active{ display:inline-flex; }
+    .serve-ball-icon{
+      width:0.9rem;
+      height:0.9rem;
+      fill:#facc15;
+      stroke:#fde047;
+      stroke-width:0.8;
+    }
+    .serve-ball-icon path{ stroke:#fef9c3; stroke-width:0.8; fill:none; }
+    .serve-ball-icon-ghost{
+      fill:#d1d5db;
+      stroke:#e5e7eb;
+      opacity:0.7;
+    }
+  `;
+  const MAX_SERVE_BADGE_BALLS = 2;
+  const renderServeBallSvg = (isGhost=false)=>`
+    <svg viewBox="0 0 24 24" class="serve-ball-icon${isGhost ? ' serve-ball-icon-ghost' : ''}" aria-hidden="true">
+      <circle cx="12" cy="12" r="9.5"></circle>
+      <path d="M4.5 7c3 0 5 2.5 5 5s-2 5-5 5"></path>
+      <path d="M19.5 7c-3 0-5 2.5-5 5s2 5 5 5"></path>
+    </svg>
   `;
 
   function ensureOverlay(){
@@ -179,7 +224,9 @@
     timerSeconds:660, timerInterval:null, scoringMode:'TENNIS',
     gameWinPending:false,
     isRecalcMode:false,
-    pendingClearScore:false
+    pendingClearScore:false,
+    serveCounts:{1:0,2:0,3:0,4:0},
+    serveHistory:[]
   };
 
   // DOM refs
@@ -190,6 +237,7 @@
       actionConfirmModal, confirmActionBtn, confirmModalTitle, confirmModalDesc, currentPendingAction, tsTitleEl,
       tsScheduleEl, matchWinnerNamesEl, nextMatchInfoEl, nextMatchPlayersEl, nextMatchTimeEl,
       finishBtnEl, forceResetBtnEl;
+  let serveBadgeEls = {};
   let pendingCloseAfterReset = false; // if reset came from close request
 
   function bindElements(){
@@ -209,6 +257,11 @@
     player2NameEl = $("player-2-name");
     player3NameEl = $("player-3-name");
     player4NameEl = $("player-4-name");
+    serveBadgeEls = {};
+    document.querySelectorAll('#tsOverlay [data-serve-player]').forEach(el=>{
+      const pid = parseInt(el.getAttribute('data-serve-player'),10);
+      if (!Number.isNaN(pid)) serveBadgeEls[pid] = el;
+    });
     actionConfirmModal = $("action-confirm-modal");
     confirmActionBtn = $("confirm-action-btn");
     confirmModalTitle = $("confirm-modal-title");
@@ -419,6 +472,78 @@
       case 2: state.currentPlayerServer=4; break;
       case 4: state.currentPlayerServer=1; break;
     }
+    resetActiveServerBadge();
+  }
+  function rewindServerAfterCorrection(prevTotalPoints, currentTotalPoints){
+    const prevRotations = Math.floor(Math.max(0, prevTotalPoints)/2);
+    const currentRotations = Math.floor(Math.max(0, currentTotalPoints)/2);
+    if (prevRotations <= currentRotations) return;
+    const order = [1,3,2,4];
+    const nextIndex = ((currentRotations % order.length) + order.length) % order.length;
+    const correctedServer = order[nextIndex];
+    if (state.currentPlayerServer !== correctedServer){
+      state.currentPlayerServer = correctedServer;
+    }
+    if (statusMessage){
+      statusMessage.textContent = `Perbaikan skor: server kembali ke ${playerDetails[correctedServer].name}.`;
+      statusMessage.className = 'text-center text-gray-600 font-semibold mt-2 text-sm';
+    }
+  }
+  function resetActiveServerBadge(){
+    if (!state.serveCounts) state.serveCounts = {1:0,2:0,3:0,4:0};
+    state.serveCounts[state.currentPlayerServer] = 0;
+    updateServeBadges();
+  }
+  function resetServeTracking(){
+    state.serveCounts = {1:0,2:0,3:0,4:0};
+    state.serveHistory = [];
+    updateServeBadges();
+  }
+  function recordServeUsage(serverId){
+    if (state.isRecalcMode || !serverId) return;
+    if (!state.serveCounts) state.serveCounts = {1:0,2:0,3:0,4:0};
+    if (!state.serveCounts[serverId]) state.serveCounts[serverId]=0;
+    state.serveCounts[serverId]++;
+    state.serveHistory.push(serverId);
+  }
+  function undoServeUsage(){
+    if (state.isRecalcMode) return;
+    const removed = state.serveHistory.pop();
+    if (!removed) return;
+    if (!state.serveCounts) state.serveCounts = {1:0,2:0,3:0,4:0};
+    if (!state.serveCounts[removed]) state.serveCounts[removed]=0;
+    state.serveCounts[removed] = Math.max(0, state.serveCounts[removed]-1);
+  }
+  function applyServeTracking(pointDelta, serverBeforePoint){
+    if (state.isRecalcMode || !pointDelta) return;
+    if (pointDelta>0) recordServeUsage(serverBeforePoint);
+    else if (pointDelta<0) undoServeUsage();
+  }
+  function updateServeBadges(){
+    if (!serveBadgeEls) return;
+    const showBalls = state.scoringMode === 'RALLY' && !state.isRecalcMode;
+    Object.keys(serveBadgeEls).forEach(key=>{
+      const playerId = Number(key);
+      const el = serveBadgeEls[playerId];
+      if (!el || Number.isNaN(playerId)) return;
+      // Default: hide and clear
+      el.classList.remove('serve-badge-active');
+      el.innerHTML = '';
+      // Only show badge + balls in Rally mode while live editing
+      if (!showBalls) return;
+      const isServing = state.currentPlayerServer === playerId;
+      if (!isServing) return;
+      el.classList.add('serve-badge-active');
+      const rawCount = Math.max(0, state.serveCounts?.[playerId] || 0);
+      const visibleCount = Math.min(rawCount, MAX_SERVE_BADGE_BALLS);
+      if (visibleCount <= 0){
+        el.innerHTML = renderServeBallSvg(true);
+        return;
+      }
+      let markup = '';
+      for (let i=0;i<visibleCount;i++) markup += renderServeBallSvg(false);
+      el.innerHTML = markup;
+    });
   }
   function tsShowToast(message, type='warning'){
     const toastEl = $("toast-notification");
@@ -529,7 +654,6 @@ function showConfirmationModal(actionType, opts){
     setStartButtonLabel();
     try{ if (statusMessage) statusMessage.classList.remove('hidden'); }catch{}
     try{ if (finishBtnEl) finishBtnEl.textContent = 'Selesai & Lihat Hasil Pertandingan'; }catch{}
-    try{ document.querySelectorAll('#tsOverlay button[data-delta="-1"]').forEach(b=>b.classList.add('hidden')); }catch{}
   }
 
   function toggleMatchState(){
@@ -654,6 +778,7 @@ function showConfirmationModal(actionType, opts){
       modeSelectorEl.disabled = dis;
       modeSelectorEl.classList.toggle('disabled-select', dis);
     }
+    updateServeBadges();
     if (state.isMatchFinished){ statusMessage.textContent='PERTANDINGAN SELESAI!'; statusMessage.className='text-center text-red-600 font-bold mt-2 text-md'; if (state.isRecalcMode && statusMessage) statusMessage.classList.add('hidden'); return; }
     state.isDeuce=false; state.isAdvantageT1=false; state.isAdvantageT2=false;
     let scoreTextT1, scoreTextT2;
@@ -720,19 +845,40 @@ function showConfirmationModal(actionType, opts){
   }
 
   function scorePoint(team, delta){
-    const d = (typeof delta==='number' && !isNaN(delta)) ? delta : 1;
+    const dRaw = (typeof delta==='number' && !isNaN(delta)) ? delta : 1;
+    if (dRaw>1){
+      for (let i=0;i<dRaw;i++) scorePoint(team, 1);
+      return;
+    }
+    if (dRaw<-1){
+      for (let i=0;i<Math.abs(dRaw);i++) scorePoint(team, -1);
+      return;
+    }
+    if (dRaw===0) return;
+    const d = dRaw;
     if (!state.isRecalcMode && (state.isMatchFinished || !state.isMatchRunning || (gameWonModal && !gameWonModal.classList.contains('hidden')))){
       statusMessage.textContent = 'Mulai pertandingan terlebih dahulu!';
       statusMessage.className = 'text-center text-orange-600 font-bold mt-2 text-md';
       return;
     }
+    const serverBeforePoint = state.currentPlayerServer;
+    let pointDelta = 0;
     if (state.scoringMode==='RALLY'){
+      const prevTotalPoints = state.gamesT1 + state.gamesT2;
+      const prevTeamScore = team===1 ? state.gamesT1 : state.gamesT2;
       if (team===1) state.gamesT1 = Math.max(0, state.gamesT1 + d); else state.gamesT2 = Math.max(0, state.gamesT2 + d);
+      const newTeamScore = team===1 ? state.gamesT1 : state.gamesT2;
+      pointDelta = newTeamScore - prevTeamScore;
+      applyServeTracking(pointDelta, serverBeforePoint);
       const totalPoints = state.gamesT1 + state.gamesT2;
-      if (!state.isRecalcMode && totalPoints>0 && totalPoints % 2 === 0){
-        rotateServer();
-        statusMessage.textContent = `Server berotasi ke ${playerDetails[state.currentPlayerServer].name} (Setiap 2 poin).`;
-        statusMessage.className = 'text-center text-orange-600 font-bold mt-2 text-md';
+      if (!state.isRecalcMode){
+        if (pointDelta>0 && totalPoints>0 && totalPoints % 2 === 0){
+          rotateServer();
+          statusMessage.textContent = `Server berotasi ke ${playerDetails[state.currentPlayerServer].name} (Setiap 2 poin).`;
+          statusMessage.className = 'text-center text-orange-600 font-bold mt-2 text-md';
+        } else if (pointDelta<0 && prevTotalPoints !== totalPoints){
+          rewindServerAfterCorrection(prevTotalPoints, totalPoints);
+        }
       }
       // Realtime: tulis langsung ke state ronde agar ikut terserialisasi & terkirim ke Cloud
       try{
@@ -766,7 +912,11 @@ function showConfirmationModal(actionType, opts){
       }catch{}
     } else {
       // TENNIS mode: hanya update state poin game berjalan; JANGAN update DB/tabel sampai game dimenangkan
+      const prevTeamScore = team===1 ? state.scoreT1 : state.scoreT2;
       if (team===1) state.scoreT1 = Math.max(0, state.scoreT1 + d); else state.scoreT2 = Math.max(0, state.scoreT2 + d);
+      const newTeamScore = team===1 ? state.scoreT1 : state.scoreT2;
+      pointDelta = newTeamScore - prevTeamScore;
+      applyServeTracking(pointDelta, serverBeforePoint);
     }
     updateDisplay();
   }
@@ -969,6 +1119,7 @@ function showConfirmationModal(actionType, opts){
   function resetMatch(hideModals=true, fullReset=false){
     if (fullReset){ if (state.timerInterval){ clearInterval(state.timerInterval); state.timerInterval=null; } state.timerSeconds=getRoundMinutes()*60; state.isMatchRunning=false; }
     state.scoreT1=0; state.scoreT2=0; state.gamesT1=0; state.gamesT2=0; state.isDeuce=false; state.isAdvantageT1=false; state.isAdvantageT2=false; state.currentPlayerServer=1; state.isMatchFinished=false;
+    resetServeTracking();
     state.gameWinPending=false;
     if (fullReset){ setStartButtonLabel(); startMatchBtn.classList.remove('bg-red-600','hover:bg-red-700','shadow-red-500/50'); startMatchBtn.classList.add('bg-indigo-600','hover:bg-indigo-700','shadow-indigo-500/50'); }
     if (hideModals){ $("game-won-modal").classList.add('hidden'); $("match-results-modal").classList.add('hidden'); $("action-confirm-modal").classList.add('hidden'); }
@@ -1049,7 +1200,6 @@ function showConfirmationModal(actionType, opts){
         if (timerDisplayEl) timerDisplayEl.textContent = 'Permainan Selesai';
         if (finishBtnEl) finishBtnEl.textContent = 'Simpan Perubahan';
         try{ if (statusMessage) statusMessage.classList.add('hidden'); }catch{}
-        try{ document.querySelectorAll('#tsOverlay button[data-delta="-1"]').forEach(b=>b.classList.remove('hidden')); }catch{}
         try{ if (forceResetBtnEl) forceResetBtnEl.classList.remove('hidden'); }catch{}
       } else {
         // Normal mode: allow start (but lock mode for match > 1)
@@ -1077,7 +1227,6 @@ function showConfirmationModal(actionType, opts){
         if (startMatchBtn) startMatchBtn.classList.remove('hidden');
         if (finishBtnEl) finishBtnEl.textContent = 'Selesai & Lihat Hasil Pertandingan';
         try{ if (statusMessage) statusMessage.classList.remove('hidden'); }catch{}
-        try{ document.querySelectorAll('#tsOverlay button[data-delta="-1"]').forEach(b=>b.classList.add('hidden')); }catch{}
         try{ if (forceResetBtnEl) forceResetBtnEl.classList.add('hidden'); }catch{}
       }
     }catch{}

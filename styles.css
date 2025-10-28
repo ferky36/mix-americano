@@ -1011,11 +1011,11 @@ input[type="time"].join-open-input {
   color:#fde68a;            /* amber-200 */
   box-shadow: inset 0 0 0 2px #b98d4a; /* soft golden border */
 }
-.dark #start-match-btn{
-  background-color:#4f46e5; /* indigo-600 */
+/* .dark #start-match-btn{
+  background-color:#4f46e5; 
   box-shadow:0 10px 20px rgba(79,70,229,.35);
-}
-.dark #start-match-btn:hover{ background-color:#4338ca; }
+} */
+/* .dark #start-match-btn:hover{ background-color:#4338ca; } */
 .dark #finish-match-btn{ background-color:#10b981; } /* emerald-500 */
 .dark #finish-match-btn:hover{ background-color:#059669; }
 .dark #force-reset-btn{ background-color:#dc2626; }  /* red-600 */
@@ -1050,11 +1050,11 @@ input[type="time"].join-open-input {
 }
 
 /* ===== Light mode: soften tennis-score buttons (scoped to overlay) ===== */
-#tsOverlay #start-match-btn{
-  background-color:#6366f1; /* indigo-500 */
+/* #tsOverlay #start-match-btn{
+  background-color:#6366f1; 
   box-shadow:0 8px 16px rgba(99,102,241,.25);
-}
-#tsOverlay #start-match-btn:hover{ background-color:#4f46e5; }
+} */
+/* #tsOverlay #start-match-btn:hover{ background-color:#4f46e5; } */
 
 #tsOverlay #finish-match-btn{
   background-color:#22c55e; /* emerald-500 */
