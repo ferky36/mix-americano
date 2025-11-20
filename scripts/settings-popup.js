@@ -100,17 +100,78 @@
     return wrap;
   }
 
-  function show(){ const m = buildModal(); m.classList.remove('hidden'); syncFromSource(); }
+  async function show(){
+    const m = buildModal();
+    m.classList.remove('hidden');
+    await syncFromSource();
+  }
   function hide(){ const m = byId('settingsPopup'); if (m) m.classList.add('hidden'); }
 
   function setVal(el, v){ if (!el) return; const old=el.value||''; if (String(old)!==String(v||'')) el.value = v||''; }
   function pipe(src, dst){ if (!src||!dst) return; setVal(dst, src.value||''); dst.addEventListener('input', ()=>{ src.value = dst.value||''; src.dispatchEvent(new Event('input',{bubbles:true})); src.dispatchEvent(new Event('change',{bubbles:true})); }); }
 
-  function syncFromSource(){
+  async function syncFromSource(){
     // Ensure dynamic editor fields exist in source panel
     try{ window.ensureMaxPlayersField?.(); }catch{}
     try{ window.ensureLocationFields?.(); }catch{}
     try{ window.ensureJoinOpenFields?.(); }catch{}
+
+    // Selalu tarik meta terbaru dari DB saat popup dibuka agar tidak pakai cache stale antar owner
+    try{
+      if (window.sb && typeof currentEventId!=='undefined' && currentEventId){
+        let meta = null;
+        const res = await sb.from('events')
+          .select('location_text, location_url, join_open_at, max_players, htm, event_date')
+          .eq('id', currentEventId)
+          .maybeSingle();
+        if (!res.error) meta = res.data || null;
+        if (meta){
+          try{ setEventMetaCache?.(currentEventId, meta); }catch{}
+          try{ const lt = byId('locationTextInput'); if (lt) lt.value = meta.location_text || ''; }catch{}
+          try{ const lu = byId('locationUrlInput');  if (lu) lu.value = meta.location_url  || ''; }catch{}
+          try{
+            const mp = byId('maxPlayersInput');
+            if (mp){
+              mp.value = (meta.max_players || meta.max_players === 0) ? (meta.max_players||0) : '';
+              currentMaxPlayers = (Number.isFinite(meta.max_players) && meta.max_players > 0) ? meta.max_players : null;
+            }
+          }catch{}
+          try{
+            const htm = Number(meta.htm||0)||0;
+            window.__htmAmount = htm;
+            const inp = byId('spHTM'); if (inp) inp.value = htm;
+            const sum = document.getElementById('summaryHTM'); if (sum) sum.textContent = 'Rp'+(htm||0).toLocaleString('id-ID');
+          }catch{}
+          try{
+            const jo = meta.join_open_at ? new Date(meta.join_open_at) : null;
+            const d = byId('spJoinDate');
+            const t = byId('spJoinTime');
+            const mainD = byId('joinOpenDateInput');
+            const mainT = byId('joinOpenTimeInput');
+            if (jo && !isNaN(jo.getTime())){
+              const isoDate = jo.toISOString().slice(0,10);
+              const isoTime = jo.toISOString().slice(11,16);
+              if (d) d.value = isoDate;
+              if (t) t.value = isoTime;
+              if (mainD) mainD.value = isoDate;
+              if (mainT) mainT.value = isoTime;
+              window.joinOpenAt = combineDateTimeToISO?.(isoDate, isoTime) || jo.toISOString();
+            } else {
+              if (d) d.value = '';
+              if (t) t.value = '';
+              if (mainD) mainD.value = '';
+              if (mainT) mainT.value = '';
+              window.joinOpenAt = null;
+            }
+          }catch{}
+          try{
+            const sd = byId('sessionDate');
+            if (sd && meta.event_date) sd.value = String(meta.event_date).slice(0,10);
+          }catch{}
+          try{ renderEventLocation?.(meta.location_text||'', meta.location_url||''); }catch{}
+        }
+      }
+    }catch{}
 
     // Map modal inputs to source inputs
     const map = [
@@ -191,6 +252,8 @@
       try{
         const jd = byId('spJoinDate')?.value||''; const jt = byId('spJoinTime')?.value||'';
         window.joinOpenAt = (jd && jt && typeof combineDateTimeToISO==='function') ? combineDateTimeToISO(jd,jt) : null;
+        const joDate = byId('joinOpenDateInput'); if (joDate) joDate.value = jd;
+        const joTime = byId('joinOpenTimeInput'); if (joTime) joTime.value = jt;
       }catch{}
       // Use global variable (not window prop) since currentEventId is declared with let
       if (window.sb && (typeof currentEventId !== 'undefined') && currentEventId){
@@ -215,9 +278,18 @@
           htm
         };
         try{
-          
           const { error } = await sb.from('events').update(updatePayload).eq('id', currentEventId);
           if (error) throw error;
+          try{
+            // refresh meta cache to keep header/location in sync after save
+            if (typeof setEventMetaCache === 'function') {
+              setEventMetaCache(currentEventId, {
+                ...(window.getEventMetaCache ? getEventMetaCache(currentEventId) : {}),
+                ...updatePayload,
+                event_date: (byId('sessionDate')?.value||null)
+              });
+            }
+          }catch{}
         }catch(e){ console.warn('Save events meta failed', e); try{ showToast?.('Gagal menyimpan ke tabel events', 'error'); }catch{} }
       }
 
@@ -229,6 +301,7 @@
       try{ refreshFairness?.(); }catch{}
       try{ renderFilterSummary?.(); }catch{}
       try{ renderEventLocation?.(byId('spLocText')?.value||'', byId('spLocUrl')?.value||''); }catch{}
+      try{ refreshJoinUI?.(); }catch{}
       try{ showToast?.('Pengaturan disimpan', 'success'); }catch{}
       try{ hide(); }catch{}
     }catch(e){ console.warn(e); try{ showToast?.('Gagal menyimpan pengaturan', 'error'); }catch{} }
@@ -243,7 +316,7 @@
   function init(){
     const btn = ensureButton();
     buildModal();
-    btn && btn.addEventListener('click', (e)=>{ e.preventDefault(); if (!isViewer()) show(); });
+    btn && btn.addEventListener('click', async (e)=>{ e.preventDefault(); if (!isViewer()) await show(); });
     document.getElementById('spSave')?.addEventListener('click', (e)=>{ e.preventDefault(); if (!isViewer()) saveAll(); });
     // React to role changes via html[data-readonly]
     toggleBtnVisibility();

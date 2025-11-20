@@ -176,8 +176,10 @@ function setEventModalTab(mode){
   }
 }
 function openCreateEventModal(){
-  setEventModalTab("create"); byId('eventDateInput').value = byId('sessionDate').value || new Date().toISOString().slice(0,10);
-  byId('eventNameInput').value = document.querySelector('h1')?.textContent?.trim() || '';
+  setEventModalTab("create");
+  const today = byId('sessionDate')?.value || new Date().toISOString().slice(0,10);
+  try{ byId('eventDateInput').value = today; }catch{}
+  try{ byId('eventNameInput').value = ''; }catch{}
   byId('eventModal').classList.remove('hidden');
   // Ensure optional location fields exist in form
   try{
@@ -271,16 +273,23 @@ async function loadSearchDates(){
     showLoading('Memuat tanggal…');
     let rows;
     if (allowAll){
-      const r = await sb.from('event_states').select('session_date').order('session_date', { ascending: false });
+      const r = await sb.from('events')
+        .select('event_date')
+        .not('event_date','is',null)
+        .order('event_date', { ascending: false });
       rows = r.data;
     } else {
       if (!ids.length){ rows = []; }
       else {
-        const r = await sb.from('event_states').select('session_date').in('event_id', ids).order('session_date', { ascending: false });
+        const r = await sb.from('events')
+          .select('event_date')
+          .in('id', ids)
+          .not('event_date','is',null)
+          .order('event_date', { ascending: false });
         rows = r.data;
       }
     }
-    const seen = Array.from(new Set((rows||[]).map(r=>r.session_date).filter(Boolean)));
+    const seen = Array.from(new Set((rows||[]).map(r=>r.event_date).filter(Boolean)));
     window._searchEventDates = seen;
     // Choose default date: current if exists, else latest available
     const curPref = normalizeDateKey(byId('sessionDate')?.value || currentSessionDate || '');
@@ -414,23 +423,23 @@ async function loadSearchEventsForDate(dateStr){
   if ((!allowAll && !ids.length) || !dateStr){ evSel.innerHTML = '<option value="">— Tidak ada —</option>'; return; }
   try{
     showLoading('Memuat event…');
-    let states;
+    let evs;
     if (allowAll) {
-      const r = await sb.from('event_states')
-        .select('event_id, updated_at')
-        .eq('session_date', dateStr)
-        .order('updated_at', { ascending: false });
-      states = r.data;
+      const r = await sb.from('events')
+        .select('id,title')
+        .eq('event_date', dateStr)
+        .order('created_at', { ascending: false });
+      evs = r.data;
     } else {
-      const r = await sb.from('event_states')
-        .select('event_id, updated_at')
-        .eq('session_date', dateStr)
-        .in('event_id', ids)
-        .order('updated_at', { ascending: false });
-      states = r.data;
+      const r = await sb.from('events')
+        .select('id,title')
+        .eq('event_date', dateStr)
+        .in('id', ids)
+        .order('created_at', { ascending: false });
+      evs = r.data;
     }
-    const eids = Array.from(new Set((states||[]).map(r=>r.event_id).filter(Boolean)));
-    if (!eids.length){
+    const list = (evs||[]).map(r=>({ id: r.id, title: r.title }));
+    if (!list.length){
       // Jika kalender masih menandai tanggal ini (hijau) namun daftar event kosong,
       // sinkronkan highlight agar tidak menyesatkan.
       try{
@@ -442,11 +451,9 @@ async function loadSearchEventsForDate(dateStr){
       evSel.innerHTML = '<option value="">— Tidak ada —</option>';
       return;
     }
-    const { data: evs } = await sb.from('events').select('id,title').in('id', eids);
-    const titleMap = new Map((evs||[]).map(r=>[r.id, r.title || r.id]));
     evSel.innerHTML = '';
-    eids.forEach(id=>{
-      const o = document.createElement('option'); o.value = id; o.textContent = titleMap.get(id) || id; evSel.appendChild(o);
+    list.forEach(row=>{
+      const o = document.createElement('option'); o.value = row.id; o.textContent = row.title || row.id; evSel.appendChild(o);
     });
     // Pastikan ada yang terseleksi (default ke pertama)
     if (!evSel.value && evSel.options.length > 0) evSel.value = evSel.options[0].value;
@@ -463,22 +470,55 @@ async function switchToEvent(eventId, dateStr){
     showLoading('Membuka event…');
     // Putuskan channel realtime sebelumnya bila ada
     try{ unsubscribeRealtimeForState?.(); }catch{}
-    currentEventId = eventId; currentSessionDate = normalizeDateKey(dateStr);
-    const url = new URL(location.href); url.searchParams.set('event', eventId); url.searchParams.set('date', currentSessionDate); history.replaceState({}, '', url);
+    currentEventId = eventId;
+    currentSessionDate = normalizeDateKey(dateStr);
+    _serverVersion = 0;
+    const dateInput = byId('sessionDate'); if (dateInput) dateInput.value = currentSessionDate;
+    const url = new URL(location.href);
+    url.searchParams.set('event', eventId);
+    url.searchParams.set('date', currentSessionDate);
+    history.replaceState({}, '', url);
+
+    // Ambil meta agar judul/lokasi/htm/max players & locked date tersinkron
+    try{ renderEventLocation('', ''); }catch{} // clear chip while loading baru
     const meta = await fetchEventMetaFromDB(eventId);
-    // if (meta?.title) setAppTitle(meta.title);
-    // renderEventLocation(meta?.location_text || '', meta?.location_url || '');
-    // try{ ensureLocationFields(); await loadLocationFromDB(); }catch{}
-    // const ok = await loadStateFromCloud();
-    const ok = window.location.reload();
+    if (meta?.title) setAppTitle(meta.title);
+    renderEventLocation(meta?.location_text || '', meta?.location_url || '');
+    try{
+      window.__htmAmount = Number(meta?.htm||0)||0;
+      const s = document.getElementById('summaryHTM'); if (s) s.textContent = 'Rp'+(window.__htmAmount||0).toLocaleString('id-ID');
+    }catch{}
+    try{
+      if (!window.__lockedEventDateKey && currentSessionDate) window.__lockedEventDateKey = currentSessionDate;
+    }catch{}
+
+    // Clear local state snapshot to avoid bleed from previous event before loading new state
+    try{
+      players = [];
+      waitingList = [];
+      window.waitingList = waitingList;
+      playerMeta = {};
+      roundsByCourt = [[]];
+      courts = [];
+      currentMaxPlayers = meta?.max_players ?? null;
+      markDirty?.();
+      renderPlayersList?.(); renderViewerPlayersList?.(); renderAll?.(); validateNames?.();
+    }catch{}
+
+    // Load state for target event/date
+    let ok = false;
+    try{ ok = await loadStateFromCloud(); }catch{}
     if (!ok){ seedDefaultIfEmpty?.(); }
-    // renderPlayersList?.(); renderAll?.(); validateNames?.();
-    // subscribeRealtimeForState?.();
-    // startAutoSave?.();
-    // loadAccessRoleFromCloud?.();
-    // refreshEventButtonLabel?.();
-    // updateEventActionButtons?.();
-    // refreshJoinUI?.();
+    renderPlayersList?.(); renderAll?.(); validateNames?.(); refreshJoinUI?.();
+
+    // Re-subscribe and restart autosave/access
+    subscribeRealtimeForState?.();
+    startAutoSave?.();
+    loadAccessRoleFromCloud?.();
+    refreshEventButtonLabel?.();
+    updateEventActionButtons?.();
+    updateMobileCashTab?.();
+    try{ renderHeaderChips?.(); }catch{}
   }catch(e){ console.warn('switchToEvent failed', e); }
   finally { hideLoading(); }
 }
@@ -600,6 +640,37 @@ byId('eventCancelBtn')?.addEventListener('click', () => {
   byId('eventModal').classList.add('hidden');
 });
 
+// Reset seluruh state lokal sebelum menyimpan event baru agar payload tidak mewarisi event sebelumnya
+function __resetStateForNewEvent(date, title){
+  try{
+    players = [];
+    waitingList = [];
+    window.waitingList = waitingList;
+    playerMeta = {};
+    // kosongkan jadwal/rounds & courts
+    roundsByCourt = [[]];
+    courts = [];
+    currentMaxPlayers = null;
+    window.__htmAmount = 0;
+    // reset form fields
+    const setVal = (id, val)=>{
+      const el = byId(id);
+      if (!el) return;
+      if (typeof val === 'boolean' && 'checked' in el) el.checked = val;
+      else el.value = val;
+    };
+    setVal('startTime','');
+    setVal('minutesPerRound','');
+    setVal('breakPerRound','0');
+    setVal('roundCount','');
+    setVal('showBreakRows', false);
+    setVal('sessionDate', date || byId('sessionDate')?.value || '');
+    if (title) setAppTitle(title);
+    markDirty?.();
+    renderPlayersList?.(); renderViewerPlayersList?.(); renderAll?.(); validateNames?.();
+  }catch(e){ console.warn('reset state for new event failed', e); }
+}
+
 // Klik Create Event
 byId('eventCreateBtn')?.addEventListener('click', async () => {
   const btnCreate = byId('eventCreateBtn');
@@ -620,16 +691,26 @@ byId('eventCreateBtn')?.addEventListener('click', async () => {
       return;
     }
 
-     players = [];
+    __resetStateForNewEvent(date, name);
+    window.__lockedEventDateKey = date;
+    // Defaults for new event
     try{
-      if (!Array.isArray(waitingList)) waitingList = [];
-      waitingList.splice(0, waitingList.length);
-      window.waitingList = waitingList;
+      const mr = byId('minutesPerRound'); if (mr) mr.value = '11';
+      const spMr = byId('spMinutes'); if (spMr) spMr.value = '11';
     }catch{}
-    try{ Object.keys(playerMeta||{}).forEach(k => delete playerMeta[k]); }catch{}
-    markDirty();
-    renderPlayersList?.();
-    try{ renderViewerPlayersList?.(); }catch{}
+    try{
+      ensureMaxPlayersField?.();
+      const mp = byId('maxPlayersInput'); if (mp) mp.value = '10';
+      const spMp = byId('spMaxPlayers'); if (spMp) spMp.value = '10';
+      currentMaxPlayers = 10;
+    }catch{}
+    try{
+      const sbreak = byId('spBreak'); if (sbreak) sbreak.value = '1';
+      const sstart = byId('spStart'); if (sstart) sstart.value = '19:00';
+      const srounds = byId('spRounds'); if (srounds) srounds.value = '10';
+      const sjd = byId('spJoinDate'); if (sjd) sjd.value = date;
+      const sjt = byId('spJoinTime'); if (sjt) sjt.value = '15:00';
+    }catch{}
 
     // update title
     setAppTitle(name);

@@ -6,6 +6,7 @@
   const byId = (id)=> document.getElementById(id);
   const qs = (s, r=document)=> r.querySelector(s);
   const qsa = (s, r=document)=> Array.from(r.querySelectorAll(s));
+  const escapeHtml = (s)=> String(s ?? '').replace(/[&<>"']/g, (c)=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const fmtDateID = (raw)=>{
     try{
       if (!raw) return '';
@@ -57,8 +58,9 @@
       const total = Number(it.amount||0) * Number(it.pax||1);
       const baseLabel = it.label || '-';
       const label = rangeMode.active && it.eventTitle ? (`[${it.eventTitle}] ` + baseLabel) : baseLabel;
+      const safeLabel = escapeHtml(label);
       tr.innerHTML = `
-        <td class="py-2 pr-2">${label}</td>
+        <td class="py-2 pr-2">${safeLabel}</td>
         <td class="py-2 pr-2 text-right">${fmtIDR(it.amount)}</td>
         <td class="py-2 pr-2 text-right">${Number(it.pax||1)}</td>
         <td class="py-2 pr-2 text-right font-semibold">${fmtIDR(total)}</td>
@@ -101,11 +103,13 @@
         const card = document.createElement('section');
         card.className = 'rounded-2xl border dark:border-gray-700 bg-white dark:bg-gray-800 p-3 md:p-4';
         const dateText = fmtDateID(ev.date);
+        const safeDate = escapeHtml(dateText || '');
+        const safeTitle = escapeHtml((ev.title||'').trim()||'Event');
         card.innerHTML = `
           <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
             <div class="flex items-center gap-2 flex-wrap">
-              ${dateText ? `<span class=\"rounded-full border border-gray-200 bg-gray-100 text-gray-600 dark:border-gray-700 dark:bg-gray-800/70 dark:text-gray-300 text-xs px-2.5 py-1\">${dateText}</span>` : ''}
-              <span class="rounded-full border border-gray-200 bg-gray-100 text-gray-600 dark:border-gray-700 dark:bg-gray-800/70 dark:text-gray-300 text-xs px-2.5 py-1">${(ev.title||'').trim()||'Event'}</span>
+              ${dateText ? `<span class=\"rounded-full border border-gray-200 bg-gray-100 text-gray-600 dark:border-gray-700 dark:bg-gray-800/70 dark:text-gray-300 text-xs px-2.5 py-1\">${safeDate}</span>` : ''}
+              <span class="rounded-full border border-gray-200 bg-gray-100 text-gray-600 dark:border-gray-700 dark:bg-gray-800/70 dark:text-gray-300 text-xs px-2.5 py-1">${safeTitle}</span>
             </div>
             <div class="flex items-center gap-2 flex-wrap">
               <span class="rounded-full border border-emerald-200 bg-emerald-50 text-emerald-600 dark:border-gray-700 dark:bg-gray-800/70 dark:text-emerald-500 font-semibold px-3 py-1 text-sm">Masuk: ${fmtIDR(sumIn)}</span>
@@ -131,8 +135,9 @@
           items.forEach(it =>{
             const tr = document.createElement('tr');
             const total = Number(it.amount||0)*Number(it.pax||1);
+            const labelSafe = escapeHtml(it.label||'-');
             tr.innerHTML = `
-              <td class="py-2 pr-2">${it.label||'-'}</td>
+              <td class="py-2 pr-2">${labelSafe}</td>
               <td class="py-2 pr-2 text-right text-gray-700 dark:text-gray-300">${fmtIDR(it.amount)}</td>
               <td class="py-2 pr-2 text-right text-gray-700 dark:text-gray-300">${Number(it.pax||1)}</td>
               <td class="py-2 pr-2 text-right font-semibold">${fmtIDR(total)}</td>`;

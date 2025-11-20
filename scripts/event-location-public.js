@@ -111,15 +111,30 @@ async function fetchEventMetaFromDB(eventId){
   try{
     // Memoize to avoid duplicate SELECTs on reload
     const cached = (window.getEventMetaCache ? getEventMetaCache(eventId) : null);
-    if (cached) return cached;
+    if (cached){
+      try{
+        const nd = (typeof normalizeDateKey === 'function')
+          ? normalizeDateKey(cached?.event_date || '')
+          : String(cached?.event_date||'').slice(0,10);
+        if (nd) window.__lockedEventDateKey = nd;
+      }catch{}
+      return cached;
+    }
     showLoading('Memuat info event…');
     const { data, error } = await sb
       .from('events')
-      .select('title, location_text, location_url, htm, max_players, join_open_at, owner_id')
+      .select('title, location_text, location_url, htm, max_players, join_open_at, owner_id, event_date')
       .eq('id', eventId)
       .maybeSingle();
     if (error) return null;
     try{ window.setEventMetaCache?.(eventId, data||null); }catch{}
+    // Lock event date so sessionDate input cannot be moved to a different day for the same event_id
+    try{
+      const nd = (typeof normalizeDateKey === 'function')
+        ? normalizeDateKey(data?.event_date || '')
+        : String(data?.event_date||'').slice(0,10);
+      if (nd) window.__lockedEventDateKey = nd;
+    }catch{}
     // Early owner promotion to reduce viewer→owner flicker
     try{
       const u = await (window.getAuthUserCached ? getAuthUserCached() : sb.auth.getUser().then(r=>r.data));
@@ -229,4 +244,3 @@ try {
     };
   }
 } catch {}
-

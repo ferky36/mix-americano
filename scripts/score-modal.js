@@ -407,7 +407,17 @@ byId("roundCount").addEventListener("input", () => {
 
 // tanggal sesi diubah
 byId('sessionDate')?.addEventListener('change', async (e) => {
-  currentSessionDate = normalizeDateKey(e.target.value);
+  const newDate = normalizeDateKey(e.target.value);
+  try{
+    const locked = window.__lockedEventDateKey || '';
+    if (isCloudMode() && currentEventId && locked && locked !== newDate){
+      showToast?.('Tanggal event tidak boleh diubah. Buat event baru untuk tanggal lain.', 'warn');
+      e.target.value = locked;
+      currentSessionDate = locked;
+      return;
+    }
+  }catch{}
+  currentSessionDate = newDate;
   const url = new URL(location.href);
   url.searchParams.set('date', currentSessionDate);
   history.replaceState({}, "", url);

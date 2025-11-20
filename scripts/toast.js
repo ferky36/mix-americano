@@ -196,6 +196,14 @@ async function loadStateFromCloud() {
 // Save (upsert) dengan optimistic concurrency
 async function saveStateToCloud() {
   try {
+    // Lock: prevent saving to a different date than the event's original date
+    try{
+      const locked = window.__lockedEventDateKey || '';
+      if (isCloudMode() && currentEventId && locked && locked !== currentSessionDate){
+        showToast?.('Tanggal event tidak boleh diubah. Buat event baru untuk tanggal berbeda.', 'error');
+        return false;
+      }
+    }catch{}
     try{ if (typeof syncVisibleScoresToState === 'function') syncVisibleScoresToState(); }catch{}
     const payload = currentPayload();       // ← fungsi kamu yg sudah ada
     // Gunakan waitingList lokal apa adanya (lokal otoritatif).
