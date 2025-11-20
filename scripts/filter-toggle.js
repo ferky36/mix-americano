@@ -265,8 +265,15 @@ function getSearchDateValue(){
 async function loadSearchDates(){
   ensureSearchDateInput();
   const inp = byId('searchDateInput'); if (!inp) return;
-  // Semua role (owner/editor/admin/viewer) boleh melihat semua tanggal event
-  const allowAll = true;
+  // Viewer hanya melihat tanggal event yang pernah diikuti; owner/editor/admin melihat semua
+  const allowAll = (function(){
+    try{
+      if (typeof isViewer === 'function' && !isViewer()) return true;
+      if (typeof isOwnerNow === 'function' && isOwnerNow()) return true;
+      if (window._isCashAdmin) return true; // admin mode
+    }catch{}
+    return false;
+  })();
   let ids = [];
   if (!allowAll){ ids = await getMyEventIds(); }
   try{
@@ -417,8 +424,15 @@ async function loadSearchEventsForDate(dateStr){
   evSel.innerHTML = '<option value="">Memuat…</option>';
   btnOpen && (btnOpen.disabled = true);
   const delBtn = byId('deleteEventBtn'); if (delBtn) delBtn.disabled = true;
-  // Semua role dapat melihat semua event pada tanggal yang dipilih
-  const allowAll = true;
+  // Viewer hanya melihat event yang pernah diikuti; owner/editor/admin lihat semua
+  const allowAll = (function(){
+    try{
+      if (typeof isViewer === 'function' && !isViewer()) return true;
+      if (typeof isOwnerNow === 'function' && isOwnerNow()) return true;
+      if (window._isCashAdmin) return true;
+    }catch{}
+    return false;
+  })();
   const ids = allowAll ? [] : await getMyEventIds();
   if ((!allowAll && !ids.length) || !dateStr){ evSel.innerHTML = '<option value="">— Tidak ada —</option>'; return; }
   try{
