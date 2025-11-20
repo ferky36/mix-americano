@@ -288,36 +288,45 @@
       // Attempt using provided Excel template first; fallback to generated workbook
       async function __tryExportTemplate(evts){
         try{
-          const res = await fetch('enhancement/Laporan_Kas_Event_LIGHT.xlsx', { cache:'no-store' });
+          const res = await fetch('enhancement/final_cashflow.xlsx', { cache:'no-store' });
           if (!res.ok) throw new Error('Template not reachable');
           const ab = await res.arrayBuffer();
           const wbT = new ExcelJS.Workbook();
           await wbT.xlsx.load(ab);
-          const wsT = wbT.getWorksheet('Report') || wbT.worksheets[0];
+          const wsT = wbT.getWorksheet('Cashflow') || wbT.worksheets[0];
           if (!wsT) throw new Error('Sheet not found');
           const get = (r,c)=> wsT.getCell(r,c);
           const clone = (s)=> JSON.parse(JSON.stringify(s||{}));
-          const S = {
-            headLeft: clone(get(5,2).style), chipIn: clone(get(5,9).style), chipOut: clone(get(5,10).style), chipBal: clone(get(5,11).style),
-            secMasuk: clone(get(7,2).style), secKeluar: clone(get(7,8).style),
-            thB: clone(get(8,2).style), thC: clone(get(8,3).style), thD: clone(get(8,4).style), thE: clone(get(8,5).style),
-            thH: clone(get(8,8).style), thI: clone(get(8,9).style), thJ: clone(get(8,10).style), thK: clone(get(8,11).style),
-            tdB: clone(get(9,2).style), tdC: clone(get(9,3).style), tdD: clone(get(9,4).style), tdE: clone(get(9,5).style),
-            tdH: clone(get(9,8).style), tdI: clone(get(9,9).style), tdJ: clone(get(9,10).style), tdK: clone(get(9,11).style),
-            tlMasuk: clone(get(11,2).style), tvMasuk: clone(get(11,5).style), tlKeluar: clone(get(11,8).style), tvKeluar: clone(get(11,11).style),
-            gtTitle: clone(get(21,2).style), inLbl: clone(get(22,2).style), inVal: clone(get(22,5).style), outLbl: clone(get(22,8).style), outVal: clone(get(22,11).style), balLbl: clone(get(23,2).style), balVal: clone(get(23,5).style)
+          // Ambil style dari template final_cashflow.xlsx
+          const findStyle = (text, col)=> {
+            for (let r=1; r<=wsT.rowCount; r++){
+              for (let c=1; c<=wsT.columnCount; c++){
+                const v = wsT.getCell(r,c).value;
+                if (v === text && (col ? c===col : true)) return wsT.getCell(r,c).style;
+              }
+            }
+            return {};
           };
-          // Title and period
-          try{ wsT.mergeCells(1,2,1,5); }catch{}
-          get(1,2).value = 'Laporan Cashflow Padel NBC';
+          const S = {
+            headLeft: clone(get(3,1).style), chipIn: clone(get(3,7).style), chipOut: clone(get(3,8).style), chipBal: clone(get(3,10).style),
+            secMasuk: clone(get(4,1).style), secKeluar: clone(get(4,7).style),
+            thB: clone(get(5,1).style), thC: clone(get(5,2).style), thD: clone(get(5,3).style), thE: clone(get(5,4).style),
+            thH: clone(get(5,7).style), thI: clone(get(5,8).style), thJ: clone(get(5,9).style), thK: clone(get(5,10).style),
+            tdB: clone(get(6,1).style), tdC: clone(get(6,2).style), tdD: clone(get(6,3).style), tdE: clone(get(6,4).style),
+            tdH: clone(get(6,7).style), tdI: clone(get(6,8).style), tdJ: clone(get(6,9).style), tdK: clone(get(6,10).style),
+            tlMasuk: clone(findStyle('Total Masuk:', 1)), tvMasuk: clone(findStyle('Total Masuk:', 1)), // value style reuse; formula style below
+            tlKeluar: clone(findStyle('Total Keluar:', 7)), tvKeluar: clone(findStyle('Total Keluar:', 7)),
+            gtTitle: clone(findStyle('Total Keseluruhan', 1)), inLbl: clone(findStyle('Masuk:', 1)), inVal: clone(findStyle('Masuk:', 4)), outLbl: clone(findStyle('Keluar:', 1)), outVal: clone(findStyle('Keluar:', 4)), balLbl: clone(findStyle('Sisa:', 1)), balVal: clone(findStyle('Sisa:', 4))
+          };
+          // Title dan periode dibiarkan seperti template (sudah berisi judul); hanya perbarui periode
           let period = '';
           if (rangeMode.active){ const d1 = evts[0]?.date||rangeMode.start||''; const d2 = evts[evts.length-1]?.date||rangeMode.end||''; period = (d1||d2)? `${d1} s/d ${d2}` : ''; }
           else { period = (byId('cashEventInfo')?.textContent||'').trim(); }
-          get(2,3).value = period;
+          try{ get(2,1).value = `Periode: ${period}`; }catch{}
 
-          // Clear rows after header
-          if (wsT.rowCount>4) wsT.spliceRows(5, wsT.rowCount-4);
-          let r0 = 5; const nf = new Intl.NumberFormat('id-ID',{maximumFractionDigits:0});
+          // Bersihkan konten lama setelah baris template awal (mulai row3)
+          if (wsT.rowCount>5) wsT.spliceRows(3, wsT.rowCount-2);
+          let r0 = 3; const nf = new Intl.NumberFormat('id-ID',{maximumFractionDigits:0});
           const leftTotals=[]; const rightTotals=[];
           const fmtDate = (d)=>{ try{ return new Date(String(d||'').slice(0,10)+'T00:00:00').toLocaleDateString('id-ID',{ weekday:'long', day:'2-digit', month:'long', year:'numeric' }); }catch{ return String(d||''); } };
 
@@ -325,44 +334,55 @@
             const sIn = (ev.masuk||[]).reduce((a,x)=> a+Number(x.amount||0)*Number(x.pax||1),0);
             const sOut= (ev.keluar||[]).reduce((a,x)=> a+Number(x.amount||0)*Number(x.pax||1),0);
             const bal = sIn - sOut;
-            // Header
-            get(r0,2).value = fmtDate(ev.date||''); get(r0,2).style = S.headLeft; get(r0,3).value = ev.title||'';
-            get(r0,9).value = `Masuk: Rp ${nf.format(sIn)}`;   get(r0,9).style = S.chipIn;
-            get(r0,10).value= `Keluar: Rp ${nf.format(sOut)}`; get(r0,10).style= S.chipOut;
-            get(r0,11).value= `Sisa: Rp ${nf.format(bal)}`;    get(r0,11).style= S.chipBal;
-            r0 += 2;
+            const rowsIn = (ev.masuk||[]).filter(r=>{
+              if (!r) return false;
+              const hasLabel = String(r.label||'').trim().length>0;
+              const hasValue = Number(r.amount||0)!==0 || Number(r.pax||0)!==0;
+              return hasLabel || hasValue;
+            });
+            const rowsOut = (ev.keluar||[]).filter(r=>{
+              if (!r) return false;
+              const hasLabel = String(r.label||'').trim().length>0;
+              const hasValue = Number(r.amount||0)!==0 || Number(r.pax||0)!==0;
+              return hasLabel || hasValue;
+            });
+            // Header (row r0)
+            get(r0,1).value = `${fmtDate(ev.date||'')}     ${ev.title||''}`; get(r0,1).style = S.headLeft;
+            get(r0,7).value = `Masuk: ${nf.format(sIn)}`;   get(r0,7).style = S.chipIn;
+            get(r0,8).value = `Keluar: ${nf.format(sOut)}`; get(r0,8).style = S.chipOut;
+            get(r0,10).value= `Sisa: ${nf.format(bal)}`;    get(r0,10).style= S.chipBal;
+            r0 += 1;
             // Section titles
-            try{ wsT.mergeCells(r0,2,r0,5); }catch{}
-            get(r0,2).value='UANG MASUK'; get(r0,2).style=S.secMasuk;
-            try{ wsT.mergeCells(r0,8,r0,11); }catch{}
-            get(r0,8).value='UANG KELUAR'; get(r0,8).style=S.secKeluar;
+            get(r0,1).value='UANG MASUK'; get(r0,1).style=S.secMasuk;
+            get(r0,7).value='UANG KELUAR'; get(r0,7).style=S.secKeluar;
+            r0 +=1;
             // Column headers
-            get(r0+1,2).value='ITEM';   get(r0+1,2).style=S.thB; get(r0+1,3).value='AMOUNT'; get(r0+1,3).style=S.thC; get(r0+1,4).value='PAX'; get(r0+1,4).style=S.thD; get(r0+1,5).value='TOTAL'; get(r0+1,5).style=S.thE;
-            get(r0+1,8).value='ITEM';   get(r0+1,8).style=S.thH; get(r0+1,9).value='AMOUNT'; get(r0+1,9).style=S.thI; get(r0+1,10).value='PAX'; get(r0+1,10).style=S.thJ; get(r0+1,11).value='TOTAL'; get(r0+1,11).style=S.thK;
+            get(r0,1).value='ITEM';   get(r0,1).style=S.thB; get(r0,2).value='AMOUNT'; get(r0,2).style=S.thC; get(r0,3).value='PAX'; get(r0,3).style=S.thD; get(r0,4).value='TOTAL'; get(r0,4).style=S.thE;
+            get(r0,7).value='ITEM';   get(r0,7).style=S.thH; get(r0,8).value='AMOUNT'; get(r0,8).style=S.thI; get(r0,9).value='PAX'; get(r0,9).style=S.thJ; get(r0,10).value='TOTAL'; get(r0,10).style=S.thK;
             // Data rows
-            let r = r0+2; const max = Math.max(ev.masuk?.length||0, ev.keluar?.length||0);
+            let r = r0+1; const max = Math.max(rowsIn.length||0, rowsOut.length||0);
             for(let i=0;i<max;i++){
-              const m = ev.masuk?.[i]; const k = ev.keluar?.[i];
-              get(r,2).value = m ? (m.label||'-') : null; get(r,2).style=S.tdB;
-              get(r,3).value = m ? Number(m.amount||0) : null; get(r,3).style=S.tdC;
-              get(r,4).value = m ? Number(m.pax||1) : null; get(r,4).style=S.tdD;
-              get(r,5).value = m ? { formula: `C${r}*D${r}` } : null; get(r,5).style=S.tdE;
-              get(r,8).value = k ? (k.label||'-') : null; get(r,8).style=S.tdH;
-              get(r,9).value = k ? Number(k.amount||0) : null; get(r,9).style=S.tdI;
-              get(r,10).value= k ? Number(k.pax||1) : null; get(r,10).style=S.tdJ;
-              get(r,11).value= k ? { formula: `I${r}*J${r}` } : null; get(r,11).style=S.tdK;
+              const m = rowsIn[i]; const k = rowsOut[i];
+              get(r,1).value = m ? (m.label||'-') : null; get(r,1).style=S.tdB;
+              get(r,2).value = m ? Number(m.amount||0) : null; get(r,2).style=S.tdC;
+              get(r,3).value = m ? Number(m.pax||1) : null; get(r,3).style=S.tdD;
+              get(r,4).value = m ? { formula: `B${r}*C${r}` } : null; get(r,4).style=S.tdE;
+              get(r,7).value = k ? (k.label||'-') : null; get(r,7).style=S.tdH;
+              get(r,8).value = k ? Number(k.amount||0) : null; get(r,8).style=S.tdI;
+              get(r,9).value = k ? Number(k.pax||1) : null; get(r,9).style=S.tdJ;
+              get(r,10).value= k ? { formula: `H${r}*I${r}` } : null; get(r,10).style=S.tdK;
               r++;
             }
-            get(r,2).value='Total Masuk:'; get(r,2).style=S.tlMasuk; get(r,5).value = { formula: `SUM(E${r0+2}:E${r-1})` }; get(r,5).style=S.tvMasuk; leftTotals.push(`E${r}`);
-            get(r,8).value='Total Keluar:'; get(r,8).style=S.tlKeluar; get(r,11).value= { formula: `SUM(K${r0+2}:K${r-1})` }; get(r,11).style=S.tvKeluar; rightTotals.push(`K${r}`);
-            r0 = r + 2; // space
+            // Totals per event
+            get(r,1).value='Total Masuk:'; get(r,1).style=S.tlMasuk; get(r,4).value = { formula: `SUM(D${r0+1}:D${r-1})` }; get(r,4).style=S.tvMasuk; leftTotals.push(`D${r}`);
+            get(r,7).value='Total Keluar:'; get(r,7).style=S.tlKeluar; get(r,10).value= { formula: `SUM(J${r0+1}:J${r-1})` }; get(r,10).style=S.tvKeluar; rightTotals.push(`J${r}`);
+            r0 = r + 2; // spasi antar event
           }
           // Grand totals
-          try{ wsT.mergeCells(r0,2,r0,11); }catch{}
-          get(r0,2).value='Total Keseluruhan'; get(r0,2).style=S.gtTitle; r0++;
-          get(r0,2).value='Masuk:'; get(r0,2).style=S.inLbl; get(r0,5).value = leftTotals.length? { formula: `SUM(${leftTotals.join(',')})` } : 0; get(r0,5).style=S.inVal;
-          get(r0,8).value='Keluar:'; get(r0,8).style=S.outLbl; get(r0,11).value= rightTotals.length? { formula: `SUM(${rightTotals.join(',')})` } : 0; get(r0,11).style=S.outVal; r0++;
-          get(r0,2).value='Sisa:'; get(r0,2).style=S.balLbl; get(r0,5).value = { formula: `E${r0-1}-K${r0-1}` }; get(r0,5).style=S.balVal;
+          get(r0,1).value='Total Keseluruhan'; get(r0,1).style=S.gtTitle; r0++;
+          get(r0,1).value='Masuk:'; get(r0,1).style=S.inLbl; get(r0,4).value = leftTotals.length? { formula: `SUM(${leftTotals.join(',')})` } : 0; get(r0,4).style=S.inVal;
+          get(r0,7).value='Keluar:'; get(r0,7).style=S.outLbl; get(r0,10).value= rightTotals.length? { formula: `SUM(${rightTotals.join(',')})` } : 0; get(r0,10).style=S.outVal; r0++;
+          get(r0,1).value='Sisa:'; get(r0,1).style=S.balLbl; get(r0,4).value = { formula: `D${r0-1}-J${r0-1}` }; get(r0,4).style=S.balVal;
 
           const out = await wbT.xlsx.writeBuffer();
           const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
