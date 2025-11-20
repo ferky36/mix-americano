@@ -19,12 +19,13 @@
     <div id="cbMsg" class="muted">Harap tunggu, Anda akan diarahkan ke aplikasi.</div>
   </div>
 
+  <script src="config.js"></script>
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script>
     // Buat client Supabase (gunakan project URL & anon key yang sama dengan index.html)
-    const SUPABASE_URL = 'https://edyneqtxtxdweczvcvvt.supabase.co';
-    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVkeW5lcXR4dHhkd2VjenZjdnZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYzNzM1MjgsImV4cCI6MjA3MTk0OTUyOH0.J_tYzbZ6fM4hw8QSiOaVcQwnPkUNC-uAZKe7W5i81DY';
-    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    const SUPABASE_URL = window.__SUPABASE_URL;
+    const SUPABASE_ANON = window.__SUPABASE_ANON;
+    const sb = (SUPABASE_URL && SUPABASE_ANON) ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON) : null;
 
     const START_URL = '/mix-americano/'; // arahkan kembali ke halaman utama PWA (GitHub Pages scope)
 
@@ -67,4 +68,3 @@
   </script>
 </body>
 </html>
-

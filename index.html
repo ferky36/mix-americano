@@ -641,11 +641,16 @@
 
   <!-- <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script> -->
   <!-- Supabase SDK dari CDN -->
+  <script src="config.js"></script>
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script id="supabase-init">
     (function initSupabase(){
-      const SUPABASE_URL = 'https://edyneqtxtxdweczvcvvt.supabase.co';   // <- ganti dengan Project URL
-      const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVkeW5lcXR4dHhkd2VjenZjdnZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYzNzM1MjgsImV4cCI6MjA3MTk0OTUyOH0.J_tYzbZ6fM4hw8QSiOaVcQwnPkUNC-uAZKe7W5i81DY'; // <- ganti dengan anon key
+      const SUPABASE_URL  = window.__SUPABASE_URL;
+      const SUPABASE_ANON = window.__SUPABASE_ANON;
+      if (!SUPABASE_URL || !SUPABASE_ANON){
+        console.error('[Supabase] URL/Anon key belum dikonfigurasi di config.js');
+        return;
+      }
       if (!window.supabase || typeof window.supabase.createClient !== 'function') {
         console.error('[Supabase] global client library belum siap');
         return;
