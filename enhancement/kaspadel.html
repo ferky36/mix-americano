@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kas Padel – Hitung Uang Masuk/Keluar</title>
+  <style>
+    :root {
+      --bg: #0b0c10;
+      --card: #111319;
+      --muted: #aab2c8;
+      --text: #eaf0ff;
+      --accent: #5b8def;
+      --green: #20c997;
+      --red: #ff6b6b;
+      --border: #22283a;
+    }
+    @media (prefers-color-scheme: light){
+      :root { --bg:#f6f8ff; --card:#ffffff; --muted:#57607a; --text:#0b1020; --accent:#2f6ae3; --green:#0f9960; --red:#d64545; --border:#e7eaf3; }
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font:500 16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu; background:var(--bg); color:var(--text);
+      display:flex; flex-direction:column; gap:16px;
+    }
+    header{
+      padding:16px 20px; position:sticky; top:0; z-index:3; backdrop-filter:saturate(140%) blur(6px);
+      background:color-mix(in oklab, var(--bg) 85%, transparent);
+      border-bottom:1px solid var(--border);
+      display:grid; grid-template-columns:1fr auto; align-items:center; gap:12px;
+    }
+    h1{margin:0; font-size:20px}
+    .wrap{max-width:1100px; width:100%; margin:0 auto; padding:0 16px 60px}
+    .grid{display:grid; gap:14px}
+    @media (min-width: 880px){
+      .grid{grid-template-columns:1fr 1fr}
+    }
+    .card{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:14px}
+    .card h2{margin:4px 0 10px; font-size:18px}
+    .toolbar{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+    button{
+      border:1px solid var(--border); background:transparent; color:var(--text); padding:8px 12px; border-radius:10px; cursor:pointer;
+    }
+    button.primary{background:var(--accent); border-color:color-mix(in oklab, var(--accent) 70%, black); color:white}
+    button.ghost{background:transparent}
+    button.danger{background:var(--red); border-color:color-mix(in oklab, var(--red) 70%, black); color:white}
+    button:disabled{opacity:.6; cursor:not-allowed}
+
+    table{width:100%; border-collapse:collapse; font-size:16px}
+    thead th{position:sticky; top:0; background:var(--card); z-index:1}
+    th, td{padding:12px 8px; border-bottom:1px dashed var(--border); text-align:left; vertical-align:middle}
+    tr:hover td{background:color-mix(in oklab, var(--card), var(--bg) 20%)}
+    .num{ text-align:right }
+    .small{font-size:12px; color:var(--muted)}
+
+    /* Perbesar dan pertebal kolom Items/Source agar mudah dibaca */
+    td input[data-k="d"], td input[data-k=d]{
+      font-size:17px; font-weight:600; letter-spacing:.2px;
+    }
+    td input[data-k="d"]::placeholder{color:var(--muted)}
+
+    /* Tingkatkan kontras angka */
+    .num .totalCell{font-weight:700}
+    .label-desc{font-weight:600; letter-spacing:.2px}
+
+    /* Responsif kecil: pastikan ukuran input cukup besar agar terbaca */
+    @media (max-width:560px){
+      table{font-size:17px}
+      input[type="text"], input[type="number"], input[type="date"]{font-size:18px}
+      th, td{padding:12px 6px}
+    }
+
+    input[type="text"], input[type="number"], input[type="date"]{ 
+      width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--text); font-size:16px;
+    }
+    input[type="number"]{ -moz-appearance:textfield }
+    input::-webkit-outer-spin-button, input::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0 }
+
+    .summary{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px }
+    .summary .stat{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:12px}
+    .stat h3{margin:0; font:600 12px/1 var(--font, inherit); color:var(--muted); letter-spacing:.3px}
+    .stat .value{margin-top:6px; font:700 20px/1.1 system-ui}
+    .value.green{color:var(--green)}
+    .value.red{color:var(--red)}
+
+    .footerNote{margin-top:12px; color:var(--muted); font-size:12px}
+    .flex{display:flex; gap:8px; align-items:center}
+    .chip{font-size:12px; border:1px solid var(--border); padding:4px 8px; border-radius:999px; color:var(--muted)}
+    /* Modal styles */
+  .modal[hidden]{display:none}
+  .modal{position:fixed; inset:0; background:color-mix(in oklab, black 45%, transparent); display:grid; place-items:center; padding:16px; z-index:50}
+  .modal__box{width:min(560px, 100%); background:var(--card); color:var(--text); border:1px solid var(--border); border-radius:16px; padding:16px 16px 14px; box-shadow:0 10px 30px rgba(0,0,0,.35)}
+  .modal__box h3{margin:0 0 10px; font-size:18px}
+  .modal__box .row{margin:8px 0}
+  .modal__box .row.two{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+  .modal__box label{display:block; font-size:12px; color:var(--muted); margin-bottom:6px}
+  .modal__box .sum{display:flex; justify-content:flex-end; gap:8px; align-items:center; margin-top:6px}
+  .modal__box .actions{display:flex; justify-content:flex-end; gap:8px; margin-top:12px}
+</style>
+</head>
+<body>
+  <header class="wrap">
+    <h1>Kas Padel • Hitung Uang</h1>
+    <div class="toolbar">
+      <button id="btnAddMasuk" class="primary">+ Tambah Uang Masuk</button>
+      <button id="btnAddKeluar" class="primary">+ Tambah Uang Keluar</button>
+      <button id="btnReset" class="danger">Reset Data</button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="summary" id="summary">
+      <div class="stat"><h3>Total Uang Masuk</h3><div class="value green" id="sumIn">-</div></div>
+      <div class="stat"><h3>Total Uang Keluar</h3><div class="value red" id="sumOut">-</div></div>
+      <div class="stat"><h3>Sisa / Remaining</h3><div class="value" id="sumRemain">-</div></div>
+    </section>
+
+    <div class="grid" style="margin-top:14px">
+      <section class="card">
+        <div class="flex" style="justify-content:space-between">
+          <h2>Uang Masuk</h2>
+          <span class="chip" id="countMasuk">0 baris</span>
+        </div>
+        <div class="tableWrap">
+          <table id="tableMasuk">
+            <thead>
+              <tr>
+                <th>Source</th>
+                <th class="num" style="width:130px">Amount</th>
+                <th class="num" style="width:80px">Pax</th>
+                <th class="num" style="width:140px">Total</th>
+                <th style="width:40px"></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="footerNote small">Hint: Amount = nominal per orang / item, Total dihitung otomatis = Amount × Pax.</div>
+      </section>
+
+      <section class="card">
+        <div class="flex" style="justify-content:space-between">
+          <h2>Uang Keluar</h2>
+          <span class="chip" id="countKeluar">0 baris</span>
+        </div>
+        <div class="tableWrap">
+          <table id="tableKeluar">
+            <thead>
+              <tr>
+                <th>Items</th>
+                <th class="num" style="width:130px">Amount</th>
+                <th class="num" style="width:80px">Pax</th>
+                <th class="num" style="width:140px">Total</th>
+                <th style="width:40px"></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="footerNote small">Semua angka otomatis disimpan di browser (localStorage). Bisa diubah kapan saja.</div>
+      </section>
+    </div>
+  </main>
+  
+  <!-- Modal Tambah Data -->
+  <div id="addModal" class="modal" hidden>
+    <div class="modal__box">
+      <h3 id="modalTitle">Tambah</h3>
+      <form id="addForm">
+        <div class="row">
+          <label id="mLabelDesc" for="mDesc">Keterangan</label>
+          <input type="text" id="mDesc" placeholder="Misal: Peserta / Lapangan" required>
+        </div>
+        <div class="row two">
+          <div>
+            <label for="mAmount">Amount</label>
+            <input type="number" id="mAmount" min="0" step="1000" value="0" required>
+          </div>
+          <div>
+            <label for="mPax">Pax</label>
+            <input type="number" id="mPax" min="1" step="1" value="1" required>
+          </div>
+        </div>
+        <div class="row sum small">Total: <strong id="mTotal">Rp0</strong></div>
+        <div class="actions">
+          <button type="button" class="ghost" id="mCancel">Batal</button>
+          <button type="submit" class="primary">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // ---------- Util ----------
+    const fmtIDR = (n)=> new Intl.NumberFormat('id-ID',{ style:'currency', currency:'IDR', maximumFractionDigits:0 }).format(n||0)
+    const uid = ()=> Math.random().toString(36).slice(2,9)
+    const $ = (sel, root=document)=> root.querySelector(sel)
+    const $$ = (sel, root=document)=> Array.from(root.querySelectorAll(sel))
+
+    // ---------- Storage ----------
+    const KEY = 'kas-padel-v1'
+    const initialData = {
+      masuk: [
+        {id:uid(), t:'2025-09-04', d:'Kas Bola', a:1000000, x:1},
+        {id:uid(), t:'2025-09-04', d:'Peserta', a:70000, x:10},
+        {id:uid(), t:'2025-09-12', d:'Peserta', a:70000, x:10},
+        {id:uid(), t:'2025-09-26', d:'Peserta', a:70000, x:10},
+        {id:uid(), t:'2025-09-30', d:'Subsidi', a:1000000, x:1},
+      ],
+      keluar: [
+        {id:uid(), t:'2025-09-04', d:'Lapangan', a:400000, x:2},
+        {id:uid(), t:'2025-09-04', d:'Biaya Admin Lapangan', a:5000, x:1},
+        {id:uid(), t:'2025-09-04', d:'Raket', a:35000, x:4},
+        {id:uid(), t:'2025-09-12', d:'Lapangan', a:350000, x:2},
+        {id:uid(), t:'2025-09-12', d:'Biaya Admin Lapangan', a:5000, x:1},
+        {id:uid(), t:'2025-09-12', d:'Raket', a:35000, x:4},
+        {id:uid(), t:'2025-09-26', d:'Lapangan', a:400000, x:2},
+        {id:uid(), t:'2025-09-26', d:'Biaya Admin Lapangan', a:5000, x:1},
+        {id:uid(), t:'2025-09-26', d:'Raket 35', a:35000, x:1},
+        {id:uid(), t:'2025-09-26', d:'Raket 55', a:55000, x:2},
+        {id:uid(), t:'2025-09-30', d:'Uang Kas Bola', a:1000000, x:1},
+      ]
+    }
+
+    function load(){
+      try{ return JSON.parse(localStorage.getItem(KEY)) || structuredClone(initialData) }catch{ return structuredClone(initialData) }
+    }
+    function save(){ localStorage.setItem(KEY, JSON.stringify(data)) }
+
+    let data = load()
+
+    // ---------- Rendering ----------
+    const tbodyIn = $('#tableMasuk tbody')
+    const tbodyOut = $('#tableKeluar tbody')
+
+    function rowTpl(item, kind){
+      const tr = document.createElement('tr')
+      tr.dataset.id = item.id
+      const labelDesc  = item.d || '-'
+      const labelAmt   = fmtIDR(item.a)
+      const labelPax   = String(item.x||0)
+      const labelTotal = fmtIDR(item.a*item.x)
+      tr.innerHTML = `
+        <td><span class="label-desc">${labelDesc}</span></td>
+        <td class="num"><span class="label-amt">${labelAmt}</span></td>
+        <td class="num"><span class="label-pax">${labelPax}</span></td>
+        <td class="num"><span class="totalCell">${labelTotal}</span></td>
+        <td class="num">
+          <button title="Edit" data-act="edit">✎</button>
+          <button title="Hapus" data-act="del">✕</button>
+        </td>`
+      ;
+      tr.addEventListener('click', (e)=>{
+        const act = e.target?.dataset?.act
+        if(act==='del') onDeleteRow(item.id, kind)
+        if(act==='edit') onEditRow(item.id, kind)
+      })
+      return tr
+    }
+
+    function render(){
+      tbodyIn.innerHTML=''; tbodyOut.innerHTML='';
+      data.masuk.forEach(it=> tbodyIn.appendChild(rowTpl(it,'masuk')))
+      data.keluar.forEach(it=> tbodyOut.appendChild(rowTpl(it,'keluar')))
+      $('#countMasuk').textContent = data.masuk.length+" baris"
+      $('#countKeluar').textContent = data.keluar.length+" baris"
+      updateSummary()
+    }
+
+    function onDeleteRow(id, kind){
+      data[kind] = data[kind].filter(x=> x.id!==id);
+      save(); render();
+    }
+
+    // inline edit removed – all edits go through modal
+    function onEditRow(id, kind){
+      const item = data[kind].find(x=> x.id===id)
+      if(!item) return
+      openModal(kind, item)
+    }
+
+    function addRow(kind){
+      const obj = {id:uid(), d:'', a:0, x:1}
+      data[kind].push(obj); save(); render();
+    }
+
+    function totalOf(list){ return list.reduce((s,i)=> s + (i.a*i.x), 0) }
+
+    function updateSummary(){
+      const sumIn = totalOf(data.masuk)
+      const sumOut = totalOf(data.keluar)
+      const remain = sumIn - sumOut
+      $('#sumIn').textContent = fmtIDR(sumIn)
+      $('#sumOut').textContent = fmtIDR(sumOut)
+      $('#sumRemain').textContent = fmtIDR(remain)
+      $('#sumRemain').style.color = remain>=0 ? 'var(--green)' : 'var(--red)'
+    }
+
+    // ---------- Actions ----------
+    function openModal(kind, item){
+      window._modalKind = kind;
+      window._editId = item?.id || null;
+      $('#modalTitle').textContent = item ? (kind==='masuk' ? 'Edit Uang Masuk' : 'Edit Uang Keluar') : (kind==='masuk' ? 'Tambah Uang Masuk' : 'Tambah Uang Keluar');
+      $('#mLabelDesc').textContent = kind==='masuk' ? 'Source' : 'Items';
+      $('#mDesc').value   = item?.d ?? '';
+      $('#mAmount').value = item?.a ?? 0;
+      $('#mPax').value    = item?.x ?? 1;
+      $('#mTotal').textContent = fmtIDR((item?.a||0) * (item?.x||1));
+      $('#addModal').hidden = false;
+      setTimeout(()=> $('#mDesc').focus(), 0);
+    }
+    function closeModal(){ $('#addModal').hidden = true }
+    function updateModalTotal(){ const a = Number($('#mAmount').value||0); const x = Number($('#mPax').value||0); $('#mTotal').textContent = fmtIDR(a*x) }
+
+    $('#mAmount')?.addEventListener('input', updateModalTotal)
+    $('#mPax')?.addEventListener('input', updateModalTotal)
+    $('#mCancel')?.addEventListener('click', closeModal)
+
+    $('#addForm')?.addEventListener('submit', (e)=>{
+      e.preventDefault();
+      const obj = { id: window._editId || uid(), d:$('#mDesc').value.trim(), a:Number($('#mAmount').value||0), x:Number($('#mPax').value||1) };
+      const kind = window._modalKind || 'masuk';
+      if(window._editId){
+        const idx = data[kind].findIndex(x=> x.id===window._editId);
+        if(idx>-1) data[kind][idx] = { ...data[kind][idx], ...obj };
+      }else{
+        data[kind].push(obj);
+      }
+      save(); render(); closeModal();
+      window._editId = null;
+    })
+    window.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && !$('#addModal').hidden) closeModal() })
+    $('#addModal')?.addEventListener('click', (e)=>{ if(e.target.id==='addModal') closeModal() })
+
+    $('#btnAddMasuk').onclick = ()=> openModal('masuk')
+    $('#btnAddKeluar').onclick = ()=> openModal('keluar')
+
+    $('#btnReset').onclick = ()=>{
+      if(confirm('Yakin reset data dan kembali ke contoh awal?')){
+        data = structuredClone(initialData); save(); render()
+      }
+    }
+
+    // ---------- Start ----------
+    render()
+  </script>
+</body>
+</html>

@@ -1,0 +1,1090 @@
+
+:root { --ui-zoom: 100%; }
+body { font-size: clamp(14px, calc(14px * var(--ui-zoom) / 100), 20px); }
+
+/* Tabs */
+.tab-active { border-color:#111827; color:#111827; }
+.dark .tab-active { border-color:#e5e7eb; color:#e5e7eb; }
+
+/* Standings highlight + dark mode */
+.rank-1 { background:#fff7d6; }
+.rank-2 { background:#ededed; }
+.rank-3 { background:#ffe9d6; }
+.dark .rank-1 { background:rgba(255,247,214,.12); color:#e5e7eb; }
+.dark .rank-2 { background:rgba(237,237,237,.08); color:#e5e7eb; }
+.dark .rank-3 { background:rgba(255,233,214,.10); color:#e5e7eb; }
+.dark .dark-table thead th,
+.dark .dark-table tbody td { color:#e5e7eb; }
+
+/* Court table wrapper (desktop default) */
+.court-wrapper { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+.court-wrapper table { min-width:640px; width:100%; text-align: center;}
+.court-wrapper td, .court-wrapper th { white-space:nowrap; }
+
+/* Drag indicators */
+.row-dragging { opacity:.6; }
+.row-drop-target { outline:2px dashed #6d28d9; outline-offset:2px; }
+
+/* Animations for header/filter panels on mobile */
+@keyframes slideDown { from{opacity:0; transform:translateY(-6px);} to{opacity:1; transform:translateY(0);} }
+.hdr-slide { animation:slideDown .18s ease-out; }
+/* Mobile-friendly header controls panel */
+.hdr-mobile-panel { display:grid; grid-template-columns: 1fr 1fr; gap:.5rem; }
+@media (min-width: 640px){ .hdr-mobile-panel { grid-template-columns: repeat(3, minmax(0,1fr)); } }
+@media (min-width: 768px){ .hdr-mobile-panel { display:flex; gap:.5rem; } }
+
+/* Mobile panel background styling */
+@media (max-width: 767px){
+  #hdrControls { background: rgba(255,255,255,.08); padding:.5rem; border-radius: .75rem; }
+}
+/* Hide racket icon on mobile; keep title + chips aligned */
+@media (max-width: 767px){
+  header .mx-auto .flex.items-start > div:first-child{ display:none !important; }
+}
+
+/* Full-width Menu button on mobile */
+@media (max-width: 767px){
+  #btnHdrMenu{
+    display:block;
+    width: calc(100% - 2rem); /* align with header px-4 */
+    margin: 6px 1rem 0 1rem;
+    background:#ffffff !important;
+    color:#4f46e5 !important; /* indigo-600 */
+    border:2px solid #ffffff !important; /* inner white ring */
+    box-shadow: 0 0 0 2px rgba(99,102,241,1) !important; /* outer purple ring */
+    border-radius: 14px !important;
+    font-weight:700;
+    text-align:center;
+  }
+}
+
+/* Make header action buttons full-width on mobile without changing HTML */
+#hdrControls > button { width:100%; }
+@media (min-width:768px){ #hdrControls > button { width:auto; border-radius:12px; } }
+.filter-slide { animation:slideDown .18s ease-out; }
+/* Make controls look like soft pills */
+@media (min-width:768px){
+  /* Desktop header layout refinements (visual only) */
+  header .mx-auto{ gap: 18px; }
+  #hdrChips{ align-items:center; gap:10px; }
+  #hdrControls{
+    display:flex; align-items:center; gap:10px; justify-content:flex-end;
+    background:linear-gradient(90deg, rgba(255,255,255,.18), rgba(255,255,255,.12));
+    padding:.5rem .6rem; border-radius:8px; /* slight rounded */
+    backdrop-filter:none; /* remove blur */
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.18);
+  }
+  #hdrControls > button{
+    border-radius:8px !important;
+    padding:.55rem .9rem !important;
+    line-height:1.1;
+    box-shadow: 0 1px 0 rgba(0,0,0,.06), 0 1px 8px rgba(0,0,0,.08);
+  }
+  /* Tweak color balance for white pills on gradient */
+  #hdrControls #btnSave,
+  #hdrControls #btnReport,
+  #hdrControls #btnLeaveEvent{
+    background: rgba(255,255,255,.95) !important;
+    color: #1f3a8a !important; /* indigo-800 */
+  }
+  #hdrControls #btnLeaveEvent{ color:#b91c1c !important; }
+  /* Make green/indigo buttons slightly softer */
+  #hdrControls #btnMakeEventLink{ background:#0ea463 !important; }
+  #hdrControls #btnShareEvent{ background:#4f46e5 !important; }
+  /* Viewer search should share the same green intent (create/find event) */
+  #hdrControls #btnViewerSearchEvent{ background:#0ea463 !important; }
+}
+
+/* Keep Logout at far-right on desktop, bottom-right on mobile */
+@media (min-width:768px){
+  #hdrControls{ display:flex; }
+  #hdrControls #btnLogout{ order: 999; }
+  #hdrControls #btnLogin{ order: 999; }
+  #hdrControls #authInfo{ order: 998; }            /* Signed in: next to Logout */
+  #hdrControls #btnAdminLogin{ order: 998; }
+  #hdrControls #btnViewerSearchEvent{ order: 997; }
+  #hdrControls #joinStatus{ order: 996; }
+}
+@media (max-width: 767px){
+  #hdrControls.hdr-mobile-panel{ display:grid; grid-template-columns: 1fr 1fr; }
+  #hdrControls #btnLogout{ order: 999; justify-self: end; }
+  #hdrControls #btnLogin{ order: 999; justify-self: end; }
+  #hdrControls #authInfo{ order: 998; }            /* Signed in near Logout */
+  #hdrControls #btnAdminLogin{ order: 998; justify-self: end; }
+  #hdrControls #btnViewerSearchEvent{ order: 997; }
+  #hdrControls #joinStatus{ order: 996; }
+}
+
+/* Header Location pill */
+#eventLocationView .event-loc{
+  display:flex; align-items:center; gap:8px;
+  color:#fff; font-weight:600;
+  text-shadow: 0 1px 1px rgba(0,0,0,.15);
+}
+
+/* Animations for score modal controls */
+.fade-in { opacity: 0; transform: translateY(4px); animation: fadeIn .18s ease-out forwards; }
+.fade-out { opacity: 1; transform: translateY(0); animation: fadeOut .15s ease-in forwards; }
+@keyframes fadeIn { to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeOut { to { opacity: 0; transform: translateY(4px); } }
+
+/* Subtle pulse for running timer */
+.timer-running { animation: timerPulse 1s ease-in-out infinite; }
+@keyframes timerPulse { 0%,100%{ opacity:1 } 50%{ opacity:.6 } }
+#eventLocationView .event-loc .pin{ width:18px; height:18px; opacity:.95; }
+#eventLocationView .event-loc a{ color:#fff; text-decoration:underline; text-underline-offset:2px; }
+@media (min-width:768px){
+  #eventLocationView .event-loc{ font-size:1rem; }
+  #eventLocationView .event-loc .pin{ width:20px; height:20px; }
+}
+
+/* Chips row under title */
+.chip{
+  display:inline-flex; align-items:center; gap:8px;
+  padding:4px 10px; border-radius:12px;
+  background:rgba(255,255,255,.18); color:#fff;
+  font-weight:600; font-size:.9rem;
+}
+.chip .chip-icon{ width:18px; height:18px; opacity:.95; }
+.chip a{ color:#fff; text-decoration:underline; text-underline-offset:2px; }
+@media (min-width:768px){ .chip{ padding:6px 12px; } .chip .chip-icon{ width:20px; height:20px; } }
+
+/* Modal overlay fix */
+#reportModal { display:none; }
+#reportModal:not(.hidden) { display:block; }
+
+/* Courts toolbar */
+.court-tab {
+  border-bottom-width: 2px;
+  border-color: transparent;
+  padding: .4rem .75rem;
+  border-radius: .5rem .5rem 0 0;
+}
+.court-tab.active { border-color: #111827; color: #111827; }
+.dark .court-tab.active { border-color: #e5e7eb; color: #e5e7eb; }
+.court-close { opacity:.7; margin-left:.35rem; }
+.court-close:hover { opacity:1; }
+#courtsToolbar { scroll-behavior:auto; } /* cegah smooth scroll ngesot */
+
+/* mini dropdown gender/level pada item pemain */
+.player-meta select{ font-size:11px; padding:2px 6px; }
+
+/* Score modal display helper */
+#scoreModal { display:none; }
+#scoreModal:not(.hidden){ display:block; }
+
+
+/* ===========================
+   Compact Header - HP Landscape
+   =========================== */
+@media (orientation: landscape) and (max-height: 480px) {
+  header .bg-gradient-to-r > .mx-auto { padding-top:8px!important; padding-bottom:8px!important; gap:8px!important; }
+  header .bg-gradient-to-r h1 { font-size:1.1rem!important; line-height:1.2!important; }
+  header .bg-gradient-to-r p.text-xs { display:none!important; }
+  #hdrControls { gap:6px!important; flex-wrap:nowrap!important; overflow-x:auto!important; -webkit-overflow-scrolling:touch; }
+  #hdrControls>* { white-space:nowrap; }
+  #hdrControls button, #hdrControls select { padding:6px 10px!important; font-size:12px!important; }
+  #btnHdrMenu, #btnFilter { padding-top:6px!important; padding-bottom:6px!important; }
+  #filterPanel input, #filterPanel select, #filterPanel button {
+    height:34px; padding-top:6px!important; padding-bottom:6px!important; font-size:12px!important;
+  }
+}
+@media (orientation: landscape) and (max-height: 380px) {
+  header .bg-gradient-to-r h1 { font-size:1rem!important; }
+  #hdrControls button, #hdrControls select { padding:5px 8px!important; font-size:11px!important; }
+}
+
+/* Collapsible */
+.collapsible { overflow:hidden; max-height:0; transition:max-height .28s ease, opacity .18s ease; opacity:0; }
+.collapsible.open { max-height:1200px; opacity:1; }
+@media (orientation: landscape) and (max-height: 480px) {
+  .collapsible.default-collapsed:not(.open) { max-height:0; opacity:0; }
+}
+
+/* ===== Players list ===== */
+#playersList {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+@media (min-width:640px){ #playersList{ grid-template-columns:repeat(3,minmax(0,1fr)); } }
+@media (min-width:768px){ #playersList{ grid-template-columns:repeat(4,minmax(0,1fr)); } }
+
+#playersList li{
+  display:flex; flex-wrap:wrap; align-items:center; gap:8px;
+  padding:10px 12px;
+  border:1px solid var(--tw-prose-border, rgba(107,114,128,.25));
+  border-radius:12px; background:var(--tw-card-bg,#fff);
+}
+.dark #playersList li{ background:#101827; border-color:#334155; }
+
+#playersList li .player-name{
+  flex:1 1 140px; min-width:0; font-weight:600;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+#playersList li .player-meta{ display:flex; gap:6px; align-items:center; flex:1 1 100%; }
+#playersList li .player-meta select{ min-width:56px; height:34px; }
+#playersList li .player-meta .remove-btn{ margin-left:auto; }
+
+@media (orientation: landscape) and (max-height: 480px){
+  #playersList{ gap:8px; }
+  #playersList li{ padding:8px 10px; gap:6px; }
+  #playersList li .player-name{ font-size:.95rem; }
+  #playersList li .player-meta{ flex:0 0 auto; }
+  #playersList li .player-meta select{ height:30px; min-width:50px; font-size:12px; }
+}
+@media (max-width:360px){ #playersList li .player-meta{ flex-basis:100%; } }
+#btnAddPlayer{ white-space:nowrap; }
+@media (max-width:420px){
+  #newPlayer{ font-size:14px; }
+  #btnAddPlayer{ padding:8px 12px; font-size:14px; }
+}
+
+/* ===============================
+   Court table fixes for mobile
+   =============================== */
+@media (max-width:640px){
+  .court-wrapper table { min-width:0!important; width:100%!important; text-align: center !important; }
+  .court-wrapper td, .court-wrapper th { white-space:normal!important; }
+}
+
+/* ===============================
+   Players list: style delete badge
+   =============================== */
+/* Hanya untuk tombol hapus di kartu pemain editor (class 'del') */
+#playersList li .del{
+  display:inline-flex; align-items:center; gap:6px;
+  /* padding:4px 10px; border-radius:9999px; */
+  background:#ef4444; color:#fff !important; text-decoration:none !important;
+  font-weight:600; font-size:12px;
+}
+#playersList li .del:hover{ background:#dc2626; text-decoration:none !important; }
+#playersList li .del::before{
+  content:""; width:14px; height:14px; display:inline-block;
+  background-color: currentColor;
+  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 6h18'/><path d='M8 6V4h8v2'/><path d='M19 6l-1 14H6L5 6'/><path d='M10 10v8'/><path d='M14 10v8'/></svg>") no-repeat center / contain;
+          mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 6h18'/><path d='M8 6V4h8v2'/><path d='M19 6l-1 14H6L5 6'/><path d='M10 10v8'/><path d='M14 10v8'/></svg>") no-repeat center / contain;
+}
+
+/* ===============================
+   App Splash Overlay (Android-like gradient)
+   =============================== */
+.app-splash{ position:fixed; inset:0; z-index:9999; display:grid; place-items:center;
+  background:
+    radial-gradient( circle at 50% 50%, rgba(0,0,0,.15) 0%, rgba(0,0,0,.12) 40%, rgba(0,0,0,0) 60% ),
+    linear-gradient( 45deg, #d946ef 0%, #8b5cf6 50%, #4f46e5 100% );
+  transition: opacity .35s ease, visibility .35s ease;
+}
+.app-splash.hide{ opacity:0; visibility:hidden; pointer-events:none; }
+.app-splash-center{ width:160px; height:160px; border-radius:9999px; display:grid; place-items:center;
+  background: rgba(255,255,255,.14);
+  box-shadow: 0 0 0 12px rgba(255,255,255,.07), 0 18px 50px rgba(0,0,0,.30);
+  backdrop-filter: blur(2px);
+}
+.app-splash-center img{ width:100px; height:100px; border-radius:24px; }
+
+/* Waiting List: one item per row on mobile */
+@media (max-width: 767px){
+  #waitingList{ grid-template-columns: 1fr !important; }
+  #waitingList li{ width: 100%; }
+}
+
+/* ===============================
+   Round table header (sticky)
+   =============================== */
+.rnd-table thead th{
+  position:sticky; top:0; z-index:5;
+  background-color:#f9fafb; color:#374151;
+  font-size:11px; text-transform:uppercase; letter-spacing:.05em; font-weight:600;
+  padding:8px 6px;
+}
+.dark .rnd-table thead th{ background-color:rgba(26,33,44,.9); color:#d1d5db; }
+
+/* ===============================
+   Round card layout (≤ 640px)
+   =============================== */
+@media (max-width:640px){
+  .rnd-table{ width:100%; border-collapse:separate; border-spacing:0 10px; }
+  .rnd-table thead{ display:none; }
+
+  .rnd-table tbody tr{
+    display:grid; grid-template-columns:1fr 1fr;
+    gap:10px 14px; padding:12px; border-radius:14px;
+    background:#ffffff; border:1px solid #e5e7eb; position:relative;
+  }
+  .dark .rnd-table tbody tr{ background:#0f172a; border-color:#334155; }
+
+  .rnd-table tbody td{ display:block; padding:0; }
+  .rnd-table tbody td::before{
+    content:attr(data-label); display:block; margin-bottom:4px;
+    font-size:10.5px; text-transform:uppercase; letter-spacing:.03em; color:#6b7280;
+  }
+  .dark .rnd-table tbody td::before{ color:#9ca3af; }
+
+  .rnd-col-drag, .rnd-col-index{ display:none!important; }
+
+  /* Ronde (opsional) & Waktu full width */
+  .rnd-col-round, .rnd-col-time{ grid-column:1 / -1; }
+  .rnd-col-time::before{ content:"Waktu"; }
+
+  /* Tim A | Tim B */
+  .rnd-teamA-1::before, .rnd-teamB-1::before{
+    display:block; margin-bottom:6px; font-weight:700; font-size:12px; letter-spacing:.04em; text-transform:uppercase; opacity:.9;
+  }
+  .rnd-teamA-1::before{ content:"Tim A"; }
+  .rnd-teamB-1::before{ content:"Tim B"; }
+
+  .rnd-teamA-1{ grid-column:1; }  .rnd-teamB-1{ grid-column:2; }
+  .rnd-teamA-2{ grid-column:1; }  .rnd-teamB-2{ grid-column:2; }
+
+  .rnd-scoreA::before, .rnd-scoreB::before{
+    display:block; margin:6px 0 4px; font-size:11px; letter-spacing:.04em; text-transform:uppercase; opacity:.8;
+  }
+  .rnd-scoreA::before{ content:"Skor Tim A"; }
+  .rnd-scoreB::before{ content:"Skor Tim B"; }
+  .rnd-scoreA{ grid-column:1; } .rnd-scoreB{ grid-column:2; }
+
+  .rnd-col-actions{ grid-column:1 / -1; }
+  .rnd-col-actions .btn, .rnd-col-actions button{ width:100%; }
+
+  /* VS badge yang halus */
+  .rnd-table tbody tr::after{
+    content:"VS"; position:absolute; top:50%; left:50%; transform:translate(-150%,50%);
+    font-size:10px; padding:2px 6px; border-radius:999px; pointer-events:none;
+    background:rgba(148,163,184,.12); color:#94a3b8;
+  }
+  .rnd-table tbody tr{
+    background-image:linear-gradient(to bottom, rgba(148,163,184,.12), rgba(148,163,184,.12));
+    background-size:1px 78%; background-repeat:no-repeat; background-position:calc(50% - .5px) 12%;
+  }
+
+  /* Break row */
+  .rnd-break-row{ background:transparent!important; border:0!important; }
+  .rnd-break-row td{ text-align:center; font-size:12px; opacity:.75; padding:6px 0; }
+}
+
+/* Jangan tampilkan VS di baris jeda */
+@media (max-width:640px){
+  .rnd-break-row::after {
+    content: none !important;
+  }
+}
+
+
+
+/* ==== Panel Pemain: nyaman di HP ==== */
+@media (max-width: 640px){
+  /* bikin area pemain punya scroll sendiri */
+  #playersPanel{
+    /* tinggi maksimum = tinggi layar - kira-kira header & kontrol di atas */
+    max-height: calc(100vh - 220px);
+    overflow-y: auto;
+    padding-bottom: 72px;          /* ruang bawah biar tak ketutup tombol/OS bar */
+    scrollbar-gutter: stable both-edges; /* biar layout nggak loncat saat muncul scrollbar */
+  }
+
+  /* baris input "Nama pemain" + tombol Tambah dibuat sticky */
+  #playersPanel > .flex:first-child{
+    position: sticky;
+    top: -6px;                     /* nempel ke atas panel */
+    z-index: 9;
+    padding-top: 6px;
+    padding-bottom: 8px;
+    background: var(--tw-card-bg, #0f172a); /* gelap */
+    /* kalau mode terang */
+  }
+  :root:not(.dark) #playersPanel > .flex:first-child{
+    background: #ffffff;
+  }
+}
+
+/* grid kartu pemain tetap rapi di layar kecil */
+@media (max-width: 480px){
+  #playersList{ grid-template-columns: 1fr !important; gap: 8px !important; }
+  #playersList li{ padding: 9px 10px; }
+  #playersList li .player-meta{ flex-basis: 100% !important; }
+  #playersList li .player-meta select{ width: 100% !important; min-width: 0 !important; height: 32px; }
+}
+
+.border {border-width: 1.5px !important }
+
+
+
+
+
+/* ====== HP: jadikan baris ronde sebagai "kartu" dua kolom ====== */
+@media (max-width: 640px){
+  .rnd-table thead{ display:none; }
+
+  /* hide title MATCH dan AKSI */
+  .rnd-col-round::before,
+  .rnd-col-actions::before {
+    content: none !important;
+  }
+
+
+  .rnd-table tbody tr{
+    display:grid;
+    grid-template-columns: 1fr 1fr;   /* A | B */
+    gap:10px 14px;
+    padding:12px;
+    border-radius:14px;
+    background:#fff;
+    border:1px solid #e5e7eb;
+    position:relative;
+  }
+  .dark .rnd-table tbody tr{
+    background:#0f172a;
+    border-color:#334155;
+  }
+
+  /* Header kartu = Ronde + Waktu (center, full width) */
+  .rnd-col-round,
+  .rnd-col-time{
+    grid-column: 1 / -1;
+    text-align:center !important;
+  }
+  .rnd-col-round{
+    font-weight:700;
+    font-size:1rem;
+    margin-top:2px;
+  }
+  .rnd-col-round::before{
+    content:"RONDE";
+    display:block;
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    opacity:.7;
+    margin-bottom:3px;
+  }
+  .rnd-col-time{
+    font-size:.9rem;
+    color:#6b7280;
+    margin-top:-2px;
+    margin-bottom:4px;
+  }
+  .dark .rnd-col-time{ color:#9ca3af; }
+
+  /* Label Tim A / Tim B */
+  .rnd-teamA-1::before,
+  .rnd-teamB-1::before,
+  .rnd-teamA-2::before,
+  .rnd-teamB-2::before{
+    display:block;
+    margin-bottom:6px;
+    font-weight:700;
+    font-size:12px;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    opacity:.9;
+    text-align: center;
+  }
+  .rnd-teamA-1::before{ content:"Tim A"; }
+  .rnd-teamB-1::before{ content:"Tim B"; }
+
+  /* Penempatan: A1 | B1 lalu A2 | B2 */
+  .rnd-teamA-1{ grid-column:1; grid-row:3; text-align: center; }
+  .rnd-teamB-1{ grid-column:2; grid-row:3; text-align: center; }
+  .rnd-teamA-2{ grid-column:1; grid-row:4; text-align: center; }
+  .rnd-teamB-2{ grid-column:2; grid-row:4; text-align: center; }
+
+  /* Skor tim */
+  .rnd-scoreA{ grid-column:1; grid-row:5; }
+  .rnd-scoreB{ grid-column:2; grid-row:5; }
+  .rnd-scoreA::before,
+  .rnd-scoreB::before{
+    display:block;
+    margin:6px 0 4px;
+    font-size:11px;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    opacity:.8;
+    text-align: center;
+  }
+  .rnd-scoreA::before{ content:"Skor Tim A"; }
+  .rnd-scoreB::before{ content:"Skor Tim B"; }
+
+  /* Aksi (tombol) full width di bawah */
+  .rnd-col-actions{ grid-column:1 / -1; grid-row:6; }
+  .rnd-col-actions .btn,
+  .rnd-col-actions button{ width:100%; }
+
+  /* Sembunyikan handle drag & header no. di HP */
+  .rnd-col-drag{ display:none !important; }
+
+  /* Badge VS di tengah (bukan di baris jeda) */
+  .rnd-table tbody tr::after{
+    content:"VS";
+    position:absolute;
+    left:50%; top:56%;
+    transform:translate(-50%,-50%);
+    font-size:11px;
+    padding:2px 6px;
+    border-radius:999px;
+    background:rgba(148,163,184,.15);
+    color:#475569;
+    pointer-events:none; z-index:1;
+  }
+  .dark .rnd-table tbody tr::after{ color:#cbd5e1; }
+  /* .rnd-break-row::after{ content:none !important; } */
+  /* Jangan tampilkan garis vertikal di baris jeda */
+    .rnd-break-row::before,
+    .rnd-break-row::after {
+    content: none !important;
+    }
+
+  /* Input & tombol nyaman di-tap */
+  .rnd-table select,
+  .rnd-table input[type="text"],
+  .rnd-table input[type="number"],
+  .rnd-table .btn,
+  .rnd-table button{ width:100%; }
+
+  /* garis vertikal tengah */
+  .rnd-table tbody tr{
+    position: relative;
+  }
+  .rnd-table tbody tr::before {
+    content: "";
+    position: absolute;
+    top: 30%;
+    bottom: 15%;
+    left: 50%;
+    width: 1px;
+    background: rgba(148,163,184,.3); /* abu-abu tipis */
+  }
+
+  /* badge VS di atas garis */
+  .rnd-table tbody tr::after{
+    content:"VS";
+    position:absolute;
+    left:50%; top:50%;
+    transform:translate(-50%,-50%);
+    font-size:11px;
+    padding:2px 6px;
+    border-radius:999px;
+    background:#fff;
+    border:1px solid rgba(148,163,184,.4);
+    color:#475569;
+    z-index:2;
+  }
+  .dark .rnd-table tbody tr::after{
+    background:#0f172a;
+    color:#cbd5e1;
+  }
+
+}
+
+/* Sticky header tabel tetap berlaku di desktop */
+.rnd-table thead th{
+  position:sticky; top:0;
+  background:#f9fafb;
+}
+.dark .rnd-table thead th{
+  background-color: rgba(47, 53, 61, 0.8);
+}
+
+/* ===== Players panel: pindahkan scroll ke #playerListContainer ===== */
+
+/* Matikan overflow di panel (biar tak double-scroll) */
+#playersPanel{
+  overflow: visible !important;
+  max-height: none !important;
+  padding-bottom: 0 !important;
+}
+
+/* Area scroll khusus daftar pemain */
+#playerListContainer{
+  overflow: auto;
+  -webkit-overflow-scrolling: touch; /* momentum scroll iOS */
+  overscroll-behavior: contain;      /* cegah 'narik' scroll halaman */
+  border-radius: 12px;
+}
+
+/* Tinggi default desktop */
+@media (min-width: 641px){
+  #playerListContainer{ max-height: 60vh; }
+}
+
+/* Tinggi responsif di HP */
+@media (max-width: 640px){
+  #playerListContainer{ max-height: 50vh; }
+}
+
+/* Toolbar input (Nama pemain + Tambah) dibuat sticky agar selalu terlihat */
+#playersToolbar{
+  position: sticky;
+  top: 0;                /* nempel di atas area scroll */
+  z-index: 9;
+  padding-top: 6px;
+  padding-bottom: 8px;
+  background: #ffffff;
+}
+.dark #playersToolbar{ background: #0f172a; } /* warna latar saat dark */
+
+/* Iconified buttons for compact mobile portrait */
+.icon { width: 18px; height: 18px; }
+.icon-btn { display:inline-flex; align-items:center; gap:6px; }
+
+@media (max-width: 480px) and (orientation: portrait){
+  .btn-label{ display:none !important; }
+  .helper-hint{ display:none !important; }
+  #playersPanel .icon{ width:18px; height:18px; }
+  #playersPanel .icon-btn{ padding:6px 8px !important; }
+}
+
+/* Live badge animation (subtle ripple dot) */
+.live-badge{ position: relative; overflow: visible; }
+.live-badge::before{
+  content:""; display:inline-block; width:.5em; height:.5em; border-radius:999px;
+  background:#fff; margin-right:6px; box-shadow:0 0 0 0 rgba(255,255,255,.85);
+  animation: liveDot 1.2s ease-out infinite;
+}
+@keyframes liveDot{
+  0%{ box-shadow:0 0 0 0 rgba(255,255,255,.85); opacity:1; }
+  70%{ box-shadow:0 0 0 8px rgba(255,255,255,0); opacity:1; }
+  100%{ box-shadow:0 0 0 0 rgba(255,255,255,0); opacity:1; }
+}
+
+/* ===== Join Open (Buka Join) – layout & responsive ===== */
+.join-open-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  align-items: center;
+}
+
+.join-open-input {
+  display: block;
+  width: 100%;
+  min-width: 140px;
+  padding: 0.5rem 0.6rem;           /* selaras dengan input lain */
+  border: 1px solid var(--border, #d1d5db);
+  border-radius: 0.5rem;            /* sama seperti input lokasi */
+  background: var(--bg, #fff);
+  color: var(--fg, #111827);
+  font-size: 0.875rem;              /* text-sm */
+  line-height: 1.25rem;
+}
+
+/* Desktop: beri lebar nyaman agar tidak mepet */
+@media (min-width: 1024px) {
+  .join-open-row {
+    grid-template-columns: 180px 120px; /* tanggal | jam */
+    gap: 10px;
+  }
+}
+
+/* Dark mode (opsional; sesuaikan variabel/theme kamu) */
+.dark .join-open-input {
+  background: #0f172a;            /* slate-900-ish */
+  color: #e5e7eb;
+  border-color: #334155;          /* slate-700-ish */
+}
+
+/* Kompensasi Safari iOS agar tinggi input date/time konsisten */
+input[type="date"].join-open-input,
+input[type="time"].join-open-input {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Kotak hijau untuk pemain yang sudah bayar (viewer) */
+.player-item.is-paid {
+  background: #ecfdf5;           /* emerald-50 */
+  border-color: #86efac;         /* emerald-300 */
+}
+.dark .player-item.is-paid {
+  background: rgba(16,185,129,.12); /* emerald-500/12% */
+  border-color: #34d399;            /* emerald-400/500 */
+}
+
+/* ikon server pada scoreModal */
+.serve-badge { 
+  display:inline-block; margin-left:.35rem; font-size: .95em;
+  vertical-align: middle;
+}
+
+/* ==== Serve badge di scoreModal ==== */
+.serve-chip{
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .15rem .5rem;
+  border-radius: 9999px;
+  background: #ecfdf5;           /* emerald-50 */
+  border: 1px solid #86efac;     /* emerald-300 */
+  color: #065f46;                /* emerald-800-ish */
+  font-size: .72rem;             /* ~text-xs */
+  font-weight: 600;
+  vertical-align: middle;
+}
+.dark .serve-chip{
+  background: rgba(16,185,129,.15);
+  border-color: #34d399;
+  color: #a7f3d0;
+}
+.serve-ball{
+  width: 14px; height: 14px;
+  fill: currentColor;             /* bola hijau */
+  stroke: #fff; stroke-width: 1.5;/* garis putih pada bola */
+}
+.serve-chip::after{
+  content:"";
+  position:absolute; inset: -2px;
+  border-radius: inherit;
+  box-shadow: 0 0 0 0 rgba(16,185,129,.55);
+  animation: servePulse 1.6s ease-out infinite;
+}
+@keyframes servePulse{
+  0%   { box-shadow: 0 0 0 0 rgba(16,185,129,.55); }
+  70%  { box-shadow: 0 0 0 6px rgba(16,185,129,0); }
+  100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+}
+.serve-text{ letter-spacing:.02em; text-transform: uppercase; }
+
+/* ===============================
+   Filter / Jadwal panel layout
+   =============================== */
+#filterPanel.filter-grid{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 14px;
+  align-items: start;
+  grid-auto-rows: minmax(min-content, auto);
+}
+
+@media (max-width: 767px){
+  #filterPanel.filter-grid{
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    grid-template-areas:
+      "date time"
+      "minutes round"
+      "break break";
+    gap: 14px;
+  }
+  .filter-field-date{ grid-area: date; }
+  .filter-field-time{ grid-area: time; }
+  .filter-field-minutes{ grid-area: minutes; }
+  .filter-field-round{ grid-area: round; }
+  .filter-field-break{ grid-area: break; }
+}
+@media (max-width: 420px){
+  #filterPanel.filter-grid{
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "date"
+      "time"
+      "minutes"
+      "round"
+      "break";
+  }
+}
+@media (min-width: 768px){
+  #filterPanel.filter-grid{
+    grid-template-columns: repeat(3, minmax(0,1fr));
+    gap: 16px 18px;
+    grid-template-areas: none;
+  }
+}
+@media (min-width: 1024px){
+  #filterPanel.filter-grid{
+    grid-template-columns: repeat(6, minmax(0,1fr));
+    gap: 18px 20px;
+  }
+}
+
+.filter-field{
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+#filterPanel.filter-grid .filter-field--full{
+  grid-column: 1 / -1;
+  grid-area: auto;
+}
+.filter-label{
+  display:block;
+}
+
+.filter-input{
+  width:100%;
+  min-height:42px;
+  margin-top:4px;
+  line-height:1.25;
+}
+
+.filter-inline{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:12px;
+}
+
+.filter-input--compact{
+  flex:0 0 110px;
+  max-width:120px;
+}
+
+.filter-checkbox{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:0.875rem;
+}
+
+.filter-checkbox span{
+  line-height:1.35;
+}
+
+@media (max-width: 520px){
+  .filter-inline{
+    flex-direction:column;
+    align-items:flex-start;
+    gap:8px;
+  }
+  .filter-input--compact{
+    flex:1 1 auto;
+    max-width:none;
+    width:100%;
+  }
+}
+
+/* ===== Standings medals (rank badges) ===== */
+.standing-medal{
+  display:inline-flex; align-items:center; gap:4px;
+  padding:2px 6px; margin-left:8px; border-radius:9999px;
+  font-size:11px; line-height:1; font-weight:700;
+  vertical-align:middle; box-shadow:0 1px 0 rgba(0,0,0,.08);
+}
+.standing-medal.gold{
+  background:linear-gradient(180deg, #fde68a, #f59e0b);
+  color:#78350f; border:1px solid rgba(120,53,15,.25);
+}
+.standing-medal.silver{
+  background:linear-gradient(180deg, #e5e7eb, #cbd5e1);
+  color:#334155; border:1px solid rgba(51,65,85,.2);
+}
+.standing-medal.bronze{
+  background:linear-gradient(180deg, #f1c08f, #c08457);
+  color:#4a2b14; border:1px solid rgba(74,43,20,.22);
+}
+.dark .standing-medal.gold{ color:#fff; }
+.dark .standing-medal.silver{ color:#0f172a; }
+.dark .standing-medal.bronze{ color:#fff; }
+
+/* Collapsible: raise max height and smooth on dynamic content */
+.collapsible { overflow:hidden; max-height:0; transition:max-height .28s ease, opacity .18s ease; opacity:0; }
+.collapsible.open { max-height: 4000px; opacity:1; }
+
+/* Paid toggle pulse animation */
+.pay-pulse { animation: payPulse 650ms ease-out; }
+@keyframes payPulse {
+  0% { box-shadow: 0 0 0 0 rgba(16,185,129,.45); }
+  70%{ box-shadow: 0 0 0 10px rgba(16,185,129,0); }
+  100%{ box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+}
+
+/* ===== Join Open (Buka Join) – layout & responsive ===== */
+.join-open-row {
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:14px;
+  align-items:center;
+}
+@media (max-width:640px){ .join-open-row { grid-template-columns: 1fr; } }
+.join-open-input { width:100%; min-height:42px; border-radius:12px; }
+.dark .join-open-input { background:#1f2937; border-color:#374151; color:#e5e7eb; }
+input[type="date"].join-open-input,
+input[type="time"].join-open-input {
+  -webkit-appearance: none;
+  appearance: textfield;
+}
+/* Mobile header chips collapse with smooth ease-in/out */
+@media (max-width: 640px){
+  #hdrChips{
+    overflow: hidden;
+    transition: max-height .25s ease, opacity .2s ease, margin-top .25s ease;
+  }
+  #hdrChips.chips-collapsed{
+    max-height: 0 !important;
+    opacity: 0;
+    margin-top: 0 !important;
+  }
+  #hdrChips:not(.chips-collapsed){
+    max-height: 160px;
+    opacity: 1;
+  }
+  #btnHdrChipsToggle{
+    transition: transform .2s ease, background-color .2s ease, opacity .2s ease;
+  }
+}
+
+/* Generic modal/popup open animations (CSS-only) */
+@media (prefers-reduced-motion: no-preference){
+  /* fade backdrop when container becomes visible */
+  [id$="Modal"]:not(.hidden),
+  [id$="Popup"]:not(.hidden),
+  #textModal:not(.hidden){
+    animation: modal-backdrop .22s ease both;
+  }
+  /* pop-in the dialog panel (assume last child is the panel) */
+  [id$="Modal"]:not(.hidden) > div:last-child,
+  [id$="Popup"]:not(.hidden) > div:last-child{
+    animation: modal-pop .22s cubic-bezier(.22,.61,.36,1) both;
+    transform-origin: center top;
+  }
+  /* inline small editor text popup */
+  #textModal:not(.hidden){
+    animation: modal-pop .18s cubic-bezier(.22,.61,.36,1) both;
+    transform-origin: center top;
+  }
+  @keyframes modal-backdrop{ from{ opacity:0 } to{ opacity:1 } }
+  @keyframes modal-pop{ from{ transform: translateY(10px) scale(.98); opacity:0 } to{ transform: translateY(0) scale(1); opacity:1 } }
+}
+/* ===== Modal/Popup ease-in animations (applies to new tennis score modals too) ===== */
+/* Animate any element whose id ends with "-modal" when it becomes visible (not .hidden) */
+[id$="-modal"]{
+  will-change: opacity, transform;
+}
+[id$="-modal"]:not(.hidden){
+  animation: modal-backdrop-in .18s ease-out both;
+}
+[id$="-modal"]:not(.hidden) > div{
+  animation: modal-zoom-in .22s cubic-bezier(.16,.84,.44,1) both;
+}
+
+/* Tennis score overlay container */
+#tsOverlay{
+  will-change: opacity, transform;
+}
+#tsOverlay:not(.hidden){
+  animation: modal-backdrop-in .18s ease-out both;
+}
+/* Animate the white panel inside overlay (the relative container) */
+#tsOverlay:not(.hidden) > div.relative{
+  animation: modal-zoom-in .22s cubic-bezier(.16,.84,.44,1) both;
+}
+
+@keyframes modal-backdrop-in{
+  from{ opacity: 0; }
+  to  { opacity: 1; }
+}
+@keyframes modal-zoom-in{
+  from{ opacity: 0; transform: translateY(8px) scale(.98); }
+  to  { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ===== Dark mode polish for Tennis Score overlay ===== */
+.dark #tsOverlay .relative{
+  background-color:#0f172a; /* slate-900 (softer) */
+  color:#e5e7eb;            /* slate-200 text */
+  border-color:#243044;     /* custom soft border */
+  box-shadow: 0 10px 30px rgba(0,0,0,.35);
+}
+.dark #tsTitle{ color:#e2e8f0; }
+.dark #tsOverlay .mb-4.flex{
+  background-color:#0b1220 !important;   /* soft dark panel */
+  border-color:#2b374a !important;       /* soft slate border */
+}
+.dark #game-score-display{
+  background-color:#0b1220; /* slightly lighter than base */
+  border-color:#2b374a;     /* soft slate border */
+}
+.dark #status-message{ color:#9ca3af; }
+.dark #mode-selector{
+  background-color:#1f2937; /* gray-800 */
+  color:#e5e7eb;
+  border-color:#475569;     /* slate-600 */
+  box-shadow: inset 0 0 0 2px rgba(51,65,85,.35);
+}
+.dark #tsOverlay label[for="mode-selector"]{ color:#c7d2fe; }
+.dark #game-score-display .text-blue-700{ color:#60a5fa !important; }
+.dark #game-score-display .text-red-700{ color:#f87171 !important; }
+.dark #set-score-label{ color:#cbd5e1; }
+.dark #timer-display{
+  background-color:#3a2a16; /* softer brown */
+  color:#fde68a;            /* amber-200 */
+  box-shadow: inset 0 0 0 2px #b98d4a; /* soft golden border */
+}
+/* .dark #start-match-btn{
+  background-color:#4f46e5; 
+  box-shadow:0 10px 20px rgba(79,70,229,.35);
+} */
+/* .dark #start-match-btn:hover{ background-color:#4338ca; } */
+.dark #finish-match-btn{ background-color:#10b981; } /* emerald-500 */
+.dark #finish-match-btn:hover{ background-color:#059669; }
+.dark #force-reset-btn{ background-color:#dc2626; }  /* red-600 */
+.dark #force-reset-btn:hover{ background-color:#b91c1c; }
+.dark #score-t1{ color:#60a5fa; } /* blue-400 */
+.dark #score-t2{ color:#f87171; } /* red-400 */
+.dark #tsOverlay .score-btn[data-delta="-1"]{
+  background-color:#0f172a; /* slate-900 */
+  color:#e5e7eb;
+  border-color:#475569;     /* slate-600 */
+}
+
+/* Team panels (softer dark cards) */
+.dark #tsOverlay .flex-1.p-4{
+  background-color:#0f172a !important; /* override light bg-blue-50/70 */
+  border-color:#374151 !important;     /* gray-700 */
+  box-shadow: inset 0 0 0 1px rgba(55,65,81,.35), 0 6px 16px rgba(0,0,0,.25);
+}
+.dark #tsOverlay .flex-1.p-4 h2{ color:#93c5fd; }        /* blue title for A */
+.dark #tsOverlay .flex-1.p-4 + .flex-1.p-4 h2{ color:#fca5a5; } /* red title for B */
+
+/* Player names visibility in dark mode */
+/* Non-serving players get a lighter slate tone for better contrast */
+.dark #tsOverlay .player-name.text-gray-600{ color:#cbd5e1 !important; } /* slate-300 */
+/* Serving player keeps orange highlight; add slight glow for readability */
+.dark #tsOverlay .player-name.text-orange-600{ text-shadow: 0 0 6px rgba(251,146,60,.25); }
+
+/* ===== Tennis Score overlay: enlarge player names for readability ===== */
+#tsOverlay .player-name{
+  font-size: 1.05rem !important; /* ~16-17px */
+  line-height: 1.35rem !important; /* ~22px */
+}
+
+/* ===== Light mode: soften tennis-score buttons (scoped to overlay) ===== */
+/* #tsOverlay #start-match-btn{
+  background-color:#6366f1; 
+  box-shadow:0 8px 16px rgba(99,102,241,.25);
+} */
+/* #tsOverlay #start-match-btn:hover{ background-color:#4f46e5; } */
+
+#tsOverlay #finish-match-btn{
+  background-color:#22c55e; /* emerald-500 */
+  box-shadow:0 8px 16px rgba(16,185,129,.22);
+}
+#tsOverlay #finish-match-btn:hover{ background-color:#16a34a; }
+
+#tsOverlay #force-reset-btn{
+  background-color:#ef4444; /* red-500 */
+  box-shadow:0 8px 16px rgba(239,68,68,.22);
+}
+#tsOverlay #force-reset-btn:hover{ background-color:#dc2626; }
+
+/* Score buttons: plus (team A/B) and minus */
+#tsOverlay .score-btn[data-team="1"][data-delta="1"]{
+  background-color:#3b82f6; /* blue-500 */
+  box-shadow:0 8px 16px rgba(59,130,246,.22);
+}
+#tsOverlay .score-btn[data-team="1"][data-delta="1"]:hover{ background-color:#2563eb; }
+
+#tsOverlay .score-btn[data-team="2"][data-delta="1"]{
+  background-color:#ef4444; /* red-500 */
+  box-shadow:0 8px 16px rgba(239,68,68,.22);
+}
+#tsOverlay .score-btn[data-team="2"][data-delta="1"]:hover{ background-color:#dc2626; }
+
+/* Minus buttons: neutral soft */
+#tsOverlay .score-btn[data-delta="-1"]{
+  background-color:#f3f4f6; /* gray-100 */
+  color:#374151;            /* gray-700 */
+  border:1px solid #d1d5db; /* gray-300 */
+}
+#tsOverlay .score-btn[data-delta="-1"]:hover{ background-color:#e5e7eb; }

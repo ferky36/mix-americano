@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <link rel="manifest" href="pwa-manifest.webmanifest?v=2025-10-13" />
+  <meta name="theme-color" content="#4f46e5" />
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-192.png" />
+  <!-- iOS startup images (optional, add actual files under /splash) -->
+  <link rel="apple-touch-startup-image" href="splash/iphone-1284x2778.png" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/iphone-1170x2532.png" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/iphone-1125x2436.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/iphone-828x1792.png"  media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/iphone-750x1334.png"  media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/ipad-2048x2732.png"   media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/ipad-1668x2388.png"   media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/ipad-1536x2048.png"   media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Padel-NBC</title>
+  <link rel="stylesheet" href="styles.css?v=2025-08-29" />
+  <link rel="stylesheet" href="match-recap.css?v=2025-09-22" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script> tailwind.config = { darkMode: 'class' };</script>
+</head>
+<body class="bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
+  <!-- App Splash (soft gradient overlay). Auto hides after window load. -->
+  <div id="appSplash" class="app-splash">
+    <div class="app-splash-center">
+      <img src="icons/icon-192.png" alt="App" />
+    </div>
+  </div>
+  <!-- HEADER -->
+  <header class="sticky top-0 z-10 shadow-sm">
+    <div class="bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 text-white rounded-b-3xl">
+      <div class="mx-auto max-w-7xl px-4 py-3 md:py-4 flex flex-col gap-2">
+        <div class="flex items-start gap-3">
+          <div class="h-14 w-14 md:h-16 md:w-16 rounded-2xl bg-white/20 grid place-items-center shadow"><span class="text-2xl md:text-3xl">🎾</span></div>
+          <div class="flex-1 min-w-0">
+            <div class="flex flex-col md:flex-row md:items-center md:gap-3">
+              <h1 id="appTitle" class="text-2xl md:text-3xl font-bold leading-tight">Event Padel/Tennis</h1>
+              <div id="hdrChips" class="mt-2 md:mt-0 md:ml-auto flex flex-wrap items-center gap-2 justify-end">
+              <span id="chipLoc" class="chip hidden">
+                <svg class="chip-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 1 1 18 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                <a id="chipLocLink" target="_blank" rel="noopener noreferrer"></a>
+                <span id="chipLocText"></span>
+              </span>
+              <span id="chipDate" class="chip">
+                <svg class="chip-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <span id="chipDateText">—</span>
+              </span>
+              <span id="chipCount" class="chip">
+                <svg class="chip-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                <span id="chipCountText">0 pemain</span>
+              </span>
+              <span id="chipRole" class="chip hidden">
+                <svg class="chip-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6"/><path d="M22 11h-6"/></svg>
+                <span id="chipRoleText">-</span>
+              </span>
+              <button id="btnTheme" class="px-3 py-2 rounded-xl bg-white/20 text-white font-semibold shadow hover:bg-white/30" title="Toggle Dark Mode">🌙/☀️</button>
+              <button id="btnInstallAppHdr" class="hidden px-3 py-2 rounded-xl bg-white/20 text-white font-semibold shadow hover:bg-white/30" title="Install aplikasi ke perangkat">Install App</button>
+              <button id="btnHdrControlsToggle" class="hidden md:inline-flex items-center justify-center w-9 h-9 rounded-xl bg-white/20 text-white shadow hover:bg-white/30" title="Tampilkan kontrol">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" class="w-5 h-5"><path stroke-width="1.8" stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16"/></svg>
+              </button>
+            </div>
+            </div>
+          </div>
+        </div>
+        </div>
+
+        <!-- tombol MENU hanya HP -->
+        <div class="flex gap-2 md:hidden">
+          <button id="btnHdrMenu" class="px-3 py-2 rounded-xl bg-white/20 text-white font-semibold shadow hover:bg-white/30">☰ Menu</button>
+        </div>
+
+        <!-- panel kontrol: hidden di HP, tampil di ≥md -->
+        <div id="hdrControlsWrap" class="mx-auto max-w-7xl px-4 py-1 md:py-2 flex flex-col gap-2 collapsible default-collapsed">
+        <div id="hdrControls" class="md:flex hdr-mobile-panel items-center w-full md:w-auto mt-1 md:mt-1 justify-end">
+          <button id="btnSave" class="px-4 py-2 rounded-xl bg-white text-indigo-700 font-semibold shadow hover:opacity-90">💾 Save</button>
+          <!-- removed: dropdown Pilih tanggal -->
+          <!-- <button id="btnImportJSON" class="px-3 py-2 rounded-lg bg-emerald-600 text-white font-semibold shadow hover:opacity-90">Load JSON File</button> -->
+          <button id="btnMakeEventLink"
+                  class="px-3 py-2 rounded-xl bg-emerald-600 text-white font-semibold shadow hover:opacity-90">
+            🔗 Buat Link Event
+          </button>
+          <button id="btnShareEvent"
+                  class="px-3 py-2 rounded-xl bg-indigo-600 text-white font-semibold shadow hover:opacity-90">
+            Share / Undang
+          </button>
+          <input id="fileInputJSON" type="file" accept="application/json" class="hidden" />
+          <button id="btnReport" class="px-3 py-2 rounded-xl bg-white text-indigo-700 font-semibold shadow hover:opacity-90">
+            📊 Report
+          </button>
+          <button id="btnCashflow" type="button" class="hidden px-3 py-2 rounded-xl bg-white text-indigo-700 font-semibold shadow hover:opacity-90">Cashflow</button>
+          <button id="btnLeaveEvent" 
+            class="px-3 py-2 rounded-xl bg-white text-red-700 font-semibold shadow hover:opacity-90">
+            🚪 Keluar Event
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- FILTER / JADWAL -->
+    <div class="bg-white/90 dark:bg-gray-800/90 backdrop-blur border-b border-gray-200 dark:border-gray-700 hidden">
+      <!-- tombol Filter di HP -->
+      <div class="px-4 pb-2">
+        <button id="btnFilterToggle"
+          class="w-full md:w-auto px-3 py-2 rounded-xl bg-white/20 dark:bg-gray-700
+                text-gray-900 dark:text-white font-semibold shadow hover:bg-white/30
+                flex items-center justify-center gap-2">
+          <span id="filterChevron">▾</span>
+          <span>Filter / Jadwal</span>
+        </button>
+      </div>
+
+      <!-- Panel Filter: hidden di HP, grid di ≥md -->
+      <div id="filterPanel" class="collapsible default-collapsed max-w-7xl mx-auto px-4 pb-4
+            grid filter-grid">
+        <div class="filter-field filter-field--half filter-field-date">
+          <label class="filter-label block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Tanggal</label>
+          <input id="sessionDate" type="date" class="filter-input border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100">
+        </div>
+        <div class="filter-field filter-field--half filter-field-time">
+          <label class="filter-label block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Mulai</label>
+          <input id="startTime" type="time" class="filter-input border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value="19:00">
+        </div>
+        <div class="filter-field filter-field--half filter-field-minutes">
+          <label class="filter-label block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Menit/Match</label>
+          <input id="minutesPerRound" type="number" min="5" class="filter-input border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value="12">
+        </div>
+        <div class="filter-field filter-field--half filter-field-break">
+          <label class="filter-label block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">
+            Jeda/Match (menit)
+          </label>
+          <div class="filter-inline">
+            <input id="breakPerRound" type="number" min="0" value="1"
+                  class="filter-input filter-input--compact border rounded-xl px-3 py-2 bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" />
+            <label class="filter-checkbox inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+              <input id="showBreakRows" type="checkbox" class="accent-indigo-600" checked>
+              <span>Tampilkan baris jeda</span>
+            </label>
+          </div>
+        </div>
+        <div class="filter-field filter-field--half filter-field-round">
+          <label class="filter-label block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Match/Lapangan</label>
+          <input id="roundCount" type="number" min="1" class="filter-input border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value="10">
+        </div>
+        <!-- panel PEMAIN collapsible -->
+        <div class="filter-field filter-field--full">
+          <div class="mt-2 p-3 rounded-2xl border bg-white dark:bg-gray-800 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <button id="btnCollapsePlayers" class="px-2 py-1 text-xs rounded-lg border bg-white dark:bg-gray-800 dark:border-gray-700">▼ Pemain</button>
+                <span class="text-xs text-gray-500 dark:text-gray-400">klik untuk expand/collapse</span>
+              </div>
+              <div class="flex gap-2">
+                <button id="btnPasteText" class="px-2 py-1 text-xs rounded-lg border bg-white dark:bg-gray-800 dark:border-gray-700">Edit sebagai teks</button>
+                <button id="btnApplyPlayerTemplate" class="px-2 py-1 text-xs rounded-lg border bg-white dark:bg-gray-800 dark:border-gray-700">
+                  Apply Template Pemain
+                </button>
+                <button id="btnClearPlayers" class="px-2 py-1 text-xs rounded-lg border bg-white dark:bg-gray-800 dark:border-gray-700">Kosongkan</button>
+              </div>
+            </div>
+            <div id="playersPanel" class="mt-3 hidden">
+              <div id="playersToolbar" class="flex gap-2 mb-2">
+                <input id="newPlayer" placeholder="Nama pemain…" class="flex-1 border rounded-lg px-3 py-2 bg-white dark:bg-gray-900 dark:border-gray-700">
+                <button id="btnAddPlayer" class="px-3 py-2 rounded-lg bg-indigo-600 text-white">Tambah</button>
+              </div>
+              <div id="playerListContainer">
+                <ul id="playersList" class="min-h-[44px] grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2"></ul>
+              </div>
+              <div id="playersWarnings" class="text-xs mt-2"></div>
+              <div id="textModal" class="hidden mt-2">
+                <textarea id="playersText" rows="6" class="w-full border rounded-xl px-3 py-2 bg-white dark:bg-gray-900 dark:border-gray-700" placeholder="Satu nama per baris"></textarea>
+                <div class="flex gap-2 mt-2">
+                  <button id="btnApplyText" class="px-3 py-2 rounded-lg bg-emerald-600 text-white">Terapkan</button>
+                  <button id="btnCancelText" class="px-3 py-2 rounded-lg border bg-white dark:bg-gray-800 dark:border-gray-700">Batal</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div> <!-- /panel pemain -->
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main class="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
+    <section class="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+        <select id="pairMode" class="px-3 py-2 rounded-xl border shadow text-sm dark:bg-gray-900 dark:border-gray-700">
+          <option value="free">Mode Pairing: Bebas</option>
+          <option value="mixed">Mixed Gender (M+F vs M+F)</option>
+          <option value="lvl_bal">Level Balance (beg+pro vs beg+pro)</option>
+          <option value="lvl_same">Level Sama (beg vs beg, pro vs pro)</option>
+        </select>
+
+        <button id="btnApplyPlayersActive"
+                class="px-4 py-2 rounded-xl bg-indigo-600 text-white shadow hover:bg-indigo-700">
+          Terapkan (Lapangan Aktif) & Auto Pasangan
+        </button>
+
+        <button id="btnResetActive"
+                class="px-4 py-2 rounded-xl border shadow hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-700">
+          ♻️ Reset Lapangan Aktif
+        </button>
+
+        <!-- ⬇️ dua tombol clear baru -->
+        <button id="btnClearScoresActive"
+                class="px-4 py-2 rounded-xl border shadow hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-700">
+          Clear Skor (Lapangan Aktif)
+        </button>
+
+        <button id="btnClearScoresAll"
+                class="px-4 py-2 rounded-xl border shadow hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-700">
+          Clear Skor (Semua Lapangan)
+        </button>
+      </div>
+
+      <div id="globalInfo" class="text-sm text-gray-600 dark:text-gray-300 mt-3"></div>
+    </section>
+
+    <section class="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow" id="toolbarSection">
+      <!-- Toolbar Lapangan (dinamis) -->
+      <div class="border-b border-gray-200 dark:border-gray-700 flex items-center gap-2 mb-3 overflow-x-auto" id="courtsToolbar">
+        <!-- tombol-tombol lapangan akan dirender via JS -->
+        <button id="btnAddCourt"
+                class="ml-auto px-3 py-1.5 rounded-lg border dark:border-gray-700 text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
+          ＋ Tambah Lapangan
+        </button>
+      </div>
+
+      <!-- Container tempat render lapangan aktif -->
+      <div id="courtContainer" class="space-y-3"></div>
+
+      <div id="errors" class="mt-3"></div>
+
+    </section>
+
+    <section class="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow">
+      <h2 class="text-lg md:text-xl font-semibold mb-2">Klasemen</h2>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm dark-table" id="standings">
+          <thead>
+            <tr class="text-left border-b border-gray-200 dark:border-gray-700">
+              <th class="py-2 pr-4">Rank</th>
+              <th class="py-2 pr-4">Pemain</th>
+              <th class="py-2 pr-4">Total</th>
+              <th class="py-2 pr-4">Selisih</th>
+              <th class="py-2 pr-4">W</th>
+              <th class="py-2 pr-4">L</th>
+              <th class="py-2 pr-4">D</th>
+              <th class="py-2 pr-4">WinRate</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <!-- Info Ranking -->
+      <div class="mt-4 p-4 rounded-xl bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-gray-800 dark:to-gray-700 border border-indigo-100 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-200 shadow-sm">
+        <h4 class="font-semibold mb-2 text-indigo-700 dark:text-indigo-300">📊 Aturan Ranking</h4>
+        <ol class="list-decimal ml-5 space-y-1">
+          <li><strong>Total ↓</strong> — pemain dengan poin total lebih tinggi berada di peringkat lebih atas.</li>
+          <li><strong>Selisih ↓</strong> — jika Total sama, peringkat ditentukan oleh selisih skor (point for – point against). Lebih besar → lebih tinggi.</li>
+          <li><strong>Menang ↓</strong> — jika Total & Selisih sama, dilihat jumlah kemenangan (W). Lebih banyak → lebih tinggi.</li>
+          <li>Jika semua sama → diurutkan alfabetis nama pemain.</li>
+        </ol>
+      </div>
+    </section>
+  </main>
+  <div id="reportModal" class="fixed inset-0 bg-black/40 hidden z-50">
+    <div class="mx-auto mt-16 max-w-5xl bg-white dark:bg-gray-800 rounded-2xl shadow p-4 md:p-6">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-lg md:text-xl font-semibold">Report Klasemen (Multi Tanggal)</h3>
+        <button id="btnReportClose" class="px-3 py-1 rounded-lg border dark:border-gray-700">Tutup</button>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        <div>
+          <label class="block text-[11px] uppercase font-semibold text-gray-500 dark:text-gray-300">Dari</label>
+          <input id="repFrom" type="date"
+            class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700">
+        </div>
+        <div>
+          <label class="block text-[11px] uppercase font-semibold text-gray-500 dark:text-gray-300">Sampai</label>
+          <input id="repTo" type="date"
+            class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700">
+        </div>
+        <div>
+          <label class="block text-[11px] uppercase font-semibold text-gray-500 dark:text-gray-300">Lapangan</label>
+          <select id="repCourt"
+            class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700">
+            <option value="both">Keduanya</option>
+            <option value="1">Hanya Lap 1</option>
+            <option value="2">Hanya Lap 2</option>
+          </select>
+        </div>
+        <div class="flex items-end">
+          <button id="btnRunReport"
+            class="w-full px-3 py-2 rounded-xl bg-indigo-600 text-white">Tampilkan</button>
+        </div>
+      </div>
+
+      <div id="reportSummary" class="text-sm text-gray-600 dark:text-gray-300 mb-3"></div>
+
+      <div class="overflow-x-auto court-wrapper">
+        <table class="min-w-full text-sm dark-table" id="reportTable">
+          <thead>
+            <tr class="text-left border-b border-gray-200 dark:border-gray-700">
+              <th class="py-2 pr-4">Rank</th>
+              <th class="py-2 pr-4">Pemain</th>
+              <th class="py-2 pr-4">Main</th>
+              <th class="py-2 pr-4">Total</th>
+              <th class="py-2 pr-4">Selisih</th>
+              <th class="py-2 pr-4">W</th>
+              <th class="py-2 pr-4">L</th>
+              <th class="py-2 pr-4">D</th>
+              <th class="py-2 pr-4">WinRate</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="mt-4 flex justify-end">
+        <button id="btnExportReportExcel"
+          class="px-3 py-2 rounded-xl border dark:border-gray-700">
+          Export Excel
+        </button>
+
+      </div>
+    </div>
+  </div>
+  <!-- Modal: Kas Event -->
+  <div id="cashModal" class="fixed inset-0 bg-black/40 hidden z-50">
+    <div class="absolute inset-0" data-cash-act="close"></div>
+    <div class="relative mx-auto mt-10 w-[95%] max-w-5xl rounded-2xl bg-white dark:bg-gray-800 border dark:border-gray-700 shadow p-4 md:p-6 md:max-h-[85vh] md:overflow-y-auto">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-lg md:text-xl font-semibold">
+          Cashflow Event
+          <span id="cashEventInfo" class="ml-2 text-sm font-normal text-gray-600 dark:text-gray-300"></span>
+        </h3>
+        <div class="flex items-center gap-2">
+          <button id="btnCashExportExcel" class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-sm hover:opacity-90">Export Excel</button>
+          <button id="btnCashExportPDF" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm hover:opacity-90">Export PDF</button>
+          <button id="btnCashClose" class="px-3 py-1 rounded-lg border dark:border-gray-700">Tutup</button>
+        </div>
+      </div>
+      <!-- Filter Tanggal (opsional, untuk menampilkan lintas event) -->
+      <div class="rounded-xl border dark:border-gray-700 p-3 mb-4">
+        <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full md:w-auto">
+            <div>
+              <label class="text-xs text-gray-500 dark:text-gray-300">Start</label>
+              <input type="date" id="cashStart" class="mt-1 w-full border rounded-xl px-3 py-2 bg-white dark:bg-gray-900 dark:border-gray-700" />
+            </div>
+            <div>
+              <label class="text-xs text-gray-500 dark:text-gray-300">End</label>
+              <input type="date" id="cashEnd" class="mt-1 w-full border rounded-xl px-3 py-2 bg-white dark:bg-gray-900 dark:border-gray-700" />
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="btnCashApplyRange" class="px-3 py-2 rounded-lg bg-indigo-600 text-white">Terapkan</button>
+            <button id="btnCashClearRange" class="px-3 py-2 rounded-lg border dark:border-gray-700">Reset</button>
+          </div>
+        </div>
+        <div class="mt-2 text-xs text-gray-600 dark:text-gray-300">
+          Isi tanggal Start–End untuk melihat kas dari semua event dalam rentang tersebut (Cloud saja).
+        </div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+        <div class="rounded-xl border dark:border-gray-700 p-3">
+          <div class="text-xs text-gray-500 dark:text-gray-300">Uang Masuk</div>
+          <div id="cashSumIn" class="text-xl font-bold text-emerald-600">Rp0</div>
+        </div>
+        <div class="rounded-xl border dark:border-gray-700 p-3">
+          <div class="text-xs text-gray-500 dark:text-gray-300">Uang Keluar</div>
+          <div id="cashSumOut" class="text-xl font-bold text-red-500">Rp0</div>
+        </div>
+        <div class="rounded-xl border dark:border-gray-700 p-3">
+          <div class="text-xs text-gray-500 dark:text-gray-300">Sisa</div>
+          <div id="cashSumRemain" class="text-xl font-bold">Rp0</div>
+        </div>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <section class="rounded-xl border dark:border-gray-700 p-3">
+          <div class="flex items-center justify-between mb-2">
+            <h4 class="font-semibold">Uang Masuk</h4>
+            <div class="flex items-center gap-2">
+              <span id="cashCountIn" class="text-xs text-gray-500 dark:text-gray-300">0 baris</span>
+              <button id="btnCashAddIn" class="px-2 py-1 rounded-lg border dark:border-gray-700 text-sm">Tambah</button>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-sm dark-table">
+              <thead>
+                <tr class="text-left border-b border-gray-200 dark:border-gray-700">
+                  <th class="py-2 pr-2">Source</th>
+                  <th class="py-2 pr-2 text-right">Amount</th>
+                  <th class="py-2 pr-2 text-right">Pax</th>
+                  <th class="py-2 pr-2 text-right">Total</th>
+                  <th class="py-2 pr-2"></th>
+                </tr>
+              </thead>
+              <tbody id="cashTbodyIn"></tbody>
+            </table>
+          </div>
+        </section>
+        <section class="rounded-xl border dark:border-gray-700 p-3">
+          <div class="flex items-center justify-between mb-2">
+            <h4 class="font-semibold">Uang Keluar</h4>
+            <div class="flex items-center gap-2">
+              <span id="cashCountOut" class="text-xs text-gray-500 dark:text-gray-300">0 baris</span>
+              <button id="btnCashAddOut" class="px-2 py-1 rounded-lg border dark:border-gray-700 text-sm">Tambah</button>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-sm dark-table">
+              <thead>
+                <tr class="text-left border-b border-gray-200 dark:border-gray-700">
+                  <th class="py-2 pr-2">Items</th>
+                  <th class="py-2 pr-2 text-right">Amount</th>
+                  <th class="py-2 pr-2 text-right">Pax</th>
+                  <th class="py-2 pr-2 text-right">Total</th>
+                  <th class="py-2 pr-2"></th>
+                </tr>
+              </thead>
+              <tbody id="cashTbodyOut"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+  <!-- Submodal: Tambah/Edit Kas -->
+  <div id="cashFormModal" class="fixed inset-0 bg-black/40 hidden z-[60]">
+    <div class="absolute inset-0" data-cashform-act="close"></div>
+    <div class="relative mx-auto mt-16 w-[92%] max-w-md rounded-2xl bg-white dark:bg-gray-800 border dark:border-gray-700 shadow p-4 md:p-6">
+      <h3 id="cashFormTitle" class="text-lg font-semibold mb-2">Tambah</h3>
+      <form id="cashForm" class="space-y-3">
+        <div>
+          <label id="cashLabelLabel" class="text-xs text-gray-500 dark:text-gray-300">Keterangan</label>
+          <input id="cashLabel" type="text" placeholder="Misal: Peserta / Lapangan" class="mt-1 w-full border rounded-xl px-3 py-2 bg-white dark:bg-gray-900 dark:border-gray-700" required />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-gray-500 dark:text-gray-300">Amount</label>
+            <input id="cashAmount" type="number" min="0" step="1000" value="0" class="mt-1 w-full border rounded-xl px-3 py-2 bg-white dark:bg-gray-900 dark:border-gray-700" required />
+          </div>
+          <div>
+            <label class="text-xs text-gray-500 dark:text-gray-300">Pax</label>
+            <input id="cashPax" type="number" min="1" step="1" value="1" class="mt-1 w-full border rounded-xl px-3 py-2 bg-white dark:bg-gray-900 dark:border-gray-700" required />
+          </div>
+        </div>
+        <div class="flex items-center justify-end gap-3 text-sm">
+          <div>Total: <strong id="cashTotal">Rp0</strong></div>
+        </div>
+        <div class="flex items-center justify-end gap-2">
+          <button type="button" id="cashCancel" class="px-3 py-2 rounded-lg border dark:border-gray-700">Batal</button>
+          <button type="submit" class="px-3 py-2 rounded-lg bg-indigo-600 text-white">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Hitung Skor -->
+  <div id="scoreModal" class="fixed inset-0 z-50 hidden">
+    <!-- backdrop -->
+    <div class="absolute inset-0 bg-black/40"></div>
+    <!-- dialog -->
+    <div class="relative mx-auto mt-16 w-[92%] max-w-xl rounded-2xl bg-white dark:bg-gray-800 shadow-lg p-4 md:p-6">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-lg md:text-xl font-semibold">Hitung Skor – <span id="scoreRoundTitle"></span></h3>
+        <button id="btnCloseScore" class="px-3 py-1 rounded-lg border dark:border-gray-700">Tutup</button>
+      </div>
+
+      <!-- Players info -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+        <div class="rounded-xl border dark:border-gray-700 p-3 text-center">
+          <div class="text-xs uppercase text-gray-500 dark:text-gray-300 mb-1">Skor Tim A</div>
+          <div id="scoreTeamA" class="font-medium">-</div>
+          <div class="text-3xl font-bold mb-3"><span id="scoreAVal">0</span></div>
+          <div class="flex justify-center gap-2" id="scoreButtonsA">
+            <button id="btnAMinus" class="px-3 py-2 rounded-lg border dark:border-gray-700">−</button>
+            <button id="btnAPlus"  class="px-3 py-2 rounded-lg bg-indigo-600 text-white">+</button>
+          </div>
+        </div>
+        <div class="rounded-xl border dark:border-gray-700 p-3 text-center">
+          <div class="text-xs uppercase text-gray-500 dark:text-gray-300 mb-1">Skor Tim B</div>
+          <div id="scoreTeamB" class="font-medium">-</div>
+          <div class="text-3xl font-bold mb-3"><span id="scoreBVal">0</span></div>
+          <div class="flex justify-center gap-2" id="scoreButtonsB">
+            <button id="btnBMinus" class="px-3 py-2 rounded-lg border dark:border-gray-700">−</button>
+            <button id="btnBPlus"  class="px-3 py-2 rounded-lg bg-indigo-600 text-white">+</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Counter -->
+      <!-- <div class="grid grid-cols-2 gap-3">
+        <div class="rounded-2xl border dark:border-gray-700 p-3 text-center">
+          <div class="text-sm mb-2">Skor Tim A</div>
+          
+        </div>
+        <div class="rounded-2xl border dark:border-gray-700 p-3 text-center">
+          <div class="text-sm mb-2">Skor Tim B</div>
+          
+        </div>
+      </div> -->
+      <div class="mt-3 flex items-center justify-center gap-3">
+          <div class="text-sm text-gray-600 dark:text-gray-300">Waktu tersisa:</div>
+          <div id="scoreTimer" class="text-2xl font-mono font-bold">--:--</div>
+        </div>
+      <div class="mt-4 flex flex-wrap gap-2 justify-between">
+        <div class="flex gap-2" id="scoreControlsLeft">
+          <button id="btnStartTimer" class="px-3 py-2 rounded-lg bg-indigo-600 text-white">Mulai</button>
+          <!-- <button id="btnTie" class="px-3 py-2 rounded-lg border dark:border-gray-700">Set Seri</button> -->
+          <button id="btnResetScore" class="px-3 py-2 rounded-lg border dark:border-gray-700">Reset</button>
+        </div>
+        <button id="btnFinishScore" class="px-4 py-2 rounded-lg bg-emerald-600 text-white font-semibold">
+          Finish & Isi Ke Match
+        </button>
+        <button id="btnRecalc"
+                class="hidden px-4 py-2 rounded-lg bg-indigo-600 text-white font-semibold">
+          Hitung Ulang
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Buat Event -->
+  <div id="eventModal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/40"></div>
+    <div class="relative mx-auto mt-16 w-[92%] max-w-md rounded-2xl bg-white dark:bg-gray-800 shadow p-4 md:p-6">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-lg font-semibold">Buat/Cari Event</h3>
+        <button id="eventCancelBtn" class="px-3 py-1 rounded-lg border dark:border-gray-700">Tutup</button>
+      </div>
+      <!-- Tabs: Buat/Cari -->
+      <div class="mb-3 grid grid-cols-2 gap-2" id="eventTabs">
+        <button id="tabCreateEvent" class="px-3 py-2 rounded-xl border dark:border-gray-700 bg-indigo-600 text-white font-semibold">Buat</button>
+        <button id="tabSearchEvent" class="px-3 py-2 rounded-xl border dark:border-gray-700 dark:text-gray-100">Cari</button>
+      </div>
+      <!-- form isi nama/tanggal -->
+      <div id="eventForm" class="space-y-3">
+        <div>
+          <label class="block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Nama Event</label>
+          <input id="eventNameInput" type="text" placeholder="Mis. Mix Americano Malam"
+                class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" />
+        </div>
+        <div>
+          <label class="block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Tanggal</label>
+          <input id="eventDateInput" type="date"
+                class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" />
+        </div>
+        <button id="eventCreateBtn" class="w-full px-3 py-2 rounded-xl bg-indigo-600 text-white font-semibold">
+          Create & Buat Link</button>
+      </div>
+
+      <!-- search existing event (moved from old modal) -->
+      <div id="eventSearchForm" class="hidden space-y-3">
+        <div>
+          <label class="block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Tanggal</label>
+          <select id="searchDateSelect" class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100">
+            <option value="">Pilih tanggal…</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Event di tanggal tersebut</label>
+          <select id="searchEventSelect" class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100">
+            <option value="">Pilih tanggal dulu</option>
+          </select>
+        </div>
+        <button id="openEventBtn" class="w-full px-3 py-2 rounded-xl bg-indigo-600 text-white font-semibold" disabled>
+          Buka Event
+        </button>
+      </div>
+
+      <!-- success message -->
+      <div id="eventSuccess" class="hidden space-y-3">
+        <div class="p-3 rounded-lg bg-green-50 text-green-700 text-sm border border-green-200">
+          ✅ Event berhasil dibuat! Bagikan link berikut:
+        </div>
+        <div class="flex items-center gap-2">
+          <input id="eventLinkOutput" readonly
+                class="flex-1 border rounded-lg px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100" />
+          <button id="eventCopyBtn" class="px-3 py-2 rounded-lg bg-green-600 text-white text-sm">Copy</button>
+        </div>
+      </div>
+  </div>
+  </div>
+
+  <!-- Modal: Login -->
+  <div id="loginModal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/40" id="loginBackdrop"></div>
+    <div class="relative mx-auto mt-16 w-[92%] max-w-md rounded-2xl bg-white dark:bg-gray-800 shadow p-4 md:p-6">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-lg font-semibold">Login</h3>
+        <button id="loginCancelBtn" class="px-3 py-1 rounded-lg border dark:border-gray-700">Tutup</button>
+      </div>
+        <div class="space-y-3">
+          <div class="text-sm text-gray-600 dark:text-gray-300">Masukkan email Anda.</div>
+          <input id="loginEmail" type="email" placeholder="email@example.com" class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" />
+          <button id="loginSendBtn" class="w-full px-3 py-2 rounded-xl bg-indigo-600 text-white font-semibold">Kirim Link Login</button>
+          <div id="loginMsg" class="text-xs"></div>
+        </div>
+    </div>
+  </div>
+
+  <!-- Modal: Admin Login -->
+  <div id="adminLoginModal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/40" id="adminBackdrop"></div>
+    <div class="relative mx-auto mt-16 w-[92%] max-w-md rounded-2xl bg-white dark:bg-gray-800 shadow p-4 md:p-6">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-lg font-semibold">Administrator Login</h3>
+        <button id="adminCancelBtn" class="px-3 py-1 rounded-lg border dark:border-gray-700">Tutup</button>
+      </div>
+      <div class="space-y-3">
+        <div class="text-sm text-gray-600 dark:text-gray-300">Masukkan email dan password Supabase Anda.</div>
+        <input id="adminEmail" type="email" placeholder="email@example.com" class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" />
+        <input id="adminPass" type="password" placeholder="Password" class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" />
+        <button id="adminLoginBtn" class="w-full px-3 py-2 rounded-xl bg-indigo-600 text-white font-semibold">Login</button>
+        <div id="adminMsg" class="text-xs"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Global Loading Overlay -->
+  <div id="loadingOverlay" class="fixed inset-0 z-[60] hidden">
+    <div class="absolute inset-0 bg-black/30 backdrop-blur-sm"></div>
+    <div class="relative mx-auto mt-28 w-[92%] max-w-sm rounded-2xl bg-white dark:bg-gray-800 shadow p-5 flex flex-col items-center gap-3">
+      <svg class="animate-spin h-7 w-7 text-indigo-600" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+      </svg>
+      <div id="loadingText" class="text-sm text-gray-700 dark:text-gray-200">Memproses…</div>
+    </div>
+  </div>
+
+
+  <!-- <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script> -->
+  <!-- Supabase SDK dari CDN -->
+  <script src="config.js"></script>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script id="supabase-init">
+    (function initSupabase(){
+      const SUPABASE_URL  = window.__SUPABASE_URL;
+      const SUPABASE_ANON = window.__SUPABASE_ANON;
+      if (!SUPABASE_URL || !SUPABASE_ANON){
+        console.error('[Supabase] URL/Anon key belum dikonfigurasi di config.js');
+        return;
+      }
+      if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+        console.error('[Supabase] global client library belum siap');
+        return;
+      }
+      window.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+      console.log('[Supabase] client ready:', !!window.sb);
+      try {
+        window.dispatchEvent(new CustomEvent('supabase-ready', { detail: window.sb }));
+      } catch (err) {
+        console.warn('[Supabase] gagal dispatch supabase-ready event', err);
+      }
+    })();
+  </script>
+  <script src="scripts/helpers.js?v=2025-08-29"></script>
+  <script src="scripts/join-open.js?v=2025-08-29"></script>
+  <script src="scripts/storage.js?v=2025-08-29"></script>
+  <script src="scripts/event-controls.js?v=2025-08-29"></script>
+  <script src="scripts/event-location-public.js?v=2025-08-29"></script>
+  <script src="scripts/title-rename.js?v=2025-08-29"></script>
+  <script src="scripts/auth-redirect.js?v=2025-08-29"></script>
+  <script src="scripts/auth-core.js?v=2025-08-29"></script>
+  <script src="scripts/join-event.js?v=2025-08-29"></script>
+  <script src="scripts/toast.js?v=2025-08-29"></script>
+  <script src="scripts/delta-updates.js?v=2025-08-29"></script>
+  <script src="scripts/autosave.js?v=2025-08-29"></script>
+  <script src="scripts/state.js?v=2025-08-29"></script>
+  <script src="scripts/player-meta.js?v=2025-08-29"></script>
+  <script src="scripts/access-control.js?v=2025-08-29"></script>
+  <script src="scripts/theme.js?v=2025-08-29"></script>
+  <script src="scripts/settings-popup.js?v=2025-10-12"></script>
+  <script src="scripts/sessions.js?v=2025-08-29"></script>
+  <script src="scripts/players-ui.js?v=2025-08-29"></script>
+  <script src="scripts/editor-panel.js?v=2025-08-29"></script>
+  <script src="scripts/max-players.js?v=2025-08-29"></script>
+  <script src="scripts/event-location-editor.js?v=2025-08-29"></script>
+  <script src="scripts/americano.js?v=2025-08-29"></script>
+  <script src="scripts/rename-helpers.js?v=2025-08-29"></script>
+  <script src="scripts/courts.js?v=2025-08-29"></script>
+  <script src="scripts/rendering.js?v=2025-08-29"></script>
+  <script src="scripts/auto-fill.js?v=2025-08-29"></script>
+  <script src="scripts/score-modal.js?v=2025-10-15"></script>
+  <script src="scripts/tennis-score-modal.js?v=2025-10-15"></script>
+  <script src="scripts/filter-toggle.js?v=2025-08-29"></script>
+  <script src="scripts/auth-ui.js?v=2025-08-29"></script>
+  <script src="scripts/standings-export.js?v=2025-08-29"></script>
+  <script src="scripts/player-composition-info.js?v=2025-09-26"></script>
+  <script src="scripts/match-recap.js?v=2025-09-22"></script>
+  <script src="scripts/pwa-install.js"></script>
+  <script src="scripts/cashflow.js"></script>
+  <script src="app.js?v=2025-08-29"></script>
+  <script src="app-responsive-addon.js?v=2025-08-29"></script>
+  <script src="scripts/mobile-nav.js"></script>
+  <script>
+    (function(){
+      function hide(){ try{ var el=document.getElementById('appSplash'); if(!el) return; el.classList.add('hide'); setTimeout(function(){ try{ el.remove(); }catch{} }, 420); }catch{} }
+      if (document.readyState === 'complete') setTimeout(hide, 120);
+      else window.addEventListener('load', function(){ setTimeout(hide, 150); });
+      try{ window.hideAppSplash = hide; }catch{}
+    })();
+  </script>
+</body>
+</html>

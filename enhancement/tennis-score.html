@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Penghitung Skor Padel/Tenis Ganda</title>
+    <!-- Memuat Tailwind CSS untuk styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Menggunakan font Inter untuk tampilan yang bersih */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f7f9;
+        }
+        /* Style untuk tombol skor */
+        .score-btn {
+            transition: all 0.1s;
+        }
+        .score-btn:active {
+            transform: scale(0.98);
+        }
+        /* Style untuk penyorotan server per pemain */
+        .serving-player {
+            border-bottom: 2px solid #f97316; /* Garis oranye untuk server */
+            padding-bottom: 1px;
+        }
+        .disabled-select {
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        /* Memastikan container berada di tengah dan mengisi viewport */
+        .main-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+    </style>
+    <script>
+        // Detail nama pemain dan tim mereka
+        const playerDetails = {
+            1: { name: "Pemain 1 (P1)", team: 1 }, // Tim A
+            2: { name: "Pemain 2 (P2)", team: 1 }, // Tim A
+            3: { name: "Pemain 3 (P3)", team: 2 }, // Tim B
+            4: { name: "Pemain 4 (P4)", team: 2 }, // Tim B
+        };
+
+        // Objek utama untuk melacak status pertandingan
+        const state = {
+            scoreT1: 0, // Poin internal Game saat ini Team 1 (Hanya untuk mode TENNIS)
+            scoreT2: 0, // Poin internal Game saat ini Team 2 (Hanya untuk mode TENNIS)
+            gamesT1: 0, // Total Game Dimenangkan (TENNIS) atau Total Poin (RALLY)
+            gamesT2: 0, // Total Game Dimenangkan (TENNIS) atau Total Poin (RALLY)
+            displayScores: ["0", "15", "30", "40"],
+            isDeuce: false,
+            isAdvantageT1: false,
+            isAdvantageT2: false,
+            currentPlayerServer: 1, 
+            isMatchFinished: false, 
+            isMatchRunning: false, // Status baru: Apakah pertandingan sedang berjalan
+            timerSeconds: 660, // 11 menit
+            timerInterval: null, 
+            scoringMode: 'TENNIS', // 'TENNIS' atau 'RALLY'
+        };
+
+        // Mengambil elemen-elemen DOM
+        let scoreDisplayT1, scoreDisplayT2, statusMessage, gameWonModal,
+            gamesDisplayContainer, gamesDisplayT1, gamesDisplayT2, matchResultsModal, timerDisplayEl, startMatchBtn,
+            player1NameEl, player2NameEl, player3NameEl, player4NameEl, modeSelectorEl, setScoreLabelEl,
+            // Variabel baru untuk modal konfirmasi
+            actionConfirmModal, confirmActionBtn, confirmModalTitle, currentPendingAction; 
+
+        // Fungsi untuk menginisialisasi DOM setelah halaman dimuat
+        document.addEventListener('DOMContentLoaded', () => {
+            scoreDisplayT1 = document.getElementById('score-t1');
+            scoreDisplayT2 = document.getElementById('score-t2');
+            statusMessage = document.getElementById('status-message');
+            gameWonModal = document.getElementById('game-won-modal');
+            
+            gamesDisplayContainer = document.getElementById('game-score-display');
+            gamesDisplayT1 = document.getElementById('games-t1');
+            gamesDisplayT2 = document.getElementById('games-t2');
+            matchResultsModal = document.getElementById('match-results-modal');
+            
+            timerDisplayEl = document.getElementById('timer-display');
+            startMatchBtn = document.getElementById('start-match-btn');
+            modeSelectorEl = document.getElementById('mode-selector');
+            setScoreLabelEl = document.getElementById('set-score-label');
+            
+            player1NameEl = document.getElementById('player-1-name');
+            player2NameEl = document.getElementById('player-2-name');
+            player3NameEl = document.getElementById('player-3-name');
+            player4NameEl = document.getElementById('player-4-name');
+
+            // Inisialisasi referensi modal konfirmasi baru
+            actionConfirmModal = document.getElementById('action-confirm-modal');
+            confirmActionBtn = document.getElementById('confirm-action-btn');
+            confirmModalTitle = document.getElementById('confirm-modal-title');
+
+
+            if (modeSelectorEl) {
+                modeSelectorEl.value = state.scoringMode;
+            }
+
+            updateDisplay(); // Tampilkan skor awal
+        });
+
+        // Fungsi untuk mengganti mode skor
+        function changeScoringMode(selectElement) {
+            const newMode = selectElement.value;
+            if (newMode !== state.scoringMode) {
+                state.scoringMode = newMode;
+                resetMatch(true, true); 
+                
+                // Menghilangkan pesan status saat ganti mode (sesuai permintaan sebelumnya)
+            }
+        }
+
+        // Fungsi pembantu untuk memformat waktu (MM:SS)
+        function formatTime(totalSeconds) {
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+        
+        // --- LOGIKA ROTASI SERVER ---
+        // Fungsi pembantu untuk merotasi server (P1 -> P3 -> P2 -> P4 -> P1)
+        function rotateServer() {
+            switch(state.currentPlayerServer) {
+                case 1: state.currentPlayerServer = 3; break;
+                case 3: state.currentPlayerServer = 2; break;
+                case 2: state.currentPlayerServer = 4; break;
+                case 4: state.currentPlayerServer = 1; break;
+            }
+        }
+        // --- AKHIR LOGIKA ROTASI SERVER ---
+
+        // --- LOGIKA TOAST NOTIFIKASI (BARU) ---
+        function showToast(message, type = 'warning') {
+            const toastEl = document.getElementById('toast-notification');
+            const toastMessageEl = document.getElementById('toast-message');
+            
+            if (!toastEl || !toastMessageEl) return;
+
+            // Reset classes
+            toastEl.classList.remove('bg-red-500', 'bg-yellow-500', 'bg-green-500');
+            
+            // Set type-specific style
+            if (type === 'error') {
+                toastEl.classList.add('bg-red-500');
+            } else if (type === 'success') {
+                toastEl.classList.add('bg-green-500');
+            } else {
+                toastEl.classList.add('bg-yellow-500');
+            }
+
+            toastMessageEl.textContent = message;
+            
+            // Show toast
+            toastEl.classList.remove('opacity-0', 'pointer-events-none');
+            toastEl.classList.add('opacity-100');
+
+            // Hide toast after 3 seconds
+            setTimeout(() => {
+                toastEl.classList.remove('opacity-100');
+                toastEl.classList.add('opacity-0', 'pointer-events-none');
+            }, 3000);
+        }
+        // --- AKHIR LOGIKA TOAST NOTIFIKASI ---
+
+
+        // --- LOGIKA KONFIRMASI (DIMODIFIKASI) ---
+        function showConfirmationModal(actionType) {
+            currentPendingAction = actionType;
+            let titleText = "";
+            let buttonText = "";
+            
+            if (actionType === 'reset') {
+                titleText = "Yakin Ingin Me-Reset Pertandingan?";
+                buttonText = "Ya, Reset Sekarang";
+            } else if (actionType === 'finish') {
+                titleText = "Yakin Ingin Menyelesaikan Pertandingan?";
+                buttonText = "Ya, Selesaikan Sekarang";
+            } else {
+                return; // Aksi tidak dikenal
+            }
+
+            if (confirmModalTitle) confirmModalTitle.textContent = titleText;
+            if (confirmActionBtn) confirmActionBtn.textContent = buttonText;
+            
+            if (actionConfirmModal) {
+                actionConfirmModal.classList.remove('hidden');
+                actionConfirmModal.classList.add('flex');
+            }
+        }
+        
+        function confirmAction() {
+            if (actionConfirmModal) actionConfirmModal.classList.add('hidden');
+            
+            if (currentPendingAction === 'reset') {
+                performMatchReset();
+            } else if (currentPendingAction === 'finish') {
+                // Panggil finishMatch dengan flag 'confirmed' = true
+                finishMatch(false, true); 
+            }
+            // Hapus aksi yang tertunda
+            currentPendingAction = null;
+            updateDisplay();
+        }
+
+        function cancelAction() {
+            if (actionConfirmModal) actionConfirmModal.classList.add('hidden');
+            currentPendingAction = null;
+            updateDisplay();
+        }
+
+        // --- LOGIKA START/RESET PERTANDINGAN (DIMODIFIKASI) ---
+        function toggleMatchState() {
+            if (state.isMatchRunning) {
+                // Tampilkan konfirmasi jika pertandingan sedang berjalan
+                showConfirmationModal('reset');
+            } else {
+                // FUNGSI MULAI PERTANDINGAN
+                startMatch();
+            }
+            updateDisplay();
+        }
+
+        // Fungsi baru untuk menjalankan reset setelah konfirmasi
+        function performMatchReset() {
+            if (state.timerInterval) {
+                clearInterval(state.timerInterval);
+                state.timerInterval = null;
+            }
+            state.isMatchRunning = false;
+            resetMatch(true, true); // Lakukan reset total
+            startMatchBtn.textContent = "Mulai Pertandingan (11 Menit)";
+            startMatchBtn.classList.remove('bg-red-600', 'hover:bg-red-700', 'shadow-red-500/50');
+            startMatchBtn.classList.add('bg-indigo-600', 'hover:bg-indigo-700', 'shadow-indigo-500/50');
+
+            statusMessage.textContent = "Pertandingan direset, siap dimulai.";
+            statusMessage.className = 'text-center text-indigo-600 font-bold mt-2 text-md';
+        }
+
+
+        function startMatch() {
+            if (state.timerInterval || state.isMatchFinished) {
+                return;
+            }
+            
+            resetMatch(true, false); // Jangan reset total timer jika sudah di-set
+            state.timerSeconds = 660; // Pastikan timer di-reset ke 11 menit
+
+            state.isMatchRunning = true;
+            startMatchBtn.textContent = "Reset Pertandingan"; // Ubah teks tombol
+            
+            // Ubah warna tombol menjadi MERAH
+            startMatchBtn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700', 'shadow-indigo-500/50');
+            startMatchBtn.classList.add('bg-red-600', 'hover:bg-red-700', 'shadow-red-500/50');
+
+            state.timerInterval = setInterval(() => {
+                state.timerSeconds--;
+                
+                if (state.timerSeconds <= 0) {
+                    clearInterval(state.timerInterval);
+                    state.timerInterval = null;
+                    state.isMatchRunning = false;
+                    
+                    finishMatch(true); 
+                }
+                updateDisplay(); 
+            }, 1000);
+            
+            updateDisplay(); 
+        }
+        // --- AKHIR LOGIKA START/RESET ---
+
+
+        // Fungsi utama untuk memperbarui tampilan UI
+        function updateDisplay() {
+            
+            // --- KONTROL PEMILIH MODE ---
+            if (modeSelectorEl) {
+                modeSelectorEl.disabled = state.isMatchRunning;
+                modeSelectorEl.classList.toggle('disabled-select', state.isMatchRunning);
+            }
+            // --- KONTROL PEMILIH MODE ---
+
+            if (state.isMatchFinished) {
+                 statusMessage.textContent = "PERTANDINGAN SELESAI!";
+                 statusMessage.className = 'text-center text-red-600 font-bold mt-2 text-md';
+                 return; 
+            }
+            
+            state.isDeuce = false;
+            state.isAdvantageT1 = false;
+            state.isAdvantageT2 = false;
+
+            let scoreTextT1, scoreTextT2;
+
+            // --- Logika Tampilan Berdasarkan Mode ---
+            if (state.scoringMode === 'RALLY') {
+                
+                // Mode RALLY: Gunakan gamesT1/gamesT2 sebagai skor utama (Total Poin)
+                gamesDisplayContainer.classList.add('hidden'); // Sembunyikan set/games score
+                setScoreLabelEl.textContent = "Total Poin Dimenangkan:"; // Perbarui label skor keseluruhan
+                
+                scoreTextT1 = state.gamesT1.toString(); 
+                scoreTextT2 = state.gamesT2.toString(); 
+                
+                if (state.isMatchRunning) {
+                    // Update status message jika tidak ada pesan rotasi serve
+                    const totalPoints = state.gamesT1 + state.gamesT2;
+                    if (totalPoints === 0 || totalPoints % 2 !== 0) {
+                         statusMessage.textContent = "Mode RALLY: Poin diakumulasikan hingga waktu habis.";
+                         statusMessage.className = 'text-center text-gray-500 mt-2 text-sm';
+                    }
+                }
+
+            } else { // TENNIS mode
+                
+                gamesDisplayContainer.classList.remove('hidden'); // Tampilkan set/games score
+                
+                // Logika Kemenangan Game (Hanya untuk TENNIS)
+                if (state.scoreT1 >= 4 && state.scoreT1 >= state.scoreT2 + 2) {
+                    handleGameWin(1);
+                    return;
+                }
+                if (state.scoreT2 >= 4 && state.scoreT2 >= state.scoreT1 + 2) {
+                    handleGameWin(2);
+                    return;
+                }
+                
+                // Tentukan skor default (0, 15, 30, 40)
+                scoreTextT1 = state.displayScores[Math.min(state.scoreT1, 3)];
+                scoreTextT2 = state.displayScores[Math.min(state.scoreT2, 3)];
+
+                // Logika Deuce/Advantage
+                if (state.scoreT1 >= 3 && state.scoreT2 >= 3) {
+                    if (state.scoreT1 === state.scoreT2) {
+                        state.isDeuce = true;
+                    } 
+                    else if (state.scoreT1 === state.scoreT2 + 1) {
+                        state.isAdvantageT1 = true;
+                        scoreTextT1 = "Adv"; 
+                        scoreTextT2 = "40"; 
+                    } 
+                    else if (state.scoreT2 === state.scoreT1 + 1) {
+                        state.isAdvantageT1 = false;
+                        scoreTextT1 = "40"; 
+                        scoreTextT2 = "Adv"; 
+                    }
+                }
+                
+                // Perbarui label skor keseluruhan (games-t1/t2)
+                setScoreLabelEl.textContent = "Games Dimenangkan (Set):";
+                gamesDisplayT1.textContent = state.gamesT1;
+                gamesDisplayT2.textContent = state.gamesT2;
+                
+                // Perbarui Status Message (Deuce/Advantage/Normal)
+                if (state.isMatchRunning) {
+                    if (state.isDeuce) {
+                        statusMessage.textContent = "Status: DEUCE (40-40)";
+                        statusMessage.className = 'text-center text-yellow-600 font-bold mt-2 text-lg';
+                    } else if (state.isAdvantageT1) {
+                        statusMessage.textContent = "Status: ADVANTAGE Tim A";
+                        statusMessage.className = 'text-center text-green-600 font-bold mt-2 text-lg';
+                    } else if (state.isAdvantageT2) {
+                        statusMessage.textContent = "Status: ADVANTAGE Tim B";
+                        statusMessage.className = 'text-center text-red-600 font-bold mt-2 text-lg';
+                    } else {
+                        statusMessage.textContent = "Permainan sedang berlangsung...";
+                        statusMessage.className = 'text-center text-gray-500 mt-2 text-sm';
+                    }
+                } else if (!state.isMatchFinished) {
+                    // Default message jika tidak berjalan dan belum selesai
+                    statusMessage.textContent = "Pilih mode skor dan tekan Mulai Pertandingan.";
+                    statusMessage.className = 'text-center text-gray-500 mt-2 text-sm';
+                }
+            }
+
+            // Perbarui tampilan skor game saat ini (ukuran besar)
+            scoreDisplayT1.textContent = scoreTextT1;
+            scoreDisplayT2.textContent = scoreTextT2;
+
+
+            // 3. Perbarui indikator serve per pemain
+            const allPlayerNames = [player1NameEl, player2NameEl, player3NameEl, player4NameEl];
+            
+            allPlayerNames.forEach(el => {
+                if (!el) return;
+                const playerId = parseInt(el.getAttribute('data-player-id'));
+                const isServing = state.currentPlayerServer === playerId;
+                
+                el.classList.toggle('text-orange-600', isServing);
+                el.classList.toggle('font-bold', isServing);
+                el.classList.toggle('serving-player', isServing);
+                el.classList.toggle('text-gray-600', !isServing);
+            });
+
+
+            // 4. Perbarui Timer Display
+            if (timerDisplayEl) {
+                timerDisplayEl.textContent = formatTime(state.timerSeconds);
+                timerDisplayEl.classList.remove('bg-yellow-100', 'text-gray-700', 'bg-red-100', 'text-red-600', 'bg-green-100', 'text-green-800');
+                
+                if (state.timerInterval) {
+                    if (state.timerSeconds <= 60) {
+                         timerDisplayEl.classList.add('bg-red-100', 'text-red-600'); 
+                    } else {
+                        timerDisplayEl.classList.add('bg-green-100', 'text-green-800'); 
+                    }
+                } else {
+                    timerDisplayEl.classList.add('bg-yellow-100', 'text-gray-700');
+                }
+            }
+        }
+
+        // Fungsi untuk mencetak poin
+        function scorePoint(team) {
+            // Jangan izinkan menambah poin jika pertandingan sudah selesai atau belum dimulai
+            if (state.isMatchFinished || !state.isMatchRunning || (gameWonModal && !gameWonModal.classList.contains('hidden'))) {
+                statusMessage.textContent = "⚠️ Mulai pertandingan terlebih dahulu!";
+                statusMessage.className = 'text-center text-orange-600 font-bold mt-2 text-md';
+                return;
+            }
+            
+            if (state.scoringMode === 'RALLY') {
+                // Di mode RALLY, poin langsung dihitung ke total games (total poin)
+                if (team === 1) {
+                    state.gamesT1++;
+                } else {
+                    state.gamesT2++;
+                }
+                
+                // --- LOGIKA ROTASI SERVE BARU (RALLY MODE) ---
+                const totalPoints = state.gamesT1 + state.gamesT2;
+                // Rotasi server setiap 2 poin (jika total poin genap)
+                if (totalPoints > 0 && totalPoints % 2 === 0) {
+                    rotateServer();
+                    statusMessage.textContent = `Server berotasi ke ${playerDetails[state.currentPlayerServer].name} (Setiap 2 poin).`;
+                    statusMessage.className = 'text-center text-orange-600 font-bold mt-2 text-md';
+                }
+                // --- AKHIR LOGIKA ROTASI SERVE BARU ---
+
+            } else { // TENNIS mode
+                // Di mode TENNIS, poin dihitung ke game score saat ini
+                if (team === 1) {
+                    state.scoreT1++;
+                } else {
+                    state.scoreT2++;
+                }
+            }
+            
+            updateDisplay();
+        }
+
+        // Fungsi untuk menangani kemenangan game (Hanya berlaku untuk mode TENNIS)
+        function handleGameWin(winningTeam) {
+            if (state.scoringMode !== 'TENNIS') return; // Pastikan hanya Tennis yang menggunakan ini
+
+            // Increment game score (Set Score)
+            if (winningTeam === 1) {
+                state.gamesT1++;
+            } else {
+                state.gamesT2++;
+            }
+
+            const winnerName = winningTeam === 1 ? "Tim A" : "Tim B";
+            document.getElementById('winner-text').textContent = winnerName;
+            
+            // Tentukan server berikutnya berdasarkan rotasi (P1->P3->P2->P4->P1)
+            let nextServerId;
+            switch(state.currentPlayerServer) {
+                case 1: nextServerId = 3; break;
+                case 3: nextServerId = 2; break;
+                case 2: nextServerId = 4; break;
+                case 4: nextServerId = 1; break;
+            }
+            
+            const nextServerEl = document.getElementById('next-server-text');
+            if(nextServerEl && playerDetails[nextServerId]) {
+                nextServerEl.textContent = playerDetails[nextServerId].name;
+            }
+
+            if (gameWonModal) {
+                gameWonModal.classList.remove('hidden');
+                gameWonModal.classList.add('flex');
+            }
+        }
+
+        // Fungsi untuk memulai game baru (mereset skor game, merotasi server)
+        function startNewGame() {
+            if (!state.isMatchRunning) {
+                statusMessage.textContent = "⚠️ Mulai pertandingan terlebih dahulu!";
+                statusMessage.className = 'text-center text-orange-600 font-bold mt-2 text-md';
+                return;
+            }
+
+            // Game score hanya direset jika mode TENNIS
+            if (state.scoringMode === 'TENNIS') {
+                state.scoreT1 = 0;
+                state.scoreT2 = 0;
+                state.isDeuce = false;
+                state.isAdvantageT1 = false;
+                state.isAdvantageT2 = false;
+                
+                // Rotasi Server Ganda setelah Game berakhir
+                rotateServer(); 
+            } 
+            /* Catatan: Di mode RALLY, rotasi server sudah ditangani di scorePoint() */
+
+            // Sembunyikan modal kemenangan game
+            if (gameWonModal) {
+                gameWonModal.classList.add('hidden');
+                gameWonModal.classList.remove('flex');
+            }
+            
+            updateDisplay();
+        }
+
+        // Fungsi untuk menyelesaikan pertandingan (Final Result) - DIMODIFIKASI untuk konfirmasi
+        function finishMatch(fromTimer = false, confirmed = false) {
+            
+            // Logika Konfirmasi Manual (Jika sedang berjalan DAN bukan dari timer DAN belum dikonfirmasi)
+            if (state.isMatchRunning && !fromTimer && !confirmed) {
+                 // --- VALIDASI SKOR KOSONG DULU sebelum konfirmasi (TOAST BARU) ---
+                const totalScore = state.gamesT1 + state.gamesT2;
+                if (totalScore === 0) {
+                    showToast("❌ PERINGATAN: Skor masih 0-0. Tidak ada hasil untuk diselesaikan.", 'error');
+                    return; 
+                }
+                // --- AKHIR VALIDASI ---
+                showConfirmationModal('finish');
+                return;
+            }
+
+            // Hanya lanjutkan ke logika penyelesaian jika dari timer ATAU sudah dikonfirmasi
+            // --- VALIDASI SKOR KOSONG (TOAST BARU) ---
+            const totalScore = state.gamesT1 + state.gamesT2;
+            if (!fromTimer && totalScore === 0) { 
+                // Ini seharusnya tidak terpicu jika konfirmasi sudah ada, tapi sebagai fallback
+                showToast("❌ PERINGATAN: Skor masih 0-0. Hasil Pertandingan Kosong tidak disimpan/ditampilkan.", 'error');
+                return; 
+            }
+            // --- AKHIR VALIDASI ---
+
+            state.isMatchFinished = true;
+            state.isMatchRunning = false;
+            
+            // Hentikan timer jika pertandingan diakhiri
+            if (state.timerInterval) {
+                clearInterval(state.timerInterval);
+                state.timerInterval = null;
+                startMatchBtn.textContent = "Mulai Pertandingan (11 Menit)";
+                startMatchBtn.classList.remove('bg-red-600', 'hover:bg-red-700', 'shadow-red-500/50');
+                startMatchBtn.classList.add('bg-indigo-600', 'hover:bg-indigo-700', 'shadow-indigo-500/50');
+                if (!fromTimer) {
+                    state.timerSeconds = 0; 
+                }
+            }
+
+            if (gameWonModal) {
+                gameWonModal.classList.add('hidden');
+            }
+            
+            // Hitung pemenang pertandingan
+            let matchWinner;
+            const scoreLabel = state.scoringMode === 'RALLY' ? 'Total Poin' : 'Total Games';
+
+            if (state.gamesT1 > state.gamesT2) {
+                matchWinner = "Tim A";
+            } else if (state.gamesT2 > state.gamesT1) {
+                matchWinner = "Tim B";
+            } else {
+                matchWinner = `Seri/Tidak ditentukan (${scoreLabel} sama kuat)`; 
+            }
+            
+            // Update modal hasil akhir
+            document.getElementById('final-score-text').textContent = `${state.gamesT1} - ${state.gamesT2}`;
+            document.getElementById('match-winner-text').textContent = matchWinner;
+            document.getElementById('final-score-label').textContent = scoreLabel;
+            
+            if (matchResultsModal) {
+                matchResultsModal.classList.remove('hidden');
+                matchResultsModal.classList.add('flex');
+            }
+            updateDisplay();
+        }
+
+        // Fungsi untuk mereset skor match secara penuh
+        function resetMatch(hideModals = true, fullReset = false) {
+            if (fullReset) {
+                if (state.timerInterval) {
+                    clearInterval(state.timerInterval);
+                    state.timerInterval = null;
+                }
+                state.timerSeconds = 660; // Reset timer ke 11 menit
+                state.isMatchRunning = false;
+            }
+            
+            state.scoreT1 = 0;
+            state.scoreT2 = 0;
+            state.gamesT1 = 0; // Reset total game/poin
+            state.gamesT2 = 0; // Reset total game/poin
+            state.isDeuce = false;
+            state.isAdvantageT1 = false;
+            state.isAdvantageT2 = false;
+            state.currentPlayerServer = 1; 
+            state.isMatchFinished = false;
+            
+            // Pastikan timer dihentikan jika reset penuh
+            if (fullReset) {
+                startMatchBtn.textContent = "Mulai Pertandingan (11 Menit)";
+                startMatchBtn.classList.remove('bg-red-600', 'hover:bg-red-700', 'shadow-red-500/50');
+                startMatchBtn.classList.add('bg-indigo-600', 'hover:bg-indigo-700', 'shadow-indigo-500/50');
+            }
+            
+
+            if (hideModals) {
+                document.getElementById('game-won-modal').classList.add('hidden');
+                document.getElementById('match-results-modal').classList.add('hidden');
+                document.getElementById('action-confirm-modal').classList.add('hidden');
+            }
+            
+            if (!state.isMatchRunning && !state.isMatchFinished) {
+                statusMessage.textContent = "Pilih mode skor dan tekan Mulai Pertandingan.";
+                statusMessage.className = 'text-center text-gray-500 mt-2 text-sm';
+            }
+            
+            updateDisplay();
+        }
+    </script>
+</head>
+<body class="main-container">
+
+    <!-- Kontainer Utama Scoreboard: Dibuat lebih lebar (max-w-3xl) -->
+    <div class="w-full max-w-3xl bg-white shadow-2xl rounded-xl p-4 md:p-8 border border-gray-100">
+        
+        <h1 class="text-2xl md:text-3xl font-extrabold text-center text-gray-800 mb-2">Penghitung Skor Padel/Tenis</h1>
+        
+        <!-- Pilihan Mode Skor -->
+        <div class="mb-4 flex flex-col md:flex-row justify-center items-center gap-2 md:gap-3 p-3 bg-indigo-50 rounded-xl border border-indigo-200">
+            <label for="mode-selector" class="text-sm font-semibold text-indigo-700">Pilih Metode Skor:</label>
+            <select id="mode-selector" onchange="changeScoringMode(this)" class="py-1 px-3 border border-indigo-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-sm w-full md:w-auto transition duration-150">
+                <option value="TENNIS">Tennis/Padel Score (0, 15, 30, 40)</option>
+                <option value="RALLY">Rally Score (Poin Berlanjut)</option>
+            </select>
+        </div>
+
+        <!-- Timer Display (11:00) -->
+        <div id="timer-display" class="text-3xl font-extrabold text-center text-gray-700 mb-4 p-2 bg-yellow-100 rounded-lg shadow-inner transition duration-300 ease-in-out">
+            11:00
+        </div>
+        
+        <!-- Start Button Dinamis (Mulai / Reset) -->
+        <button id="start-match-btn" onclick="toggleMatchState()" class="w-full py-3 mb-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/50 transition duration-150 ease-in-out">
+            Mulai Pertandingan (11 Menit)
+        </button>
+
+        <!-- Skor Game Keseluruhan / Total Poin (Dinamis - Disembunyikan saat RALLY) -->
+        <div id="game-score-display" class="flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0 sm:space-x-8 mb-4 p-3 bg-gray-100 rounded-xl border">
+             <p id="set-score-label" class="text-base font-bold text-gray-700 text-center w-full sm:w-auto">Games Dimenangkan (Set):</p>
+            <div class="flex justify-center space-x-4 md:space-x-6">
+                <div class="text-lg font-bold text-blue-700">Tim A: <span id="games-t1" class="text-2xl font-extrabold">0</span></div>
+                <div class="text-lg font-bold text-red-700">Tim B: <span id="games-t2" class="text-2xl font-extrabold">0</span></div>
+            </div>
+        </div>
+
+        <!-- Pesan Status (Deuce/Advantage/Match Selesai) -->
+        <div id="status-message" class="text-center text-gray-500 mt-2 text-sm h-6 mb-4 transition duration-300 ease-in-out">
+            Pilih mode skor dan tekan Mulai Pertandingan.
+        </div>
+
+        <!-- Bagian Scoreboard Game Saat Ini (RESPONSIVE: Stack Vertikal di Mobile) -->
+        <div class="flex flex-col md:flex-row justify-between items-stretch gap-4">
+            
+            <!-- Tim 1 (A) -->
+            <div class="flex-1 p-4 bg-blue-50/70 border border-blue-100 rounded-lg flex flex-col items-center">
+                <h2 class="text-lg md:text-xl font-extrabold text-blue-800 tracking-wider mb-2">
+                    Tim A
+                </h2>
+                <!-- Pemain dan Server Indicator -->
+                <div class="text-xs text-gray-600 mb-2 flex justify-center gap-2 w-full md:text-sm md:gap-4">
+                    <p id="player-1-name" data-player-id="1" class="player-name transition duration-150 text-gray-600">P1</p>
+                    <p id="player-2-name" data-player-id="2" class="player-name transition duration-150 text-gray-600">P2</p>
+                </div>
+
+                <div id="score-t1" class="text-6xl md:text-8xl font-black text-blue-700 my-2 md:my-4 transition duration-300 ease-in-out h-20 md:h-24 flex items-center justify-center">
+                    0
+                </div>
+
+                <button onclick="scorePoint(1)" class="score-btn w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/50 transition duration-150 ease-in-out">
+                    Poin Tim A
+                </button>
+            </div>
+
+            <!-- VS separator (Hanya terlihat di desktop) -->
+            <div class="text-2xl font-bold text-gray-400 self-center hidden md:block">VS</div>
+
+            <!-- Tim 2 (B) -->
+            <div class="flex-1 p-4 bg-red-50/70 border border-red-100 rounded-lg flex flex-col items-center">
+                <h2 class="text-lg md:text-xl font-extrabold text-red-800 tracking-wider mb-2">
+                    Tim B
+                </h2>
+                <!-- Pemain dan Server Indicator -->
+                 <div class="text-xs text-gray-600 mb-2 flex justify-center gap-2 w-full md:text-sm md:gap-4">
+                    <p id="player-3-name" data-player-id="3" class="player-name transition duration-150 text-gray-600">P3</p>
+                    <p id="player-4-name" data-player-id="4" class="player-name transition duration-150 text-gray-600">P4</p>
+                </div>
+
+                <div id="score-t2" class="text-6xl md:text-8xl font-black text-red-700 my-2 md:my-4 transition duration-300 ease-in-out h-20 md:h-24 flex items-center justify-center">
+                    0
+                </div>
+
+                <button onclick="scorePoint(2)" class="score-btn w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-lg shadow-red-500/50 transition duration-150 ease-in-out">
+                    Poin Tim B
+                </button>
+            </div>
+        </div>
+
+        <!-- Tombol Aksi (RESPONSIVE: Stack Vertikal di Mobile, Horizontal di Desktop) -->
+        <div class="mt-6 flex flex-col sm:flex-row justify-center gap-3 md:gap-4">
+            <button onclick="startNewGame()" class="text-sm py-2 px-4 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold rounded-full transition duration-150 ease-in-out">
+                Rotasi Server & Game Baru
+            </button>
+            <button onclick="finishMatch()" class="text-sm py-2 px-4 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-full shadow-md shadow-green-300/50 transition duration-150 ease-in-out">
+                Selesai & Lihat Hasil Pertandingan
+            </button>
+        </div>
+        <div class="mt-3 text-center">
+             <button onclick="resetMatch(true, true)" class="text-xs text-gray-400 hover:text-red-500">
+                Reset Total Paksa (Untuk Debug/Ulang)
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal 1: Kemenangan Game (Hanya mode TENNIS) -->
+    <div id="game-won-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 items-center justify-center p-4">
+        <div class="bg-white rounded-xl p-6 max-w-sm w-full shadow-2xl text-center transform scale-100 transition-all duration-300">
+            <svg class="mx-auto h-12 w-12 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <h3 class="text-2xl font-bold text-gray-900 mt-3">GAME DIMENANGKAN!</h3>
+            <p class="text-lg text-gray-700 mt-2">Pemenang: <span id="winner-text" class="font-extrabold text-green-600"></span></p>
+            <p class="text-sm text-gray-500 mt-1">Skor game saat ini akan direset. Server berikutnya adalah <span id="next-server-text" class="font-bold text-indigo-600"></span>.</p>
+            <button onclick="startNewGame()" class="mt-5 w-full py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg">
+                Mulai Game Berikutnya
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal 2: Hasil Akhir Pertandingan -->
+    <div id="match-results-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 items-center justify-center p-4">
+        <div class="bg-white rounded-xl p-8 max-w-md w-full shadow-2xl text-center">
+            <h3 class="text-2xl md:text-3xl font-extrabold text-gray-900 mb-4">HASIL AKHIR PERTANDINGAN</h3>
+            <div class="border-t border-b py-4 mb-4">
+                <p class="text-xl text-gray-600 font-medium"><span id="final-score-label">Total Games</span>:</p>
+                <p id="final-score-text" class="text-5xl font-black text-indigo-600 mt-2">0 - 0</p>
+            </div>
+            
+            <p class="text-xl text-gray-700 font-semibold mt-4">Pemenang Pertandingan:</p>
+            <p id="match-winner-text" class="text-2xl font-extrabold text-green-700 mt-1"></p>
+            
+            <button onclick="resetMatch(true, true)" class="mt-6 w-full py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg">
+                Mulai Pertandingan Baru
+            </button>
+        </div>
+    </div>
+    
+    <!-- Modal 3 (BARU): Konfirmasi Tindakan (Reset/Selesai) -->
+    <div id="action-confirm-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 items-center justify-center p-4">
+        <div class="bg-white rounded-xl p-6 max-w-sm w-full shadow-2xl text-center">
+            <svg class="mx-auto h-12 w-12 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <h3 id="confirm-modal-title" class="text-xl font-bold text-gray-900 mt-3"></h3>
+            <p class="text-sm text-gray-500 mt-2">Tindakan ini akan mengakhiri atau mereset skor pertandingan saat ini.</p>
+            <div class="mt-5 flex justify-between gap-3">
+                <button onclick="cancelAction()" class="flex-1 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold rounded-lg transition duration-150">
+                    Batal
+                </button>
+                <button id="confirm-action-btn" onclick="confirmAction()" class="flex-1 py-2 bg-orange-600 hover:bg-orange-700 text-white font-semibold rounded-lg transition duration-150">
+                    Ya, Lanjutkan
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toast Notification (BARU) -->
+    <div id="toast-notification" class="fixed bottom-5 right-5 p-4 rounded-lg shadow-xl text-white font-semibold transition-opacity duration-300 opacity-0 pointer-events-none z-50">
+        <p id="toast-message"></p>
+    </div>
+
+</body>
+</html>

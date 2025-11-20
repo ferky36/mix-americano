@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cashflow Event per Tanggal</title>
+  <style>
+    :root{
+      /* Dark (default) */
+      --bg:#0b0c10;
+      --card:#121319;
+      --muted:#9aa3b2;
+      --text:#0f1117; /* base text for internal surfaces */
+      --accent:#4f46e5;
+      --in:#16a34a;
+      --out:#ef4444;
+      --chip:#1f2937;
+      --border:#242736;
+      /* Table surfaces */
+      --tbl:#0f1117;
+      --thead:#0c0e14;
+      --rowborder:#1f2431;
+      --text-strong:#f6f7f9;
+    }
+    :root[data-theme='light']{
+      --bg:#f6f7fb;
+      --card:#ffffff;
+      --muted:#5b6472;
+      --text:#0b0c10;
+      --accent:#4338ca;
+      --in:#16a34a;
+      --out:#ef4444;
+      --chip:#eef2f7;
+      --border:#e5e7eb;
+      --tbl:#ffffff;
+      --thead:#f3f4f6;
+      --rowborder:#e5e7eb;
+      --text-strong:#0b0c10;
+    }
+    html,body{margin:0;background:var(--bg);color:var(--text-strong);font-family:system-ui, -apple-system, Segoe UI, Roboto, Inter, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";}
+    .wrap{max-width:1200px;margin-inline:auto;padding:24px;}
+
+    .page-title{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    .page-title h1{font-size:clamp(20px,2.6vw,28px);margin:0}
+    .hint{color:var(--muted);font-size:14px}
+
+    .summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:18px 0 26px}
+    .kpi{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px 16px}
+    .kpi .label{font-size:12px;color:var(--muted)}
+    .kpi .value{font-size:22px;margin-top:6px}
+    .kpi.in .value{color:var(--in)}
+    .kpi.out .value{color:var(--out)}
+    .kpi.balance .value{color:#22d3ee}
+
+    .event-card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:16px 16px 12px;margin-bottom:18px}
+    .event-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+    .event-info{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+    .chip{background:var(--chip);border:1px solid var(--border);padding:6px 10px;border-radius:999px;font-size:12px;color:var(--muted)}
+    .event-name{font-weight:600;letter-spacing:.2px}
+
+    .tables{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    @media (max-width:860px){.tables{grid-template-columns:1fr}}
+
+    table{width:100%;border-collapse:collapse;background:var(--tbl);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+    thead th{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);background:var(--thead);padding:12px;border-bottom:1px solid var(--border)}
+    tbody td{padding:10px 12px;border-bottom:1px dashed var(--rowborder);color:var(--text-strong)}
+    tbody tr:last-child td{border-bottom:none}
+    td.num{text-align:right;white-space:nowrap}
+    td.small{color:var(--text-strong);font-size:13px}
+
+    .t-total{display:flex;justify-content:flex-end;gap:18px;padding:10px 6px 0 6px;color:#cbd5e1}
+    .t-total .pill{padding:6px 10px;border-radius:999px;border:1px solid var(--border);background:var(--chip)}
+    .t-total .in{color:var(--in)}
+    .t-total .out{color:var(--out)}
+
+    .event-footer{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;margin-top:10px}
+    .badge{border-radius:999px;padding:8px 12px;border:1px solid var(--border);background:var(--chip);font-weight:600}
+    .badge.in{color:var(--in)}
+    .badge.out{color:var(--out)}
+    .badge.sisa{color:#22d3ee}
+
+    .grand{position:sticky;bottom:0;background:linear-gradient(180deg, rgba(11,12,16,0), var(--bg) 35%);padding-top:10px}
+    .grand .bar{background:var(--tbl);border:1px solid var(--border);border-radius:18px;padding:14px 16px;display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;align-items:center}
+    .grand .title{font-weight:700}
+
+    .muted{color:var(--muted)}
+
+    /* theme toggle */
+    .theme-toggle{margin-left:auto;border:1px solid var(--border);background:var(--chip);color:var(--text-strong);padding:8px 12px;border-radius:999px;cursor:pointer;font-weight:600}
+    .theme-toggle:active{transform:translateY(1px)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="page-title">
+      <h1>Cashflow Event per Tanggal</h1>
+      <span class="hint">Contoh desain berdasarkan laporan yang Anda kirim<\/span>
+      <button id="themeToggle" class="theme-toggle" aria-label="Toggle tema">☀️ Light<\/button>
+    </div>
+
+    <div class="summary" id="top-summary"></div>
+
+    <div id="events"></div>
+
+    <div class="grand" id="grand"></div>
+  </div>
+
+  <script>
+    // --- Tema: toggle light/dark ---
+    (function(){
+      const saved = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      let theme = saved || (prefersDark ? 'dark' : 'light');
+      function apply(t){
+        document.documentElement.setAttribute('data-theme', t);
+        const btn = document.getElementById('themeToggle');
+        if(btn){ btn.textContent = t==='light' ? '🌙 Dark' : '☀️ Light'; }
+        localStorage.setItem('theme', t);
+      }
+      window.addEventListener('DOMContentLoaded', ()=>{
+        apply(theme);
+        document.getElementById('themeToggle')?.addEventListener('click', ()=>{
+          theme = theme==='light' ? 'dark' : 'light';
+          apply(theme);
+        });
+      });
+    })();
+
+    // --- Sample data diambil dari report: 2 event beda tanggal ---
+    const events = [
+      {
+        name: "Tennis-British",
+        date: "2025-09-17",
+        income: [
+          {source:"[Tennis-British] Peserta", amount:70000, pax:10}
+        ],
+        expense: [
+          {item:"[Tennis-British] Sewa lapangan", amount:700000, pax:1},
+          {item:"[Tennis-British] Raket", amount:50000, pax:5}
+        ]
+      },
+      {
+        name: "Pickle Ball",
+        date: "2025-09-29",
+        income: [
+          {source:"[Pickle Ball] Peserta", amount:75000, pax:10},
+          {source:"[Pickle Ball] Kas Bola", amount:1000000, pax:1}
+        ],
+        expense: [
+          {item:"[Pickle Ball] Sewa Lapangan", amount:800000, pax:1},
+          {item:"[Pickle Ball] Sewa Raket", amount:50000, pax:4}
+        ]
+      }
+    ];
+
+    // --- Utils ---
+    const rupiah = n => new Intl.NumberFormat("id-ID", {style:"currency", currency:"IDR", maximumFractionDigits:0}).format(n);
+    const fmtDate = iso => new Date(iso+"T00:00:00").toLocaleDateString("id-ID", {weekday:"long", day:"2-digit", month:"long", year:"numeric"});
+
+    function calcEvent(ev){
+      const inTotal = ev.income.reduce((a,b)=> a + (b.amount * (b.pax||1)), 0);
+      const outTotal = ev.expense.reduce((a,b)=> a + (b.amount * (b.pax||1)), 0);
+      return {inTotal, outTotal, balance: inTotal - outTotal};
+    }
+
+    function rowIncome(r){
+      const total = r.amount * (r.pax||1);
+      return `<tr>
+        <td>${r.source}</td>
+        <td class="num small">${rupiah(r.amount)}</td>
+        <td class="num small">${r.pax||1}</td>
+        <td class="num">${rupiah(total)}</td>
+      </tr>`;
+    }
+    function rowExpense(r){
+      const total = r.amount * (r.pax||1);
+      return `<tr>
+        <td>${r.item}</td>
+        <td class="num small">${rupiah(r.amount)}</td>
+        <td class="num small">${r.pax||1}</td>
+        <td class="num">${rupiah(total)}</td>
+      </tr>`;
+    }
+
+    // --- Render top summary (aggregat semua event) ---
+    function renderTopSummary(){
+      const totalIn = events.reduce((s,ev)=> s + calcEvent(ev).inTotal, 0);
+      const totalOut = events.reduce((s,ev)=> s + calcEvent(ev).outTotal, 0);
+      const bal = totalIn - totalOut;
+      document.getElementById('top-summary').innerHTML = `
+        <div class="kpi in"><div class="label">Uang Masuk</div><div class="value">${rupiah(totalIn)}</div></div>
+        <div class="kpi out"><div class="label">Uang Keluar</div><div class="value">${rupiah(totalOut)}</div></div>
+        <div class="kpi balance"><div class="label">Sisa</div><div class="value">${rupiah(bal)}</div></div>
+      `;
+    }
+
+    // --- Render events per tanggal ---
+    function renderEvents(){
+      const host = document.getElementById('events');
+      host.innerHTML = '';
+      events
+        .slice()
+        .sort((a,b)=> new Date(a.date) - new Date(b.date))
+        .forEach(ev => {
+          const {inTotal, outTotal, balance} = calcEvent(ev);
+          const h = document.createElement('section');
+          h.className = 'event-card';
+          h.innerHTML = `
+            <div class="event-head">
+              <div class="event-info">
+                <span class="chip" title="Tanggal Event">${fmtDate(ev.date)}</span>
+                <span class="chip muted">${ev.name}</span>
+              </div>
+              <div class="event-footer">
+                <span class="badge in">Masuk: ${rupiah(inTotal)}</span>
+                <span class="badge out">Keluar: ${rupiah(outTotal)}</span>
+                <span class="badge sisa">Sisa: ${rupiah(balance)}</span>
+              </div>
+            </div>
+
+            <div class="tables">
+              <div>
+                <table>
+                  <thead>
+                    <tr><th>Uang Masuk</th><th>Amount</th><th>Pax</th><th>Total</th></tr>
+                  </thead>
+                  <tbody>
+                    ${ev.income.map(rowIncome).join('')}
+                  </tbody>
+                </table>
+                <div class="t-total">
+                  <span class="pill in">Total Masuk: <b>${rupiah(inTotal)}</b></span>
+                </div>
+              </div>
+
+              <div>
+                <table>
+                  <thead>
+                    <tr><th>Uang Keluar</th><th>Amount</th><th>Pax</th><th>Total</th></tr>
+                  </thead>
+                  <tbody>
+                    ${ev.expense.map(rowExpense).join('')}
+                  </tbody>
+                </table>
+                <div class="t-total">
+                  <span class="pill out">Total Keluar: <b>${rupiah(outTotal)}</b></span>
+                </div>
+              </div>
+            </div>
+          `;
+          host.appendChild(h);
+        });
+    }
+
+    function renderGrand(){
+      const totalIn = events.reduce((s,ev)=> s + calcEvent(ev).inTotal, 0);
+      const totalOut = events.reduce((s,ev)=> s + calcEvent(ev).outTotal, 0);
+      const bal = totalIn - totalOut;
+      document.getElementById('grand').innerHTML = `
+        <div class="bar">
+          <div class="title">Total Keseluruhan</div>
+          <div class="event-footer">
+            <span class="badge in">Masuk: ${rupiah(totalIn)}</span>
+            <span class="badge out">Keluar: ${rupiah(totalOut)}</span>
+            <span class="badge sisa">Sisa: ${rupiah(bal)}</span>
+          </div>
+        </div>`;
+    }
+
+    renderTopSummary();
+    renderEvents();
+    renderGrand();
+  </script>
+</body>
+</html>
