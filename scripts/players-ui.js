@@ -54,6 +54,18 @@ function renderPlayersList() {
       // sisipkan di antara nama & tombol hapus
       const nameSpan = li.querySelector('.player-name');
       const delBtn   = li.querySelector('.del');
+      if (!isViewer()){
+        const editBtn = document.createElement('button');
+        editBtn.className = 'px-2 py-0.5 text-xs rounded border dark:border-gray-700 flex items-center gap-1';
+        editBtn.textContent = 'edit';
+        editBtn.title = 'Rename pemain';
+        editBtn.addEventListener('click', (e)=>{
+          e.preventDefault(); e.stopPropagation();
+          if (typeof openPlayerNameEditModal === 'function') openPlayerNameEditModal(name);
+        });
+        nameSpan.after(editBtn);
+        nameSpan.classList.add('mr-2');
+      }
       if (isViewer()) delBtn.style.display = 'none';
       // Tombol toggle "Paid" (khusus editor) — akan disembunyikan, kita gunakan klik kartu
       const pBtn = document.createElement('button');
@@ -77,7 +89,15 @@ function renderPlayersList() {
       if (!isViewer()) { pBtn.style.display = ''; } else { pBtn.style.display = 'none'; }
       _refreshPaidBtn();
 
-      nameSpan.after(gSel, lSel, pBtn);
+      if (!isViewer()){
+        const editBtn = nameSpan.nextElementSibling && nameSpan.nextElementSibling.textContent === 'edit'
+          ? nameSpan.nextElementSibling
+          : null;
+        if (editBtn) editBtn.after(gSel, lSel, pBtn);
+        else nameSpan.after(gSel, lSel, pBtn);
+      } else {
+        nameSpan.after(gSel, lSel, pBtn);
+      }
 
       // Badge Paid (bottom-right)
       const paidBadge = document.createElement('span');
@@ -233,6 +253,5 @@ function ensureViewerPlayersPanel(){
   parent.appendChild(wrap);
   return wrap;
 }
-
 
 

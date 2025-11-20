@@ -146,7 +146,7 @@ async function submitJoinForm(){
     const t = window.joinOpenAt
       ? `Belum bisa join. Pendaftaran dibuka pada ${toLocalDateValue(window.joinOpenAt)} ${toLocalTimeValue(window.joinOpenAt)}.`
       : 'Belum bisa join. Pendaftaran belum dibuka.';
-    if (msg) { msg.textContent = t; msg.className = 'text-xs text-amber-600 dark:text-amber-400'; }
+    if (msg) { msg.textContent = t; msg.className = 'text-xs mt-2 text-amber-600 dark:text-amber-400'; }
     try{ showToast?.(t, 'info'); }catch{}
     return;
   }
@@ -164,12 +164,12 @@ async function submitJoinForm(){
 
     if (Array.isArray(waitingList) && waitingList.some(x => norm(x) === n)) {
       const t = 'Nama sudah ada di waiting list.'; 
-      msg.textContent = t; msg.className = 'text-xs text-amber-600 dark:text-amber-400';
+      msg.textContent = t; msg.className = 'text-xs mt-2 text-amber-600 dark:text-amber-400';
       return;
     }
     if (Array.isArray(players) && players.some(x => norm(x) === n)) {
       const t = 'Nama sudah ada di daftar pemain.';
-      msg.textContent = t; msg.className = 'text-xs text-amber-600 dark:text-amber-400';
+      msg.textContent = t; msg.className = 'text-xs mt-2 text-amber-600 dark:text-amber-400';
       return;
     }
   } catch {}
@@ -194,11 +194,11 @@ async function submitJoinForm(){
     } else if (status === 'already') {
       const nm = res?.name || name;
       const t = 'Anda sudah terdaftar sebagai '+ nm;
-      msg.textContent = t; msg.className = 'text-xs text-amber-600 dark:text-amber-400';
+      msg.textContent = t; msg.className = 'text-xs mt-2 text-amber-600 dark:text-amber-400';
       showToast(t, 'warn');
     } else if (status === 'waitlisted' || status === 'full') {
       const t = 'List sudah penuh, Anda masuk ke waiting list';
-      msg.textContent = t; msg.className = 'text-xs text-amber-600 dark:text-amber-400';
+      msg.textContent = t; msg.className = 'text-xs mt-2 text-amber-600 dark:text-amber-400';
       showToast(t, 'warn');
       const ok = await loadStateFromCloud();
       if (!ok) showToast('Berhasil masuk waiting list, tapi gagal memuat data.', 'warn');
@@ -206,26 +206,26 @@ async function submitJoinForm(){
       byId('joinModal')?.classList.add('hidden');
     } else if (status === 'closed') {
       const t = 'Pendaftaran ditutup. Hanya member yang bisa join.';
-      msg.textContent = t; msg.className = 'text-xs text-amber-600 dark:text-amber-400';
+      msg.textContent = t; msg.className = 'text-xs mt-2 text-amber-600 dark:text-amber-400';
       showToast(t, 'warn');
     } else if (status === 'unauthorized') {
       const t = 'Silakan login terlebih dahulu.';
-      msg.textContent = t; msg.className = 'text-xs text-red-600 dark:text-red-400';
+      msg.textContent = t; msg.className = 'text-xs mt-2 text-red-600 dark:text-red-400';
       showToast(t, 'error');
     } else if (status === 'not_found') {
       const t = 'Event tidak ditemukan.';
-      msg.textContent = t; msg.className = 'text-xs text-red-600 dark:text-red-400';
+      msg.textContent = t; msg.className = 'text-xs mt-2 text-red-600 dark:text-red-400';
       showToast(t, 'error');
     } else {
       const t = 'Gagal join. Silakan coba lagi.';
-      msg.textContent = t; msg.className = 'text-xs text-red-600 dark:text-red-400';
+      msg.textContent = t; msg.className = 'text-xs mt-2 text-red-600 dark:text-red-400';
       showToast(t, 'error');
     }
   }catch(e){
     console.error(e);
     const t = 'Gagal join: ' + (e?.message || '');
     msg.textContent = t;
-    msg.className = 'text-xs text-red-600 dark:text-red-400';
+    msg.className = 'text-xs mt-2 text-red-600 dark:text-red-400';
     showToast(t, 'error');
   } finally { hideLoading(); refreshJoinUI(); }
 }
@@ -255,20 +255,22 @@ async function requestJoinEventRPC({ name, gender, level }){
   return data;
 }
 
-// ===== Edit Self Name (preserve UID) =====
-// Lightweight modal for editing display name
-let __editNameOld = null;
+// ===== Edit Name Modal (self or player list) =====
+let __editNameCtx = null;
+let editNameModalEl=null, editNameInputEl=null, editGenderSelectEl=null, editLevelSelectEl=null,
+    editNameMsgEl=null, editNameTitleEl=null, editNameMetaRowEl=null;
+
 function ensureEditNameModal(){
-  if (byId('editNameModal')) return;
+  if (editNameModalEl) return;
   const div = document.createElement('div');
   div.id='editNameModal';
   div.className='fixed inset-0 z-50 hidden';
   div.innerHTML = `
     <div class="absolute inset-0 bg-black/40" id="editNameBackdrop"></div>
     <div class="relative mx-auto mt-20 w-[92%] max-w-md rounded-2xl bg-white dark:bg-gray-800 shadow p-4 md:p-6 border dark:border-gray-700">
-      <h3 class="text-base md:text-lg font-semibold mb-3">Ubah nama tampilan Anda</h3>
+      <h3 id="editNameTitle" class="text-base md:text-lg font-semibold mb-3">Ubah Nama</h3>
       <input id="editNameInput" type="text" class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" />
-      <div class="grid grid-cols-2 gap-3 mt-3">
+      <div id="editNameMetaRow" class="grid grid-cols-2 gap-3 mt-3">
         <div>
           <label class="block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Gender</label>
           <select id="editGenderSelect" class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100">
@@ -293,11 +295,42 @@ function ensureEditNameModal(){
       <div id="editNameMsg" class="text-xs mt-2"></div>
     </div>`;
   document.body.appendChild(div);
-  byId('editNameBackdrop').addEventListener('click', ()=> byId('editNameModal').classList.add('hidden'));
-  byId('editNameCancel').addEventListener('click', ()=> byId('editNameModal').classList.add('hidden'));
-  byId('editNameOk').addEventListener('click', submitEditSelfName);
-  // Enter key support
-  byId('editNameInput').addEventListener('keydown', (e)=>{ if (e.key==='Enter'){ e.preventDefault(); submitEditSelfName(); } });
+  editNameModalEl = div;
+  editNameInputEl = byId('editNameInput');
+  editGenderSelectEl = byId('editGenderSelect');
+  editLevelSelectEl = byId('editLevelSelect');
+  editNameMsgEl = byId('editNameMsg');
+  editNameTitleEl = byId('editNameTitle');
+  editNameMetaRowEl = byId('editNameMetaRow');
+  byId('editNameBackdrop').addEventListener('click', hideEditNameModal);
+  byId('editNameCancel').addEventListener('click', hideEditNameModal);
+  byId('editNameOk').addEventListener('click', submitEditNameModal);
+  editNameInputEl.addEventListener('keydown', (e)=>{ if (e.key==='Enter'){ e.preventDefault(); submitEditNameModal(); } });
+}
+
+function openEditNameModal(ctx){
+  ensureEditNameModal();
+  __editNameCtx = ctx || {};
+  const title = ctx?.title || 'Ubah Nama';
+  const initial = ctx?.initialName || '';
+  const allowMeta = !!ctx?.allowMeta;
+  const g = ctx?.initialGender || '';
+  const lv = ctx?.initialLevel || '';
+  if (editNameTitleEl) editNameTitleEl.textContent = title;
+  if (editNameInputEl){
+    editNameInputEl.value = initial;
+    setTimeout(()=>{ try{ editNameInputEl.focus(); editNameInputEl.select(); }catch{} }, 30);
+  }
+  if (editNameMetaRowEl) editNameMetaRowEl.classList.toggle('hidden', !allowMeta);
+  if (editGenderSelectEl) editGenderSelectEl.value = g;
+  if (editLevelSelectEl) editLevelSelectEl.value = lv;
+  if (editNameMsgEl){ editNameMsgEl.textContent=''; editNameMsgEl.className='text-xs mt-2'; }
+  editNameModalEl.classList.remove('hidden');
+}
+
+function hideEditNameModal(){
+  if (editNameModalEl) editNameModalEl.classList.add('hidden');
+  __editNameCtx = null;
 }
 
 async function editSelfNameFlow(){
@@ -307,80 +340,122 @@ async function editSelfNameFlow(){
     if (!user){ byId('loginModal')?.classList.remove('hidden'); return; }
     const found = findJoinedPlayerByUid(user.id);
     if (!found || !found.name){ showToast?.('Anda belum join di event ini.', 'warn'); return; }
-    ensureEditNameModal();
-    __editNameOld = found.name;
-    const inp = byId('editNameInput');
-    const msg = byId('editNameMsg'); if (msg){ msg.textContent=''; msg.className='text-xs'; }
-    if (inp){ inp.value = __editNameOld; setTimeout(()=>{ inp.focus(); try{ inp.select(); }catch{} }, 30); }
-    // Prefill gender & level from meta
-    try{
-      const meta = (playerMeta && playerMeta[__editNameOld]) ? playerMeta[__editNameOld] : {};
-      const g = meta?.gender || '';
-      const lv = meta?.level || '';
-      const gs = byId('editGenderSelect'); if (gs) gs.value = g;
-      const ls = byId('editLevelSelect'); if (ls) ls.value = lv;
-    }catch{}
-    byId('editNameModal').classList.remove('hidden');
+    const meta = (playerMeta && playerMeta[found.name]) ? playerMeta[found.name] : {};
+    openEditNameModal({
+      mode:'self',
+      title:'Ubah nama tampilan Anda',
+      initialName: found.name,
+      initialGender: meta?.gender || '',
+      initialLevel: meta?.level || '',
+      allowMeta: true,
+      userId: user.id,
+      originalName: found.name
+    });
   }catch(e){ console.warn('editSelfNameFlow failed', e); showToast?.('Gagal membuka editor nama.', 'error'); }
 }
 
-async function submitEditSelfName(){
+async function submitEditNameModal(){
   try{
-    let user=null; try{ const data = await (window.getAuthUserCached ? getAuthUserCached() : sb.auth.getUser().then(r=>r.data)); user = data?.user || null; }catch{}
-    if (!user) { byId('loginModal')?.classList.remove('hidden'); return; }
-    const oldName = __editNameOld || '';
-    const inp = byId('editNameInput');
-    const msg = byId('editNameMsg');
-    const newName = (inp?.value||'').trim();
-    const newGender = byId('editGenderSelect')?.value || '';
-    const newLevel  = byId('editLevelSelect')?.value || '';
-    if (!newName){ if (msg){ msg.textContent='Nama tidak boleh kosong.'; msg.className='text-xs text-red-600 dark:text-red-400'; } return; }
-    // If only gender/level changed (name stays the same), still update meta and save
-    if (newName === oldName){
-      try{
-        playerMeta = (typeof playerMeta==='object' && playerMeta) ? playerMeta : {};
-        const prev = playerMeta[oldName] ? {...playerMeta[oldName]} : {};
-        playerMeta[oldName] = { ...prev, uid: prev.uid || user.id, gender: newGender || '', level: newLevel || '' };
-      }catch{}
-      try{ markDirty?.(); renderPlayersList?.(); renderAll?.(); validateNames?.(); refreshJoinUI?.(); }catch{}
-      try{ if (typeof maybeAutoSaveCloud==='function') maybeAutoSaveCloud(); else if (typeof saveStateToCloud==='function') await saveStateToCloud(); }catch{}
-      showToast?.('Profil diperbarui.', 'success');
-      byId('editNameModal').classList.add('hidden');
-      return;
-    }
+    const ctx = __editNameCtx || {};
+    const oldName = ctx.originalName || '';
+    const allowMeta = !!ctx.allowMeta;
+    const msg = editNameMsgEl;
+    const newName = (editNameInputEl?.value || '').trim();
+    const newGender = allowMeta ? (editGenderSelectEl?.value || '') : '';
+    const newLevel  = allowMeta ? (editLevelSelectEl?.value || '') : '';
+    if (!newName){ if (msg){ msg.textContent='Nama tidak boleh kosong.'; msg.className='text-xs mt-2 text-red-600 dark:text-red-400'; } return; }
     const norm = (s)=>String(s||'').trim().toLowerCase();
     const targetN = norm(newName);
     const oldN = norm(oldName);
-    const dupPlayers = Array.isArray(players) && players.some(n=>{ const k=norm(n); return k===targetN && k!==oldN; });
-    const dupWaiting = Array.isArray(waitingList) && waitingList.some(n=>{ const k=norm(n); return k===targetN && k!==oldN; });
-    if (dupPlayers || dupWaiting){ if (msg){ msg.textContent='Nama sudah digunakan. Pilih nama lain.'; msg.className='text-xs text-amber-600 dark:text-amber-400'; } return; }
-    // Apply rename in players or waiting list
-    let renamed=false;
-    if (Array.isArray(players)){
-      const idx = players.findIndex(n => norm(n)===oldN);
-      if (idx>=0){ players[idx]=newName; renamed=true; }
+    if (ctx.mode === 'self'){
+      let userId = ctx.userId;
+      if (!userId){
+        try{ const data = await (window.getAuthUserCached ? getAuthUserCached() : sb.auth.getUser().then(r=>r.data)); userId = data?.user?.id || null; }
+        catch{}
+      }
+      if (!userId){ byId('loginModal')?.classList.remove('hidden'); return; }
+      const dupPlayers = Array.isArray(players) && players.some(n=>{ const k=norm(n); return k===targetN && k!==oldN; });
+      const dupWaiting = Array.isArray(waitingList) && waitingList.some(n=>{ const k=norm(n); return k===targetN && k!==oldN; });
+      if (dupPlayers || dupWaiting){ if (msg){ msg.textContent='Nama sudah digunakan. Pilih nama lain.'; msg.className='text-xs mt-2 text-amber-600 dark:text-amber-400'; } return; }
+      if (newName === oldName){
+        try{
+          playerMeta = (typeof playerMeta==='object' && playerMeta) ? playerMeta : {};
+          const prev = playerMeta[oldName] ? {...playerMeta[oldName]} : {};
+          playerMeta[oldName] = { ...prev, uid: prev.uid || userId, gender: newGender || '', level: newLevel || '' };
+        }catch{}
+        try{ markDirty?.(); renderPlayersList?.(); renderAll?.(); validateNames?.(); refreshJoinUI?.(); }catch{}
+        try{ if (typeof maybeAutoSaveCloud==='function') maybeAutoSaveCloud(); else if (typeof saveStateToCloud==='function') await saveStateToCloud(); }catch{}
+        showToast?.('Profil diperbarui.', 'success');
+        hideEditNameModal();
+        return;
+      }
+      // rename self entry in players/waiting list
+      let renamed=false;
+      if (Array.isArray(players)){
+        const idx = players.findIndex(n => norm(n)===oldN);
+        if (idx>=0){ players[idx]=newName; renamed=true; }
+      }
+      if (!renamed && Array.isArray(waitingList)){
+        const idx2 = waitingList.findIndex(n => norm(n)===oldN);
+        if (idx2>=0){ waitingList[idx2]=newName; renamed=true; }
+      }
+      try{
+        playerMeta = (typeof playerMeta==='object' && playerMeta) ? playerMeta : {};
+        const meta = playerMeta[oldName] ? {...playerMeta[oldName]} : {};
+        if (!playerMeta[newName]) playerMeta[newName] = {};
+        playerMeta[newName] = { ...meta, uid: meta.uid || userId, gender: newGender || '', level: newLevel || '' };
+        if (oldName in playerMeta) delete playerMeta[oldName];
+      }catch{}
+      try{ if (typeof replaceNameInRounds === 'function') replaceNameInRounds(oldName, newName); }catch{}
+      try{ markDirty?.(); renderPlayersList?.(); renderAll?.(); validateNames?.(); refreshJoinUI?.(); }catch{}
+      try{ if (typeof maybeAutoSaveCloud==='function') maybeAutoSaveCloud(); else if (typeof saveStateToCloud==='function') await saveStateToCloud(); }catch{}
+      showToast?.('Nama diperbarui menjadi '+ newName, 'success');
+      hideEditNameModal();
+      return;
     }
-    if (!renamed && Array.isArray(waitingList)){
-      const idx2 = waitingList.findIndex(n => norm(n)===oldN);
-      if (idx2>=0){ waitingList[idx2]=newName; renamed=true; }
+
+    if (ctx.mode === 'playerList'){
+      if (typeof isViewer === 'function' && isViewer()) { hideEditNameModal(); return; }
+      const idx = Array.isArray(players) ? players.findIndex(n => norm(n)===oldN) : -1;
+      if (idx < 0){ if (msg){ msg.textContent='Nama tidak ditemukan di daftar pemain.'; msg.className='text-xs mt-2 text-red-600 dark:text-red-400'; } return; }
+      const dupPlayers = players.some((n,i)=>{ const k=norm(n); return i!==idx && k===targetN; });
+      const dupWaiting = Array.isArray(waitingList) && waitingList.some(n=> norm(n)===targetN);
+      if (dupPlayers || dupWaiting){ if (msg){ msg.textContent='Nama sudah digunakan. Pilih nama lain.'; msg.className='text-xs mt-2 text-amber-600 dark:text-amber-400'; } return; }
+      if (newName === oldName){ hideEditNameModal(); return; }
+      players[idx] = newName;
+      try{
+        playerMeta = (typeof playerMeta==='object' && playerMeta) ? playerMeta : {};
+        const meta = playerMeta[oldName] ? {...playerMeta[oldName]} : {};
+        if (!playerMeta[newName]) playerMeta[newName] = {};
+        playerMeta[newName] = { ...meta };
+        if (oldName in playerMeta) delete playerMeta[oldName];
+      }catch{}
+      try{ if (typeof replaceNameInRounds === 'function') replaceNameInRounds(oldName, newName); }catch{}
+      try{ markDirty?.(); renderPlayersList?.(); renderAll?.(); validateNames?.(); refreshJoinUI?.(); }catch{}
+      try{ if (typeof maybeAutoSaveCloud==='function') maybeAutoSaveCloud(); else if (typeof saveStateToCloud==='function') await saveStateToCloud(); }catch{}
+      showToast?.('Nama pemain diperbarui.', 'success');
+      hideEditNameModal();
+      return;
     }
-    // Move meta and preserve UID/attributes
-    try{
-      playerMeta = (typeof playerMeta==='object' && playerMeta) ? playerMeta : {};
-      const meta = playerMeta[oldName] ? {...playerMeta[oldName]} : {};
-      if (!playerMeta[newName]) playerMeta[newName] = {};
-      playerMeta[newName] = { ...meta, uid: meta.uid || user.id, gender: newGender || '', level: newLevel || '' };
-      if (oldName in playerMeta) delete playerMeta[oldName];
-    }catch{}
-    // Also propagate rename into scheduled matches (all courts/rounds)
-    try{ if (typeof replaceNameInRounds === 'function') replaceNameInRounds(oldName, newName); }catch{}
-    // Persist + refresh UI
-    try{ markDirty?.(); renderPlayersList?.(); renderAll?.(); validateNames?.(); refreshJoinUI?.(); }catch{}
-    try{ if (typeof maybeAutoSaveCloud==='function') maybeAutoSaveCloud(); else if (typeof saveStateToCloud==='function') await saveStateToCloud(); }catch{}
-    showToast?.('Nama diperbarui menjadi '+ newName, 'success');
-    byId('editNameModal').classList.add('hidden');
+
+    hideEditNameModal();
   }catch(e){ console.warn('submitEditSelfName failed', e); showToast?.('Gagal memperbarui nama. Coba lagi.', 'error'); }
 }
+
+function openPlayerNameEditModal(name){
+  if (!name || (typeof isViewer==='function' && isViewer())) return;
+  const norm = s=>String(s||'').trim().toLowerCase();
+  const exists = Array.isArray(players) && players.some(n=>norm(n)===norm(name));
+  if (!exists){ showToast?.('Nama tidak ditemukan di daftar pemain.', 'warn'); return; }
+  openEditNameModal({
+    mode:'playerList',
+    title:'Ubah nama pemain',
+    initialName: name,
+    allowMeta:false,
+    originalName: name
+  });
+}
+window.openPlayerNameEditModal = openPlayerNameEditModal;
 
 async function requestLeaveEventRPC(){
   const d = byId('sessionDate')?.value || currentSessionDate || new Date().toISOString().slice(0,10);
