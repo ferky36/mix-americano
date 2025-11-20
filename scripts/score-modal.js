@@ -412,6 +412,7 @@ byId('sessionDate')?.addEventListener('change', async (e) => {
     const locked = window.__lockedEventDateKey || '';
     if (isCloudMode() && currentEventId && locked && locked !== newDate){
       showToast?.('Tanggal event tidak boleh diubah. Buat event baru untuk tanggal lain.', 'warn');
+      try{ leaveEventMode?.(true); }catch{}
       e.target.value = locked;
       currentSessionDate = locked;
       return;

@@ -201,6 +201,7 @@ async function saveStateToCloud() {
       const locked = window.__lockedEventDateKey || '';
       if (isCloudMode() && currentEventId && locked && locked !== currentSessionDate){
         showToast?.('Tanggal event tidak boleh diubah. Buat event baru untuk tanggal berbeda.', 'error');
+        try{ leaveEventMode?.(true); }catch{}
         return false;
       }
     }catch{}

@@ -717,6 +717,10 @@ byId('eventCreateBtn')?.addEventListener('click', async () => {
 
     // update title
     setAppTitle(name);
+    try{
+      window._isOwnerUser = true;
+      setAccessRole?.('editor');
+    }catch{}
     currentEventId = id;
     currentSessionDate = date;
     byId('sessionDate').value = date;
@@ -746,6 +750,7 @@ byId('eventCreateBtn')?.addEventListener('click', async () => {
     startAutoSave();
     refreshEventButtonLabel?.();
     updateEventActionButtons?.();
+    try{ ensureCashAdminFlag?.(); applyAccessMode?.(); updateMobileCashTab?.(); }catch{}
 
     // tampilkan UI success: share link default = viewer (readonly) + embed owner
     const link = buildPublicViewerUrl(id, date);
