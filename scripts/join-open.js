@@ -15,9 +15,15 @@ function toLocalTimeValue(iso) {
     return `${hh}:${mi}`; } catch { return ''; }
 }
 function combineDateTimeToISO(dateStr, timeStr) {
-  try { if (!dateStr || !timeStr) return null;
-    const dt = new Date(`${dateStr}T${timeStr}`);
-    return isNaN(dt.getTime()) ? null : dt.toISOString(); } catch { return null; }
+  try {
+    if (!dateStr || !timeStr) return null;
+    const [hh,mm] = String(timeStr).split(':').map(n=>parseInt(n||'0',10));
+    if (![hh,mm].every(Number.isFinite)) return null;
+    const hhStr = String(hh).padStart(2,'0');
+    const mmStr = String(mm).padStart(2,'0');
+    // Simpan sebagai waktu lokal (naive) tanpa konversi offset agar tidak bergeser saat tampil/simpan
+    return `${dateStr}T${hhStr}:${mmStr}:00`;
+  } catch { return null; }
 }
 function isJoinOpen() {
   try { if (!window.joinOpenAt) return true;

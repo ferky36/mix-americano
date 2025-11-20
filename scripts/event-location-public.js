@@ -35,8 +35,19 @@ function renderEventLocation(text, url){
     if (chip){
       const has = !!(t || u);
       chip.classList.toggle('hidden', !has);
-      if (u && link){ link.href = u; link.textContent = t || 'Lihat lokasi'; link.classList.remove('hidden'); if (txt) txt.textContent = ''; }
-      else if (txt){ txt.textContent = t || ''; if (link) link.removeAttribute('href'); }
+      if (u && link){
+        link.href = u;
+        link.textContent = t || 'Lihat lokasi';
+        link.classList.remove('hidden');
+        if (txt) txt.textContent = '';
+      } else {
+        if (link){
+          link.removeAttribute('href');
+          link.classList.add('hidden');
+          link.textContent = '';
+        }
+        if (txt) txt.textContent = t || '';
+      }
     }
   }catch{}
 }

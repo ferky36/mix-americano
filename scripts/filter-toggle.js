@@ -710,6 +710,9 @@ byId('eventCreateBtn')?.addEventListener('click', async () => {
       const srounds = byId('spRounds'); if (srounds) srounds.value = '10';
       const sjd = byId('spJoinDate'); if (sjd) sjd.value = date;
       const sjt = byId('spJoinTime'); if (sjt) sjt.value = '15:00';
+      const mainJd = byId('joinOpenDateInput'); if (mainJd) mainJd.value = date;
+      const mainJt = byId('joinOpenTimeInput'); if (mainJt) mainJt.value = '15:00';
+      try{ window.joinOpenAt = combineDateTimeToISO?.(date, '15:00') || `${date}T15:00:00`; }catch{}
     }catch{}
 
     // update title
@@ -718,16 +721,19 @@ byId('eventCreateBtn')?.addEventListener('click', async () => {
     currentSessionDate = date;
     byId('sessionDate').value = date;
 
-    // save optional location to events table
+    // save optional location & default join_open_at to events table
     try{
       const locText = (byId('eventLocationInput')?.value || '').trim();
       const locUrl  = (byId('eventLocationUrlInput')?.value || '').trim();
-      if (locText || locUrl){
-        await sb.from('events').update({ location_text: locText || null, location_url: locUrl || null }).eq('id', id);
-        renderEventLocation(locText, locUrl);
-      } else {
-        renderEventLocation('', '');
-      }
+      const joinAt = window.joinOpenAt || (combineDateTimeToISO?.(date, '15:00') || `${date}T15:00:00`);
+      await sb.from('events')
+        .update({
+          location_text: locText || null,
+          location_url: locUrl || null,
+          join_open_at: joinAt
+        })
+        .eq('id', id);
+      renderEventLocation(locText, locUrl);
     }catch(e){ console.warn('Gagal menyimpan lokasi event:', e); }
 
     const url = new URL(location.href);

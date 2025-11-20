@@ -143,26 +143,21 @@
             const sum = document.getElementById('summaryHTM'); if (sum) sum.textContent = 'Rp'+(htm||0).toLocaleString('id-ID');
           }catch{}
           try{
-            const jo = meta.join_open_at ? new Date(meta.join_open_at) : null;
+            const rawJo = meta.join_open_at || '';
+            const match = String(rawJo).match(/(\d{4}-\d{2}-\d{2})[T\s](\d{2}):(\d{2})/);
+            const isoDate = match ? match[1] : '';
+            const isoTime = match ? `${match[2]}:${match[3]}` : '';
             const d = byId('spJoinDate');
             const t = byId('spJoinTime');
             const mainD = byId('joinOpenDateInput');
             const mainT = byId('joinOpenTimeInput');
-            if (jo && !isNaN(jo.getTime())){
-              const isoDate = jo.toISOString().slice(0,10);
-              const isoTime = jo.toISOString().slice(11,16);
-              if (d) d.value = isoDate;
-              if (t) t.value = isoTime;
-              if (mainD) mainD.value = isoDate;
-              if (mainT) mainT.value = isoTime;
-              window.joinOpenAt = combineDateTimeToISO?.(isoDate, isoTime) || jo.toISOString();
-            } else {
-              if (d) d.value = '';
-              if (t) t.value = '';
-              if (mainD) mainD.value = '';
-              if (mainT) mainT.value = '';
-              window.joinOpenAt = null;
-            }
+            if (d) d.value = isoDate;
+            if (t) t.value = isoTime;
+            if (mainD) mainD.value = isoDate;
+            if (mainT) mainT.value = isoTime;
+            window.joinOpenAt = (isoDate && isoTime && typeof combineDateTimeToISO==='function')
+              ? combineDateTimeToISO(isoDate, isoTime)
+              : null;
           }catch{}
           try{
             const sd = byId('sessionDate');
@@ -261,7 +256,7 @@
         const locUrl  = (byId('spLocUrl')?.value||'').trim();
         const jd = byId('spJoinDate')?.value||'';
         const jt = byId('spJoinTime')?.value||'';
-        let joinAt = null; try{ joinAt = (jd && jt && typeof combineDateTimeToISO==='function') ? combineDateTimeToISO(jd,jt) : null; }catch{ joinAt = null; }
+        let joinAt = null; try{ joinAt = window.joinOpenAt || ((jd && jt && typeof combineDateTimeToISO==='function') ? combineDateTimeToISO(jd,jt) : null); }catch{ joinAt = null; }
         // Read max players directly from popup to avoid stale runtime
         let mp = null; try{
           const rawMp = (byId('spMaxPlayers')?.value||'').trim();
