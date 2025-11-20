@@ -26,11 +26,10 @@ set search_path = public
 as $$
 declare
   v_uid uuid := auth.uid();
-  v_email text := coalesce(auth.email(), '');
   v_role text := lower(coalesce(p_role,'viewer'));
   v_token text := md5(random()::text || clock_timestamp()::text || coalesce(v_uid::text,'') || coalesce(p_email,'') || coalesce(p_role,''));
   v_ok boolean := false;
-  v_is_global_owner boolean := false;
+  v_is_global_owner boolean := public.is_global_owner();
 begin
   if v_uid is null then
     raise exception 'unauthorized' using errcode = '42501';
@@ -39,21 +38,6 @@ begin
   if v_role not in ('viewer','editor','admin','wasit') then
     v_role := 'viewer';
   end if;
-
-  -- Determine if caller is a global owner (superadmin) via user_roles
-  begin
-    perform 1 from information_schema.tables
-      where table_schema = 'public' and table_name = 'user_roles';
-    if found then
-      select exists (
-        select 1 from public.user_roles ur
-        where (ur.user_id = v_uid or lower(coalesce(ur.email,'')) = lower(v_email))
-          and (coalesce(ur.is_owner,false) = true or lower(coalesce(ur.role,'')) = 'owner')
-      ) into v_is_global_owner;
-    end if;
-  exception when others then
-    v_is_global_owner := false;
-  end;
 
   -- Allow if: event owner, event editor, or global owner
   select exists (
@@ -76,3 +60,10 @@ $$;
 
 grant execute on function public.create_event_invite(uuid, text, text) to authenticated;
 
+do $$ begin
+  begin
+    alter function public.create_event_invite(uuid, text, text) owner to postgres;
+  exception when others then
+    null;
+  end;
+end $$;

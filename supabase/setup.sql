@@ -1,3 +1,14 @@
+-- Supabase bootstrap script (idempotent)
+-- Jalankan seluruh isi file ini di SQL Editor Supabase atau lewat psql.
+-- Semua perintah aman diulang.
+
+set search_path = public;
+create extension if not exists pgcrypto;
+
+-- ===== Mulai definisi inti =====
+
+-- ===== BEGIN migrations/struktur-table.sql =====
+
 create table if not exists public.events (
   id uuid not null default gen_random_uuid (),
   slug text null,
@@ -728,3 +739,408 @@ end;
 $$;
 
 grant execute on function public.delete_event(uuid) to authenticated;
+
+-- ===== END migrations/struktur-table.sql =====
+
+-- ===== BEGIN migrations/htm-field.sql =====
+
+-- Add HTM field on events and allow admin to update events
+set search_path = public;
+
+-- 1) Add column htm (idempotent)
+alter table if exists public.events
+  add column if not exists htm integer not null default 0 check (htm >= 0);
+
+-- ===== END migrations/htm-field.sql =====
+
+-- ===== BEGIN migrations/cashflow-admin-all.sql =====
+
+-- All-in-one, idempotent migration for Cashflow feature + Admin role
+-- Safe to run multiple times. It does NOT remove existing roles or policies beyond
+-- replacing the specific cashflow CUD policy and role-check constraints.
+
+-- 0) PRAGMAS
+set search_path = public;
+
+-- Ensure pgcrypto is available for gen_random_bytes()
+create extension if not exists pgcrypto;
+
+-- 1) Table: event_cashflows (if absent)
+create table if not exists public.event_cashflows (
+  id uuid primary key default gen_random_uuid(),
+  event_id uuid not null references public.events(id) on delete cascade,
+  t date null,
+  kind text not null check (kind in ('masuk','keluar')),
+  label text not null,
+  amount integer not null check (amount >= 0),
+  pax integer not null default 1 check (pax >= 1),
+  created_by uuid null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists event_cashflows_event_id_idx   on public.event_cashflows(event_id);
+create index if not exists event_cashflows_event_kind_idx on public.event_cashflows(event_id, kind);
+create index if not exists event_cashflows_date_idx       on public.event_cashflows(t);
+
+alter table if exists public.event_cashflows enable row level security;
+
+-- 2) SELECT policy for cashflows (public OR member of event)
+do $$ begin
+  -- Replace SELECT policy to also allow event owner
+  if exists (
+    select 1 from pg_policies where schemaname='public' and tablename='event_cashflows' and policyname='event_cashflows_select_public_or_member'
+  ) then
+    drop policy event_cashflows_select_public_or_member on public.event_cashflows;
+  end if;
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='event_cashflows' and policyname='event_cashflows_select_owner_or_member'
+  ) then
+    create policy event_cashflows_select_owner_or_member on public.event_cashflows
+      for select using (
+        exists (
+          select 1 from public.events e
+          where e.id = event_cashflows.event_id
+            and (
+              e.owner_id = auth.uid()
+              or coalesce(e.is_public, true)
+              or exists (
+                select 1 from public.event_members em
+                where em.event_id = e.id and em.user_id = auth.uid()
+              )
+            )
+        )
+      );
+  end if;
+end $$;
+
+-- 3) Role checks: add 'admin' (and keep existing 'wasit' if used)
+do $$ begin
+  if exists (
+    select 1 from information_schema.table_constraints
+    where table_schema='public' and table_name='event_members' and constraint_name='event_members_role_check'
+  ) then
+    alter table public.event_members drop constraint event_members_role_check;
+  end if;
+  -- Use NOT VALID to avoid blocking when historical data exists; includes 'wasit' to be backward-compatible
+  alter table public.event_members
+    add constraint event_members_role_check check (role = any (array['owner','editor','viewer','admin','wasit'])) not valid;
+  -- Validate in case existing rows already conform (safe to run repeatedly)
+  begin
+    alter table public.event_members validate constraint event_members_role_check;
+  exception when others then
+    -- keep as NOT VALID if legacy rows exist; new rows will still be checked
+    null;
+  end;
+
+  if exists (
+    select 1 from information_schema.table_constraints
+    where table_schema='public' and table_name='event_invites' and constraint_name='event_invites_role_check'
+  ) then
+    alter table public.event_invites drop constraint event_invites_role_check;
+  end if;
+  -- Accept 'wasit' invites too; make it NOT VALID to be reusable
+  alter table public.event_invites
+    add constraint event_invites_role_check check (role = any (array['viewer','editor','admin','wasit'])) not valid;
+  begin
+    alter table public.event_invites validate constraint event_invites_role_check;
+  exception when others then
+    null;
+  end;
+end $$;
+
+-- 4) CUD policy for cashflows: only owner or 'admin'
+do $$ begin
+  if exists (
+    select 1 from pg_policies where schemaname='public' and tablename='event_cashflows' and policyname='event_cashflows_cud_owner_or_editor'
+  ) then
+    drop policy event_cashflows_cud_owner_or_editor on public.event_cashflows;
+  end if;
+  if exists (
+    select 1 from pg_policies where schemaname='public' and tablename='event_cashflows' and policyname='event_cashflows_cud_owner_or_admin'
+  ) then
+    drop policy event_cashflows_cud_owner_or_admin on public.event_cashflows;
+  end if;
+  create policy event_cashflows_cud_owner_or_admin on public.event_cashflows
+    for all
+    using (
+      exists (select 1 from public.events e where e.id = event_cashflows.event_id and e.owner_id = auth.uid())
+      or exists (
+        select 1 from public.event_members em
+        where em.event_id = event_cashflows.event_id and em.user_id = auth.uid() and em.role = 'admin'
+      )
+    )
+    with check (
+      exists (select 1 from public.events e where e.id = event_cashflows.event_id and e.owner_id = auth.uid())
+      or exists (
+        select 1 from public.event_members em
+        where em.event_id = event_cashflows.event_id and em.user_id = auth.uid() and em.role = 'admin'
+      )
+    );
+end $$;
+
+-- ===== END migrations/cashflow-admin-all.sql =====
+
+-- ===== BEGIN migrations/cashflow-rpc.sql =====
+
+-- Generic RPCs for cashflow CUD with owner/admin authorization
+set search_path = public;
+
+create or replace function public.upsert_cashflow(
+  p_event_id uuid,
+  p_kind text,
+  p_label text,
+  p_amount integer,
+  p_pax integer default 1,
+  p_id uuid default null
+) returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_ok boolean := false;
+  v_id uuid := coalesce(p_id, null);
+  v_kind text := lower(coalesce(p_kind,'masuk'));
+begin
+  if v_uid is null then raise exception 'unauthorized' using errcode = '42501'; end if;
+  if v_kind not in ('masuk','keluar') then v_kind := 'masuk'; end if;
+  select exists (select 1 from public.events e where e.id = p_event_id and e.owner_id = v_uid)
+         or exists (select 1 from public.event_members em where em.event_id = p_event_id and em.user_id = v_uid and em.role='admin')
+    into v_ok;
+  if not v_ok then raise exception 'forbidden' using errcode = '42501'; end if;
+
+  if v_id is not null then
+    update public.event_cashflows
+       set kind=v_kind, label=p_label, amount=coalesce(p_amount,0), pax=greatest(coalesce(p_pax,1),1), created_by=v_uid
+     where id = v_id and event_id = p_event_id
+     returning id into v_id;
+    if v_id is null then
+      -- row not found; insert instead
+      insert into public.event_cashflows(event_id, kind, label, amount, pax, created_by)
+      values (p_event_id, v_kind, p_label, coalesce(p_amount,0), greatest(coalesce(p_pax,1),1), v_uid)
+      returning id into v_id;
+    end if;
+  else
+    insert into public.event_cashflows(event_id, kind, label, amount, pax, created_by)
+    values (p_event_id, v_kind, p_label, coalesce(p_amount,0), greatest(coalesce(p_pax,1),1), v_uid)
+    returning id into v_id;
+  end if;
+  return v_id;
+end;
+$$;
+
+grant execute on function public.upsert_cashflow(uuid, text, text, integer, integer, uuid) to authenticated;
+do $$ begin
+  begin
+    alter function public.upsert_cashflow(uuid, text, text, integer, integer, uuid) owner to postgres;
+  exception when others then null;
+  end;
+end $$;
+
+create or replace function public.delete_cashflow(
+  p_event_id uuid,
+  p_id uuid
+) returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_ok boolean := false;
+  v_count integer := 0;
+begin
+  if v_uid is null then raise exception 'unauthorized' using errcode = '42501'; end if;
+  select exists (select 1 from public.events e where e.id = p_event_id and e.owner_id = v_uid)
+         or exists (select 1 from public.event_members em where em.event_id = p_event_id and em.user_id = v_uid and em.role='admin')
+    into v_ok;
+  if not v_ok then raise exception 'forbidden' using errcode = '42501'; end if;
+  delete from public.event_cashflows where id = p_id and event_id = p_event_id;
+  get diagnostics v_count = ROW_COUNT;
+  return v_count;
+end;
+$$;
+
+grant execute on function public.delete_cashflow(uuid, uuid) to authenticated;
+do $$ begin
+  begin
+    alter function public.delete_cashflow(uuid, uuid) owner to postgres;
+  exception when others then null;
+  end;
+end $$;
+
+-- ===== END migrations/cashflow-rpc.sql =====
+
+-- ===== BEGIN migrations/paid-cashflow-rpc.sql =====
+
+-- RPC helpers for syncing player paid flag to cashflow
+-- Idempotent and safe to run multiple times
+set search_path = public;
+
+-- Upsert income row when a player is marked as paid
+create or replace function public.add_paid_income(
+  p_event_id uuid,
+  p_label text,
+  p_amount integer,
+  p_pax integer default 1
+) returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_id uuid := null;
+  v_ok boolean := false;
+begin
+  if v_uid is null then
+    raise exception 'unauthorized' using errcode = '42501';
+  end if;
+  -- allow owner or admin member
+  select exists (select 1 from public.events e where e.id = p_event_id and e.owner_id = v_uid)
+         or exists (select 1 from public.event_members em where em.event_id = p_event_id and em.user_id = v_uid and em.role = 'admin')
+    into v_ok;
+  if not v_ok then
+    raise exception 'forbidden' using errcode = '42501';
+  end if;
+
+  select id into v_id from public.event_cashflows
+   where event_id = p_event_id and kind = 'masuk' and label = p_label
+   limit 1;
+  if v_id is not null then
+    update public.event_cashflows
+       set amount = coalesce(p_amount,0), pax = greatest(coalesce(p_pax,1),1), created_by = v_uid
+     where id = v_id;
+    return v_id;
+  else
+    insert into public.event_cashflows(event_id, kind, label, amount, pax, created_by)
+    values (p_event_id, 'masuk', p_label, coalesce(p_amount,0), greatest(coalesce(p_pax,1),1), v_uid)
+    returning id into v_id;
+    return v_id;
+  end if;
+end;
+$$;
+
+grant execute on function public.add_paid_income(uuid, text, integer, integer) to authenticated;
+do $$ begin
+  begin
+    alter function public.add_paid_income(uuid, text, integer, integer) owner to postgres;
+  exception when others then null;
+  end;
+end $$;
+
+-- Remove income row when a player is unmarked as paid
+create or replace function public.remove_paid_income(
+  p_event_id uuid,
+  p_label text
+) returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_ok boolean := false;
+  v_count integer := 0;
+begin
+  if v_uid is null then
+    raise exception 'unauthorized' using errcode = '42501';
+  end if;
+  -- allow owner or admin member
+  select exists (select 1 from public.events e where e.id = p_event_id and e.owner_id = v_uid)
+         or exists (select 1 from public.event_members em where em.event_id = p_event_id and em.user_id = v_uid and em.role = 'admin')
+    into v_ok;
+  if not v_ok then
+    raise exception 'forbidden' using errcode = '42501';
+  end if;
+
+  delete from public.event_cashflows where event_id = p_event_id and kind = 'masuk' and label = p_label;
+  get diagnostics v_count = ROW_COUNT;
+  return v_count;
+end;
+$$;
+
+grant execute on function public.remove_paid_income(uuid, text) to authenticated;
+do $$ begin
+  begin
+    alter function public.remove_paid_income(uuid, text) owner to postgres;
+  exception when others then null;
+  end;
+end $$;
+
+-- ===== END migrations/paid-cashflow-rpc.sql =====
+
+-- ===== BEGIN migrations/create-invite-global-owner.sql =====
+
+-- Allow global owner (superadmin) to create invites for any event
+set search_path = public;
+
+do $$
+declare rec record;
+begin
+  -- Drop any existing overloads of create_event_invite to avoid conflict
+  for rec in
+    select p.oid as oid, pg_get_function_identity_arguments(p.oid) as args
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'create_event_invite'
+  loop
+    execute format('drop function if exists public.create_event_invite(%s);', rec.args);
+  end loop;
+end $$;
+
+create or replace function public.create_event_invite(
+  p_event_id uuid,
+  p_email text,
+  p_role text
+) returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_role text := lower(coalesce(p_role,'viewer'));
+  v_token text := md5(random()::text || clock_timestamp()::text || coalesce(v_uid::text,'') || coalesce(p_email,'') || coalesce(p_role,''));
+  v_ok boolean := false;
+  v_is_global_owner boolean := public.is_global_owner();
+begin
+  if v_uid is null then
+    raise exception 'unauthorized' using errcode = '42501';
+  end if;
+  -- Normalize role; support wasit/admin in invites
+  if v_role not in ('viewer','editor','admin','wasit') then
+    v_role := 'viewer';
+  end if;
+
+  -- Allow if: event owner, event editor, or global owner
+  select exists (
+           select 1 from public.events e where e.id = p_event_id and e.owner_id = v_uid
+         )
+      or exists (
+           select 1 from public.event_members em where em.event_id = p_event_id and em.user_id = v_uid and em.role in ('owner','editor')
+         )
+      or v_is_global_owner
+    into v_ok;
+  if not v_ok then
+    raise exception 'forbidden' using errcode = '42501';
+  end if;
+
+  insert into public.event_invites(event_id, email, role, token)
+  values (p_event_id, trim(p_email), v_role, v_token);
+  return v_token;
+end;
+$$;
+
+grant execute on function public.create_event_invite(uuid, text, text) to authenticated;
+
+do $$ begin
+  begin
+    alter function public.create_event_invite(uuid, text, text) owner to postgres;
+  exception when others then
+    null;
+  end;
+end $$;
+
+-- ===== END migrations/create-invite-global-owner.sql =====
