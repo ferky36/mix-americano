@@ -1,0 +1,28 @@
+name: Deploy Pages
+on:
+  push:
+    branches: [main]   # ganti jika branch utama Anda berbeda
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Generate config.js dari Secrets
+      - name: Generate config.js
+        run: |
+          cat > config.js <<'EOF'
+          window.__SUPABASE_URL='${{ secrets.SUPABASE_URL }}';
+          window.__SUPABASE_ANON='${{ secrets.SUPABASE_ANON }}';
+          EOF
+
+      # Deploy ke gh-pages (target GitHub Pages)
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages    # branch target Pages
+          publish_dir: .              # root berkas statis
