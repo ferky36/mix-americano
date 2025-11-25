@@ -63,7 +63,7 @@
     actions.className = 'recap-actions';
     const saveBtn = document.createElement('button');
     saveBtn.className = 'recap-action';
-    saveBtn.innerHTML = '<span>💾</span><span>Simpat gambar</span>';
+    saveBtn.innerHTML = '<span>💾</span><span>Simpan gambar</span>';
     saveBtn.addEventListener('click', ()=> saveRecapAsImage());
     const copyBtn = document.createElement('button');
     copyBtn.className = 'recap-action';
@@ -273,18 +273,229 @@
 
   function notesFull(matches, avgMargin, standings){
     const wrap = document.createElement('div');
-    wrap.appendChild(sectionTitle('Catatan & Insight'));
-    const box = document.createElement('div');
-    box.className = 'recap-insight-box cardlike recap-notes-full';
-    const ul = document.createElement('ul');
-    ul.className = 'recap-insight';
-    generateInsights(matches, avgMargin, standings).forEach(t=>{
-      const li = document.createElement('li'); li.innerHTML = t; ul.appendChild(li);
-    });
-    box.appendChild(ul);
-    wrap.appendChild(box);
+    wrap.className = 'recap-insight-section';
+
+    const hdr = document.createElement('div');
+    hdr.className = 'recap-insight-heading';
+    const h1 = document.createElement('div');
+    h1.className = 'rih-title';
+    h1.textContent = 'Padel Match Recap';
+    const h2 = document.createElement('div');
+    h2.className = 'rih-subtitle';
+    h2.textContent = 'Analisis Performa & Strategi Pemain';
+    hdr.appendChild(h1);
+    hdr.appendChild(h2);
+    const line = document.createElement('div');
+    line.className = 'rih-line';
+    hdr.appendChild(line);
+    wrap.appendChild(hdr);
+
+    const grid = document.createElement('div');
+    grid.className = 'recap-insight-grid';
+
+    grid.appendChild(buildTopRankingCard(standings, matches, avgMargin));
+    grid.appendChild(buildPairingCard(standings));
+    grid.appendChild(buildSupportCard(standings));
+    grid.appendChild(buildInsightCard(matches, avgMargin, standings));
+
+    wrap.appendChild(grid);
     return wrap;
   }
+
+  function buildTopRankingCard(standings, matches, avgMargin){
+    const card = createInsightCard('Top Performers', '🏆');
+    const list = document.createElement('div');
+    list.className = 'insight-player-list';
+    const top = standings.slice().sort((a,b)=> a.rank-b.rank || b.pf-a.pf).slice(0,3);
+    if (!top.length){
+      list.appendChild(emptyInsightText());
+    } else {
+      top.forEach((p, idx)=>{
+        const row = document.createElement('div');
+        row.className = 'insight-player-row';
+        if (idx===0) row.classList.add('is-lead');
+        if (idx===2) row.classList.add('is-muted');
+        const left = document.createElement('div');
+        left.className = 'insight-player-info';
+        const av = document.createElement('div');
+        av.className = 'insight-avatar';
+        av.textContent = (p.player||'?').trim().charAt(0).toUpperCase() || '?';
+        left.appendChild(av);
+        const meta = document.createElement('div');
+        const nm = document.createElement('div'); nm.className='p-name'; nm.textContent = p.player;
+        const statWin = document.createElement('div'); statWin.className='p-stat'; statWin.textContent = `WinRate ${formatWinRate(p)}`;
+        const statDiff = document.createElement('div'); statDiff.className='p-stat p-stat-diff'; if (p.diff<0) statDiff.classList.add('neg'); statDiff.textContent = `Selisih ${p.diff>=0?'+':''}${p.diff}`;
+        meta.appendChild(nm);
+        meta.appendChild(statWin);
+        meta.appendChild(statDiff);
+        left.appendChild(meta);
+
+        const score = document.createElement('div');
+        score.className = 'insight-score';
+        const main = document.createElement('div'); main.className='score-main'; main.textContent = p.pf;
+        const sub = document.createElement('div'); sub.className='score-sub';
+        if (p.diff>0){ sub.textContent = `↑ +${p.diff}`; sub.classList.add('pos'); }
+        else if (p.diff<0){ sub.textContent = `↓ ${Math.abs(p.diff)}`; sub.classList.add('neg'); }
+        else { sub.textContent = '0'; }
+        score.appendChild(main); score.appendChild(sub);
+
+        row.appendChild(left);
+        row.appendChild(score);
+        list.appendChild(row);
+      });
+    }
+    card.appendChild(list);
+
+    // const bulletWrap = document.createElement('div');
+    // bulletWrap.className = 'top-performer-bullet';
+    // const bulletIcon = document.createElement('span');
+    // bulletIcon.className = 'tpb-icon';
+    // bulletIcon.textContent = '✓';
+    // const bulletText = document.createElement('span');
+    // const bullet = generateInsights(matches||[], avgMargin||0, standings)[0] || 'Kontrol game tinggi. Cocok untuk pairing berat.';
+    // bulletText.innerHTML = bullet;
+    // bulletWrap.appendChild(bulletIcon);
+    // bulletWrap.appendChild(bulletText);
+    // card.appendChild(bulletWrap);
+    return card;
+  }
+
+  function buildPairingCard(standings){
+    const card = createInsightCard('Rekomendasi Pairing', '🤝');
+    const wrap = document.createElement('div');
+    wrap.className = 'insight-pairing-wrap';
+    const lows = standings.filter(s=>s.diff<0).sort((a,b)=>a.diff-b.diff).slice(0,2);
+    const highs = standings.filter(s=>s.diff>0).sort((a,b)=>b.diff-a.diff).slice(0,2);
+    if (!lows.length || !highs.length){
+      wrap.appendChild(emptyInsightText('Belum ada rekomendasi – butuh data W/L dan selisih.'));
+    } else {
+      lows.forEach((low, idx)=>{
+        const high = highs[idx % highs.length];
+        const box = document.createElement('div');
+        box.className = 'pairing-box insight-pairing';
+        const line = document.createElement('div');
+        const lowSpan = document.createElement('span'); lowSpan.className='pair-low'; lowSpan.textContent = `${low.player} (WR ${formatWinRate(low)})`;
+        const arrow = document.createElement('span'); arrow.className='pair-arrow'; arrow.textContent = '→';
+        const highSpan = document.createElement('span'); highSpan.className='pair-high'; highSpan.textContent = `${high.player} (WR ${formatWinRate(high)})`;
+        const reason = document.createElement('span'); reason.className='reason';
+        reason.textContent = `Menyeimbangkan selisih ${low.diff} ke ${high.diff>=0?'+':''}${high.diff}`;
+        line.appendChild(lowSpan); line.appendChild(arrow); line.appendChild(highSpan); line.appendChild(reason);
+        box.appendChild(line);
+        wrap.appendChild(box);
+      });
+    }
+    card.appendChild(wrap);
+    return card;
+  }
+
+  function buildSupportCard(standings){
+    const card = createInsightCard('Butuh Penyangga', '⚠️');
+    const needs = standings.filter(s=>{
+      const wr = winRateValue(s);
+      return s.diff<0 || wr<=25;
+    }).sort((a,b)=> a.diff-b.diff).slice(0,4);
+    if (!needs.length){
+      card.appendChild(emptyInsightText('Semua pemain aman, tidak ada selisih negatif.'));
+      return card;
+    }
+    needs.forEach(p=>{
+      const row = document.createElement('div');
+      row.className = 'insight-support-row';
+      const name = document.createElement('span'); name.className='p-name'; name.textContent = p.player;
+      const pills = document.createElement('div'); pills.className='pill-row';
+      const wr = document.createElement('span'); wr.className='pill red'; wr.textContent = `WR ${formatWinRate(p)}`;
+      const diff = document.createElement('span'); diff.className='pill red'; diff.textContent = `Selisih ${p.diff}`;
+      pills.appendChild(wr); pills.appendChild(diff);
+      row.appendChild(name); row.appendChild(pills);
+      card.appendChild(row);
+    });
+    return card;
+  }
+
+  function buildInsightCard(matches, avgMargin, standings){
+    const card = createInsightCard('Insight & Konsistensi', '📈');
+    const container = document.createElement('div');
+    container.className = 'insight-progress';
+    const cand = pickConsistencyCandidate(standings);
+    if (cand){
+      const label = document.createElement('div');
+      label.className = 'progress-label';
+      const left = document.createElement('span');
+      left.textContent = `Consistency Watch: ${cand.player}`;
+      const right = document.createElement('span');
+      right.textContent = `Total ${cand.pf}`;
+      label.appendChild(left); label.appendChild(right);
+      const bg = document.createElement('div'); bg.className='insight-progress-bg';
+      const fill = document.createElement('div'); fill.className='insight-progress-fill';
+      const max = Math.max(...standings.map(s=>s.pf||0), cand.pf || 0, 1);
+      const width = Math.max(18, Math.min(100, Math.round((cand.pf/max)*100)));
+      fill.style.width = `${width}%`;
+      bg.appendChild(fill);
+      container.appendChild(label);
+      container.appendChild(bg);
+      const quote = document.createElement('div');
+      quote.className = 'insight-quote';
+      quote.textContent = 'Kontribusi bagus, hasil belum stabil.';
+      container.appendChild(quote);
+    } else {
+      container.appendChild(emptyInsightText('Belum ada data konsistensi.'));
+    }
+    card.appendChild(container);
+
+    const statGrid = document.createElement('div');
+    statGrid.className = 'insight-stat-grid';
+    const tight = matches.length ? matches.slice().sort((a,b)=>a.margin-b.margin || a.round-b.round)[0] : null;
+    const stats = [
+      { label: 'Match Ketat', value: tight ? `Match ${tight.round}` : 'Belum ada', sub: tight ? `${tight.saN}–${tight.sbN}` : ''},
+      { label: 'Rata Margin', value: avgMargin ? avgMargin.toFixed(1) : '0.0', sub: 'Skor per match'}
+    ];
+    stats.forEach(s=>{
+      const box = document.createElement('div');
+      box.className = 'insight-stat-box';
+      const val = document.createElement('span'); val.className='stat-val'; val.textContent = s.value;
+      const lbl = document.createElement('span'); lbl.className='stat-lbl'; lbl.textContent = s.label;
+      box.appendChild(val); box.appendChild(lbl);
+      if (s.sub){
+        const sub = document.createElement('span'); sub.className='stat-sub'; sub.textContent = s.sub; box.appendChild(sub);
+      }
+      statGrid.appendChild(box);
+    });
+    card.appendChild(statGrid);
+    return card;
+  }
+
+  function createInsightCard(title, icon){
+    const card = document.createElement('div');
+    card.className = 'recap-insight-card';
+    const head = document.createElement('div');
+    head.className = 'insight-card-title';
+    const ic = document.createElement('span'); ic.className='insight-icon'; ic.textContent = icon || '';
+    const tx = document.createElement('span'); tx.textContent = title;
+    head.appendChild(ic); head.appendChild(tx);
+    card.appendChild(head);
+    return card;
+  }
+
+  function emptyInsightText(text){
+    const el = document.createElement('div');
+    el.className = 'insight-empty';
+    el.textContent = text || 'Belum ada data.';
+    return el;
+  }
+
+  function pickConsistencyCandidate(standings){
+    const cand = standings.filter(s=>{
+      const wr = winRateValue(s)/100;
+      return wr>=0.45 && wr<=0.6;
+    }).sort((a,b)=> (b.pf - a.pf) || (b.diff - a.diff))[0];
+    return cand || null;
+  }
+
+  function winRateValue(p){
+    const gp = (p.w||0)+(p.l||0)+(p.d||0);
+    return gp ? Math.round((p.w/gp)*100) : 0;
+  }
+  function formatWinRate(p){ return `${winRateValue(p)}%`; }
 
   // --- Dynamic insights powered by JSON templates ---
   let INSIGHT_TPL_CACHE = null;

@@ -453,15 +453,25 @@ async function buildInsightInline(host){
   const prevH = host.offsetHeight; host.style.minHeight = (prevH? prevH : 140) + 'px'; host.style.visibility = 'hidden';
   const root = await getRecapRootFromModal();
   if (!root){ host.innerHTML = '<div class="text-sm text-red-600">Gagal membuat insight.</div>'; return; }
-  // Pick only the insight section
-  const title = [...root.querySelectorAll('.recap-section-title')]
-                  .find(el => /Catatan\s*&\s*Insight/i.test(el.textContent||''));
-  const insight = root.querySelector('.recap-insight-box');
-  const wrap = document.createElement('div');
-  if (title) wrap.appendChild(title.cloneNode(true));
-  if (insight) wrap.appendChild(insight.cloneNode(true));
-  host.innerHTML = '';
-  host.appendChild(wrap);
+  // Pick only the insight section (new layout)
+  const insightSection = root.querySelector('.recap-insight-section');
+  if (insightSection){
+    const shell = document.createElement('div');
+    shell.className = 'recap-inline-shell';
+    shell.appendChild(insightSection.cloneNode(true));
+    host.innerHTML = '';
+    host.appendChild(shell);
+  } else {
+    // Fallback to legacy insight box
+    const title = [...root.querySelectorAll('.recap-section-title')]
+                    .find(el => /Catatan\s*&\s*Insight/i.test(el.textContent||''));
+    const insight = root.querySelector('.recap-insight-box');
+    const wrap = document.createElement('div');
+    if (title) wrap.appendChild(title.cloneNode(true));
+    if (insight) wrap.appendChild(insight.cloneNode(true));
+    host.innerHTML = '';
+    host.appendChild(wrap);
+  }
   host.style.minHeight = '';
   host.style.visibility = '';
 }
