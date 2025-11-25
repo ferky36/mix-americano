@@ -58,18 +58,23 @@
     header.className = 'recap-header';
     const title = document.createElement('div');
     title.className = 'recap-title';
-    title.textContent = 'Match Recap';
+    title.innerHTML = '<div class="text-xs uppercase tracking-wide text-indigo-100 mb-1">Rangkuman</div><div class="text-lg font-bold text-white">Match Recap</div>';
     const actions = document.createElement('div');
     actions.className = 'recap-actions';
     const saveBtn = document.createElement('button');
     saveBtn.className = 'recap-action';
-    saveBtn.textContent = 'Save as Image';
+    saveBtn.innerHTML = '<span>💾</span><span>Simpat gambar</span>';
     saveBtn.addEventListener('click', ()=> saveRecapAsImage());
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'recap-action';
+    copyBtn.innerHTML = '<span>📋</span><span>Salin teks</span>';
+    copyBtn.addEventListener('click', copyRecapText);
     const closeBtn = document.createElement('button');
     closeBtn.className = 'recap-action';
-    closeBtn.textContent = 'Tutup';
+    closeBtn.innerHTML = '<span>✕</span><span>Tutup</span>';
     closeBtn.addEventListener('click', closeRecapModal);
     actions.appendChild(saveBtn);
+    actions.appendChild(copyBtn);
     actions.appendChild(closeBtn);
     header.appendChild(title);
     header.appendChild(actions);
@@ -129,11 +134,12 @@
     const tight = matches.length ? matches.slice().sort((a,b)=>a.margin-b.margin || a.round-b.round)[0] : null;
     const cards = document.createElement('div');
     cards.className = 'recap-cards';
+    const tightLabel = tight ? `Match ${tight.round} (${tight.teamA} vs ${tight.teamB || '-'})` : 'Belum ada';
     cards.innerHTML = `
-      ${cardMetric(totalMatch, 'Total Match')}
-      ${cardMetric(totalPoint, 'Total Poin')}
-      ${cardMetric(avgMargin.toFixed(1), 'Rata Selisih')}
-      ${tight ? cardMetric(`${tight.saN}–${tight.sbN}`, `Skor Paling Ketat (Match ${tight.round})`) : cardMetric('-', 'Skor Paling Ketat')}
+      ${cardMetric(totalMatch, 'Total Match', 'Berapa banyak laga sudah dimainkan.')}
+      ${cardMetric(totalPoint, 'Total Poin', 'Akumulasi poin semua match (A+B).')}
+      ${cardMetric(avgMargin.toFixed(1), 'Rata Selisih', 'Rata-rata margin skor per match.')}
+      ${tight ? cardMetric(`${tight.saN}–${tight.sbN}`, `Paling Ketat`, `Terketat: ${tightLabel}`) : cardMetric('-', 'Paling Ketat', 'Menunggu skor terisi.')}
     `;
     root.appendChild(cards);
 
@@ -143,14 +149,14 @@
 
     const left = document.createElement('div');
     left.className = 'recap-col-left';
-    left.appendChild(sectionTitle('Rekap Pertandingan'));
+    left.appendChild(sectionTitle('Jalannya Pertandingan'));
     const matchWrap = document.createElement('div');
     matchWrap.className = 'recap-match-wrap';
 
     if (!matches.length){
       const empty = document.createElement('div');
       empty.className = 'recap-empty';
-      empty.textContent = 'Belum ada skor yang tercatat.';
+      empty.innerHTML = '<div class="font-semibold mb-1">Belum ada skor yang tercatat</div><div class="text-sm text-gray-600">Masukkan skor dulu agar recap terisi otomatis.</div>';
       matchWrap.appendChild(empty);
     } else {
       matches.forEach(m=> matchWrap.appendChild(matchCard(m)));
