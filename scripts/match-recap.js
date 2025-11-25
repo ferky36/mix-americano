@@ -295,6 +295,7 @@
 
     grid.appendChild(buildTopRankingCard(standings, matches, avgMargin));
     grid.appendChild(buildPairingCard(standings));
+    grid.appendChild(buildPairPerformanceCard(matches));
     grid.appendChild(buildSupportCard(standings));
     grid.appendChild(buildInsightCard(matches, avgMargin, standings));
 
@@ -386,6 +387,76 @@
     }
     card.appendChild(wrap);
     return card;
+  }
+
+  function buildPairPerformanceCard(matches){
+    const card = createInsightCard('Pairing Performance', '🔀');
+    const list = document.createElement('div');
+    list.className = 'pair-perf-list';
+    const agg = aggregatePairs(matches);
+    const best = agg.slice().sort((a,b)=> (b.pf - a.pf) || (b.diff - a.diff))[0];
+    const worst = agg.slice().sort((a,b)=> (a.pf - b.pf) || (a.diff - b.diff))[0];
+    if (!agg.length){
+      list.appendChild(emptyInsightText('Belum ada data pairing.'));
+    } else {
+      if (best) list.appendChild(pairPerfRow(best, 'Best Pairing', false, 'best'));
+      if (worst && worst.name !== best?.name) list.appendChild(pairPerfRow(worst, 'Bad Pairing', true, 'bad'));
+    }
+    card.appendChild(list);
+    return card;
+  }
+
+  function aggregatePairs(matches){
+    const map = new Map();
+    (matches||[]).forEach(m=>{
+      const pA = `${m.a1} – ${m.a2}`;
+      const pB = `${m.b1} – ${m.b2}`;
+      const keyA = `A:${pA}`;
+      const keyB = `B:${pB}`;
+      const prevA = map.get(keyA) || { name:pA, pf:0, diff:0, count:0, rounds:[] };
+      const prevB = map.get(keyB) || { name:pB, pf:0, diff:0, count:0, rounds:[] };
+      prevA.pf += m.saN; prevA.diff += (m.saN - m.sbN); prevA.count += 1;
+      prevB.pf += m.sbN; prevB.diff += (m.sbN - m.saN); prevB.count += 1;
+      const r = Number(m.round||0);
+      if (r){ prevA.rounds.push(r); prevB.rounds.push(r); }
+      map.set(keyA, prevA); map.set(keyB, prevB);
+    });
+    return [...map.values()];
+  }
+
+  function pairPerfRow(pair, label, isBad, type){
+    const row = document.createElement('div');
+    row.className = 'pair-perf-row';
+    if (isBad) row.classList.add('is-bad');
+    const title = document.createElement('div');
+    title.className = 'pair-perf-title';
+    title.textContent = label;
+    const names = document.createElement('div');
+    names.className = 'pair-perf-names';
+    names.textContent = pair.name;
+    const meta = document.createElement('div');
+    meta.className = 'pair-perf-meta';
+    const rounds = Array.from(new Set((pair.rounds||[]).filter(Boolean))).sort((a,b)=>a-b);
+    let roundLabel = pair.count ? `${pair.count} match` : 'Match';
+    if (rounds.length===1) roundLabel = `Match ke ${rounds[0]}`;
+    else if (rounds.length>1 && rounds.length<=3) roundLabel = `Match ke ${rounds.join(', ')}`;
+    else if (rounds.length>3) roundLabel = `Match ke ${rounds.slice(0,3).join(', ')} +${rounds.length-3} lagi`;
+    meta.textContent = `${roundLabel} | Total ${pair.pf}`;
+    if (type==='best') title.classList.add('pair-perf-best');
+    if (type==='bad') title.classList.add('pair-perf-bad');
+    const score = document.createElement('div');
+    score.className = 'pair-perf-score';
+    const diff = document.createElement('div');
+    diff.className = 'pair-perf-diff';
+    if (pair.diff>0){ diff.textContent = `+${pair.diff}`; diff.classList.add('pos'); }
+    else if (pair.diff<0){ diff.textContent = `${pair.diff}`; diff.classList.add('neg'); }
+    else diff.textContent = '0';
+    score.appendChild(diff);
+    row.appendChild(title);
+    row.appendChild(names);
+    row.appendChild(meta);
+    row.appendChild(score);
+    return row;
   }
 
   function buildSupportCard(standings){
