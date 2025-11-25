@@ -1,6 +1,8 @@
 
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
 :root { --ui-zoom: 100%; }
-body { font-size: clamp(14px, calc(14px * var(--ui-zoom) / 100), 20px); }
+body { font-size: clamp(14px, calc(14px * var(--ui-zoom) / 100), 20px); font-family: 'Outfit', sans-serif; }
 
 /* Tabs */
 .tab-active { border-color:#111827; color:#111827; }
