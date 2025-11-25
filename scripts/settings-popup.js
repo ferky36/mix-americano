@@ -141,6 +141,7 @@
             window.__htmAmount = htm;
             const inp = byId('spHTM'); if (inp) inp.value = htm;
             const sum = document.getElementById('summaryHTM'); if (sum) sum.textContent = 'Rp'+(htm||0).toLocaleString('id-ID');
+            try{ setHTM(String(htm)); }catch{}
           }catch{}
           try{
             const rawJo = meta.join_open_at || '';
@@ -199,7 +200,12 @@
     try{
       const h = byId('spHTM');
       if (h){
-        h.value = getHTM();
+        // Jika sudah diisi dari DB di atas (meta.htm), jangan ditimpa oleh LS kosong
+        const existing = h.value || String(window.__htmAmount ?? '');
+        const fallback = getHTM();
+        h.value = existing || fallback || '';
+        // Sinkronkan LS agar tidak lagi kosong ketika sudah ada nilai dari DB
+        try{ if (h.value) setHTM(h.value); }catch{}
         h.oninput = ()=>{
           setHTM(h.value||'');
           try{

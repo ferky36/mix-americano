@@ -572,6 +572,38 @@ byId('btnMakeEventLink')?.addEventListener('click', async () => {
   // jika sudah login, buka tab Cari agar langsung bisa memilih
   if (user) openSearchEventModal(); else openCreateEventModal();
 });
+// Basic email validator for invite workflows
+const EMAIL_REGEX = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+// Send invite link via mail client (mailto)
+async function sendInviteEmailLink(targetEmail, inviteLink, role, msgEl, btnEl){
+  if (!targetEmail || !EMAIL_REGEX.test(targetEmail)){
+    if (msgEl) msgEl.textContent = 'Email tidak valid.';
+    return false;
+  }
+  if (!inviteLink){
+    if (msgEl) msgEl.textContent = 'Buat link undangan dulu.';
+    return false;
+  }
+  const prev = btnEl?.textContent;
+  if (btnEl){ btnEl.disabled = true; btnEl.textContent = 'Sending...'; }
+  if (msgEl) msgEl.textContent = 'Membuka email client...';
+  try{
+    const subject = encodeURIComponent(`Undangan ${role} event`);
+    const bodyText = encodeURIComponent(`Halo,\n\nBerikut link undangan sebagai ${role}:\n${inviteLink}\n\nTerima kasih.`);
+    window.open(`mailto:${encodeURIComponent(targetEmail)}?subject=${subject}&body=${bodyText}`, '_blank');
+    if (msgEl) msgEl.textContent = 'Silakan kirim email undangan dari client Anda.';
+    return true;
+  }catch(err){
+    console.error('sendInviteEmailLink fatal', err);
+    const detail = err?.message || err?.error_description || '';
+    if (msgEl) msgEl.textContent = 'Gagal membuka email client' + (detail ? ': ' + detail : '');
+    return false;
+  }finally{
+    if (btnEl){ btnEl.disabled = false; btnEl.textContent = prev || 'Send To Email'; }
+  }
+}
+
 // Open Share/Invite for current event anytime
 function openShareEventModal(){
   if (!isCloudMode() || !currentEventId){ openCreateEventModal(); return; }
@@ -620,6 +652,7 @@ function openShareEventModal(){
       <div class="flex items-center gap-2 hidden" id="inviteLinkRow">
         <input id="inviteLinkOut" readonly class="flex-1 border rounded-lg px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100" />
         <button id="btnCopyInvite" class="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm">Copy Link</button>
+        <button id="btnSendInviteEmail" class="px-3 py-2 rounded-lg bg-amber-600 text-white text-sm">Send To Email</button>
       </div>
       <div id="inviteMsg" class="text-xs"></div>`;
     successBox.appendChild(box);
@@ -628,7 +661,7 @@ function openShareEventModal(){
       const email = (byId('inviteEmail').value||'').trim();
       const role = byId('inviteRole').value||'editor';
       const msg = byId('inviteMsg'); msg.textContent='';
-      if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { msg.textContent='Email tidak valid.'; return; }
+      if (!email || !EMAIL_REGEX.test(email)) { msg.textContent='Email tidak valid.'; return; }
       if (!isCloudMode() || !currentEventId){ msg.textContent='Mode Cloud belum aktif. Buat event dulu.'; return; }
       try{
         if (btn){ btn.disabled = true; btn.textContent = 'Membuat…'; }
@@ -637,8 +670,10 @@ function openShareEventModal(){
         const { data: token, error } = await sb.rpc('create_event_invite', { p_event_id: currentEventId, p_email: email, p_role: role });
         if (error) throw error;
         const link = buildInviteUrl(currentEventId, byId('sessionDate').value || '', token);
-        const row = byId('inviteLinkRow'); const out = byId('inviteLinkOut'); const cp = byId('btnCopyInvite');
-        if (row && out && cp){ row.classList.remove('hidden'); out.value = link; msg.textContent='Link undangan dibuat. Kirimkan ke email terkait.'; cp.onclick = async ()=>{ try{ await navigator.clipboard.writeText(out.value); cp.textContent='Copied!'; setTimeout(()=>cp.textContent='Copy Link',1200);}catch{} }; }
+        const row = byId('inviteLinkRow'); const out = byId('inviteLinkOut'); const cp = byId('btnCopyInvite'); const send = byId('btnSendInviteEmail');
+        if (row && out){ row.classList.remove('hidden'); out.value = link; msg.textContent='Link undangan dibuat. Kirimkan ke email terkait.'; }
+        if (cp && out){ cp.onclick = async ()=>{ try{ await navigator.clipboard.writeText(out.value); cp.textContent='Copied!'; setTimeout(()=>cp.textContent='Copy Link',1200);}catch{} }; }
+        if (send && out){ send.onclick = () => sendInviteEmailLink((byId('inviteEmail').value||'').trim(), out.value, byId('inviteRole')?.value || role, msg, send); }
       }catch(e){ console.error(e); msg.textContent = 'Gagal membuat link undangan' + (e?.message? ': '+e.message : ''); }
       finally { if (btn){ btn.disabled = false; btn.textContent = 'Buat Link Undangan'; } hideLoading(); }
     });
@@ -799,6 +834,7 @@ byId('eventCreateBtn')?.addEventListener('click', async () => {
         <div class="flex items-center gap-2 hidden" id="inviteLinkRow">
           <input id="inviteLinkOut" readonly class="flex-1 border rounded-lg px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100" />
           <button id="btnCopyInvite" class="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm">Copy Link</button>
+          <button id="btnSendInviteEmail" class="px-3 py-2 rounded-lg bg-amber-600 text-white text-sm">Send To Email</button>
         </div>
         <div id="inviteMsg" class="text-xs"></div>`;
       successBox.appendChild(box);
@@ -807,7 +843,7 @@ byId('eventCreateBtn')?.addEventListener('click', async () => {
         const email = (byId('inviteEmail').value||'').trim();
         const role = byId('inviteRole').value||'editor';
         const msg = byId('inviteMsg'); msg.textContent='';
-        if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { msg.textContent='Email tidak valid.'; return; }
+        if (!email || !EMAIL_REGEX.test(email)) { msg.textContent='Email tidak valid.'; return; }
         if (!isCloudMode() || !currentEventId){ msg.textContent='Mode Cloud belum aktif. Buat event dulu.'; return; }
         try{
           if (btn){ btn.disabled = true; btn.textContent = 'Membuat…'; }
@@ -824,10 +860,12 @@ byId('eventCreateBtn')?.addEventListener('click', async () => {
           if (error) throw error;
 
           const link = buildInviteUrl(currentEventId, byId('sessionDate').value || '', token);
-          const row = byId('inviteLinkRow'); const out = byId('inviteLinkOut'); const cp = byId('btnCopyInvite');
-          if (row && out && cp){ row.classList.remove('hidden'); out.value = link; msg.textContent='Link undangan dibuat. Kirimkan ke email terkait.';
+          const row = byId('inviteLinkRow'); const out = byId('inviteLinkOut'); const cp = byId('btnCopyInvite'); const send = byId('btnSendInviteEmail');
+          if (row && out){ row.classList.remove('hidden'); out.value = link; msg.textContent='Link undangan dibuat. Kirimkan ke email terkait.'; }
+          if (cp && out){
             cp.onclick = async ()=>{ try{ await navigator.clipboard.writeText(out.value); cp.textContent='Copied!'; setTimeout(()=>cp.textContent='Copy Link',1200);}catch{} };
           }
+          if (send && out){ send.onclick = () => sendInviteEmailLink((byId('inviteEmail').value||'').trim(), out.value, byId('inviteRole')?.value || role, msg, send); }
         }catch(e){ console.error(e); msg.textContent = 'Gagal membuat link undangan' + (e?.message? ': '+e.message : ''); }
         finally { if (btn){ btn.disabled = false; btn.textContent = 'Buat Link Undangan'; } }
       });

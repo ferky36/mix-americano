@@ -74,6 +74,19 @@ function shuffleInPlace(a){
 const teamKey=(a,b)=>[a,b].sort().join(' & ');
 const vsKey  =(a,b)=>[a,b].sort().join(' vs ');
 
+// Matikan autofill/password prompt pada input non-password agar tidak muncul "use saved password"
+(function disablePasswordSuggestions(){
+  const apply = ()=>{
+    document.querySelectorAll('input').forEach(el=>{
+      const t = (el.getAttribute('type')||'').toLowerCase();
+      if (t === 'password' || t === 'hidden' || t === 'file') return;
+      el.setAttribute('autocomplete','off');
+    });
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', apply);
+  else apply();
+})();
+
 // -------- UI polish for header labels/icons (fix encoding artifacts) --------
 // Run once after DOM ready
 (function normalizeHeaderUI(){
