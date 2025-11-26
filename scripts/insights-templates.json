@@ -4,17 +4,50 @@
     {
       "id": "top_total",
       "when": { "type": "always" },
-      "build": { "type": "top_list", "source": "pf", "count": 3, "label": "Peringkat berdasarkan Total", "suffix": "mengejar." }
+      "build": {
+        "type": "top_list",
+        "source": "pf",
+        "count": 3,
+        "label": "Peringkat berdasarkan Total",
+        "label_en": "Top by Total",
+        "suffix": "mengejar.",
+        "suffix_en": "are leading the chase."
+      }
     },
     {
       "id": "best_diff",
       "when": { "type": "always" },
-      "build": { "type": "top_list", "source": "diff", "count": 2, "label": "Selisih terbaik", "format": "{name} (+{value})", "join": " & ", "suffix": "menunjukkan kontrol game tinggi." }
+      "build": {
+        "type": "top_list",
+        "source": "diff",
+        "count": 2,
+        "label": "Selisih terbaik",
+        "label_en": "Best Point Difference",
+        "format": "{name} (+{value})",
+        "format_en": "{name} (+{value})",
+        "join": " & ",
+        "join_en": " & ",
+        "suffix": "menunjukkan kontrol game tinggi.",
+        "suffix_en": "show strong control."
+      }
     },
     {
       "id": "wr_high",
       "when": { "type": "wr_ge", "threshold": 0.7 },
-      "build": { "type": "list_filter", "source": "wr", "op": ">=", "threshold": 0.7, "label": "WinRate unggul (≥ 70%)", "format": "{name} {pct}%", "join": ", ", "suffix": "— kandidat kunci untuk pairing berat." }
+      "build": {
+        "type": "list_filter",
+        "source": "wr",
+        "op": ">=",
+        "threshold": 0.7,
+        "label": "WinRate unggul (≥ 70%)",
+        "label_en": "High WinRate (≥ 70%)",
+        "format": "{name} {pct}%",
+        "format_en": "{name} {pct}%",
+        "join": ", ",
+        "join_en": ", ",
+        "suffix": "— kandidat kunci untuk pairing berat.",
+        "suffix_en": "— key candidates for tough pairings."
+      }
     },
     {
       "id": "needs_improve",
@@ -34,12 +67,12 @@
     {
       "id": "avg_margin_low",
       "when": { "type": "avg_margin_le", "threshold": 6 },
-      "build": { "type": "text", "label": "Selisih poin rata-rata rendah → pertandingan cenderung kompetitif." }
+      "build": { "type": "text", "label": "Selisih poin rata-rata rendah → pertandingan cenderung kompetitif.", "label_en": "Low average point margin → matches tend to be competitive." }
     },
     {
       "id": "avg_margin_high",
       "when": { "type": "avg_margin_ge", "threshold": 12 },
-      "build": { "type": "text", "label": "Selisih poin rata-rata tinggi → disparitas performa terlihat." }
+      "build": { "type": "text", "label": "Selisih poin rata-rata tinggi → disparitas performa terlihat.", "label_en": "High average point margin → performance disparity is visible." }
     },
     {
       "id": "rotation_spread",
@@ -49,17 +82,17 @@
     {
       "id": "most_wins",
       "when": { "type": "always" },
-      "build": { "type": "top_list", "source": "w", "count": 3, "label": "Menang terbanyak" }
+      "build": { "type": "top_list", "source": "w", "count": 3, "label": "Menang terbanyak", "label_en": "Most Wins" }
     },
     {
       "id": "most_matches",
       "when": { "type": "always" },
-      "build": { "type": "top_list", "source": "gp", "count": 3, "label": "Paling aktif (jumlah pertandingan)" }
+      "build": { "type": "top_list", "source": "gp", "count": 3, "label": "Paling aktif (jumlah pertandingan)", "label_en": "Most Active (matches played)" }
     },
     {
       "id": "needs_attention_losses",
       "when": { "type": "always" },
-      "build": { "type": "top_list", "source": "l", "count": 2, "label": "Kalah terbanyak", "suffix": "— perlu evaluasi." }
+      "build": { "type": "top_list", "source": "l", "count": 2, "label": "Kalah terbanyak", "label_en": "Most Losses", "suffix": "— perlu evaluasi.", "suffix_en": "— needs review." }
     },
     {
       "id": "biggest_margin_match",
@@ -84,12 +117,12 @@
     {
       "id": "avg_total_low",
       "when": { "type": "avg_total_le", "threshold": 22 },
-      "build": { "type": "text", "label": "Total poin per match relatif rendah → tempo permainan cenderung defensif." }
+      "build": { "type": "text", "label": "Total poin per match relatif rendah → tempo permainan cenderung defensif.", "label_en": "Total points per match are low → tempo tends to be defensive." }
     },
     {
       "id": "avg_total_high",
       "when": { "type": "avg_total_ge", "threshold": 40 },
-      "build": { "type": "text", "label": "Total poin per match tinggi → tempo permainan cenderung ofensif." }
+      "build": { "type": "text", "label": "Total poin per match tinggi → tempo permainan cenderung ofensif.", "label_en": "Total points per match are high → tempo tends to be offensive." }
     }
   ]
 }

@@ -61,7 +61,7 @@ function applyMinorRoundDelta(newState){
         byId('scoreBVal').textContent = scoreCtx.b;
         const startBtn = byId('btnStartTimer');
         if (target.startedAt){ if (startBtn) startBtn.classList.add('hidden'); setScoreModalPreStart(false); }
-        if (target.finishedAt){ setScoreModalLocked(true); const t = byId('scoreTimer'); if (t) t.textContent='Permainan Selesai'; }
+        if (target.finishedAt){ setScoreModalLocked(true); const t = byId('scoreTimer'); if (t) t.textContent = (window.__i18n_get ? __i18n_get('score.finished','Permainan Selesai') : 'Permainan Selesai'); }
       }
     }catch{}
 

@@ -1,8 +1,9 @@
 "use strict";
 // ========== Auth helpers ==========
+const __t = (k, f)=> (window.__i18n_get ? __i18n_get(k, f) : f);
 async function handleAuthRedirect(){
   try{
-    showLoading('Memproses login…');
+    showLoading(__t('auth.processingLogin', 'Memproses login…'));
     const hash = location.hash || '';
     const hasCode = /[?#&](code|access_token)=/.test(location.href) || hash.includes('type=recovery');
     if (hasCode && sb?.auth?.exchangeCodeForSession) {
@@ -140,12 +141,12 @@ function ensureAuthButtons(){
   const bar = byId('hdrControls'); if (!bar) return;
   if (!byId('authInfo')){
     const span = document.createElement('span'); span.id='authInfo'; span.className='text-xs px-2 py-1 bg-white/10 rounded hidden';
-    const se = document.createElement('span'); se.id='authUserEmail'; span.innerHTML = 'Signed in: ';
+    const se = document.createElement('span'); se.id='authUserEmail'; span.innerHTML = __t('auth.signedIn', 'Signed in: ');
     span.appendChild(se);
     bar.appendChild(span);
   }
   if (!byId('btnLogin')){
-    const b = document.createElement('button'); b.id='btnLogin'; b.className='px-3 py-2 rounded-xl bg-white text-indigo-700 font-semibold shadow hover:opacity-90'; b.textContent='Login';
+    const b = document.createElement('button'); b.id='btnLogin'; b.className='px-3 py-2 rounded-xl bg-white text-indigo-700 font-semibold shadow hover:opacity-90'; b.textContent=__t('login.title', 'Login');
     bar.appendChild(b);
     b.addEventListener('click', ()=>{
       const m = byId('loginModal'); if (!m) return; m.classList.remove('hidden');
@@ -153,12 +154,12 @@ function ensureAuthButtons(){
     });
   }
   if (!byId('btnLogout')){
-    const b = document.createElement('button'); b.id='btnLogout'; b.className='px-3 py-2 rounded-xl bg-white text-indigo-700 font-semibold shadow hover:opacity-90 hidden'; b.textContent='Logout';
+    const b = document.createElement('button'); b.id='btnLogout'; b.className='px-3 py-2 rounded-xl bg-white text-indigo-700 font-semibold shadow hover:opacity-90 hidden'; b.textContent=__t('auth.logout', 'Logout');
     bar.appendChild(b);
     b.addEventListener('click', async ()=>{ try{ await sb.auth.signOut(); }catch{} location.reload(); });
   }
   if (!byId('btnAdminLogin')){
-    const b = document.createElement('button'); b.id='btnAdminLogin'; b.className='px-3 py-2 rounded-xl bg-white text-indigo-700 font-semibold shadow hover:opacity-90'; b.textContent='Login as Administrator';
+    const b = document.createElement('button'); b.id='btnAdminLogin'; b.className='px-3 py-2 rounded-xl bg-white text-indigo-700 font-semibold shadow hover:opacity-90'; b.textContent=__t('admin.button', 'Login as Administrator');
     bar.appendChild(b);
     b.addEventListener('click', ()=>{
       const m = byId('adminLoginModal'); if (!m) return; m.classList.remove('hidden');

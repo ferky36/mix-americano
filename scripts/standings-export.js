@@ -2,6 +2,7 @@
 // Export Standings (Excel/PDF) — UI-agnostic, parses table #standings
 
 (function(){
+  const __seT = (k,f)=> (window.__i18n_get ? __i18n_get(k,f) : f);
   function getStandingsAoA(){
     const tbl = document.getElementById('standings');
     if (!tbl) return [];
@@ -43,7 +44,7 @@
     try{
       await ensureXLSX();
       const data = getStandingsAoA();
-      if (!data.length){ alert('Tabel klasemen belum tersedia.'); return; }
+      if (!data.length){ alert(window.__i18n_get ? __i18n_get('standings.noTable','Tabel klasemen belum tersedia.') : 'Tabel klasemen belum tersedia.'); return; }
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.aoa_to_sheet(data);
       // Set column widths (best-effort)
@@ -54,14 +55,14 @@
       const title = (document.getElementById('appTitle')?.textContent || 'Event');
       const name = `${title.replace(/[^\w\- ]+/g,'').trim().replace(/\s+/g,'_')}_Standings_${date}.xlsx`;
       XLSX.writeFile(wb, name);
-    }catch(e){ console.error(e); alert('Gagal export Excel.'); }
+    }catch(e){ console.error(e); alert(window.__i18n_get ? __i18n_get('standings.exportExcelFail','Gagal export Excel.') : 'Gagal export Excel.'); }
   };
 
   // Export to PDF via Print (open a new window and print). Users can Save as PDF.
   window.exportStandingsToPDF = function(){
     try{
       const tbl = document.getElementById('standings');
-      if (!tbl){ alert('Tabel klasemen belum tersedia.'); return; }
+      if (!tbl){ alert(window.__i18n_get ? __i18n_get('standings.noTable','Tabel klasemen belum tersedia.') : 'Tabel klasemen belum tersedia.'); return; }
       const date = (document.getElementById('sessionDate')?.value || new Date().toISOString().slice(0,10));
       const title = (document.getElementById('appTitle')?.textContent || 'Event');
       const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/>
@@ -79,11 +80,11 @@
         ${tbl.outerHTML}
       </body></html>`;
       const w = window.open('', '_blank');
-      if (!w){ alert('Popup diblokir. Izinkan popup untuk export PDF.'); return; }
+      if (!w){ alert(window.__i18n_get ? __i18n_get('standings.popupBlocked','Popup diblokir. Izinkan popup untuk export PDF.') : 'Popup diblokir. Izinkan popup untuk export PDF.'); return; }
       w.document.open(); w.document.write(html); w.document.close();
       w.focus();
       setTimeout(()=>{ try{ w.print(); }catch{} }, 200);
-    }catch(e){ console.error(e); alert('Gagal export PDF.'); }
+    }catch(e){ console.error(e); alert(window.__i18n_get ? __i18n_get('standings.exportPDFFail','Gagal export PDF.') : 'Gagal export PDF.'); }
   };
 
   // Insert buttons above/right of standings table
@@ -97,8 +98,8 @@
       bar.id = 'standingsActions';
       bar.className = 'flex items-center gap-2 justify-end mb-2';
       bar.innerHTML = `
-        <button id="btnExportExcel" class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-sm hover:opacity-90">Export Excel</button>
-        <button id="btnExportPDF" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm hover:opacity-90">Export PDF</button>`;
+        <button id="btnExportExcel" class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-sm hover:opacity-90">${__seT('standings.exportExcel','Export Excel')}</button>
+        <button id="btnExportPDF" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm hover:opacity-90">${__seT('standings.exportPDF','Export PDF')}</button>`;
       // Insert before the table wrapper (.overflow-x-auto) if exists; else before table; else append
       const wrapper = tbl.closest('.overflow-x-auto');
       if (wrapper && wrapper.parentElement === host){

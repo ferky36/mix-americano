@@ -1,4 +1,5 @@
 "use strict";
+const __hT = (k, f)=> (window.__i18n_get ? __i18n_get(k, f) : f);
 // ================== Helpers ================== //
 // bisa disesuaikan urutannya
 const DEFAULT_PLAYERS_10 = [
@@ -91,13 +92,13 @@ const vsKey  =(a,b)=>[a,b].sort().join(' vs ');
 // Run once after DOM ready
 (function normalizeHeaderUI(){
   function run(){
-    try{ const el = byId('btnTheme'); if (el && /[^\w\s]/.test(el.textContent||'')) el.textContent = 'Tema'; }catch{}
+    try{ const el = byId('btnTheme'); if (el && /[^\w\s]/.test(el.textContent||'')) el.textContent = (window.__i18n_get ? __i18n_get('theme.button','Tema') : 'Tema'); }catch{}
     const labelFix = {
-      btnSave: 'Save',
-      btnMakeEventLink: 'Buat/Cari Event',
-      btnReport: 'Report',
-      btnHdrMenu: 'Menu',
-      btnLeaveEvent: 'Keluar Event'
+      btnSave: (window.__i18n_get ? __i18n_get('header.save','Save') : 'Save'),
+      btnMakeEventLink: (window.__i18n_get ? __i18n_get('event.title','Buat/Cari Event') : 'Buat/Cari Event'),
+      btnReport: (window.__i18n_get ? __i18n_get('header.report','Report') : 'Report'),
+      btnHdrMenu: (window.__i18n_get ? __i18n_get('header.menu','Menu') : 'Menu'),
+      btnLeaveEvent: (window.__i18n_get ? __i18n_get('header.leave','Keluar Event') : 'Keluar Event')
     };
     Object.keys(labelFix).forEach(id=>{
       try{
@@ -179,7 +180,7 @@ function updateNextStartButton(courtIdx, roundIdx){
     const allowStart = (typeof canEditScore==='function') ? canEditScore() : !isViewer();
     if (!allowStart || next.startedAt || next.finishedAt) return;
     if (canStartRoundBySequence(courtIdx, nextIdx)){
-      btn.textContent = 'Mulai Main';
+      btn.textContent = __hT('status.startMatch','Mulai Main');
       btn.disabled = false;
       btn.classList.remove('opacity-50','cursor-not-allowed','hidden');
     }
@@ -213,12 +214,12 @@ function __fairnessFromRounds(){
       return `<button type="button" class="fi-name inline-flex items-center gap-1 mr-3 mb-1 px-2 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200 border border-blue-200 dark:border-blue-800" data-player="${safe}">${mark} <b>${safe}</b>: ${n}</button>`;
     }).join('');
     const active = window.__fairnessFilterName || '';
-    const activeHTML = active ? `<div class="mt-1 text-[11px]">Filter aktif: <b>${(typeof escapeHtml==='function')?escapeHtml(active):active}</b> · <button type="button" class="fi-clear underline">Reset</button></div>` : '';
+    const activeHTML = active ? `<div class="mt-1 text-[11px]">${__hT('render.fairness.activeFilter','Filter aktif:')} <b>${(typeof escapeHtml==='function')?escapeHtml(active):active}</b> → <button type="button" class="fi-clear underline">${__hT('render.fairness.reset','Reset')}</button></div>` : '';
     box.innerHTML = `
-      <div class="font-semibold mb-1">Fairness Info (semua lapangan): min=${min}, max=${max}, selisih=${spread}</div>
+      <div class="font-semibold mb-1">${__hT('render.fairness.header','Fairness Info (semua lapangan): min={min}, max={max}, selisih={spread}').replace('{min}', min).replace('{max}', max).replace('{spread}', spread)}</div>
       <div class="fi-chipwrap leading-6">${rows}</div>
       ${activeHTML}
-      <div class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">Tips: jika ada ⬆ dan ⬇ berjauhan, klik \"Terapkan\" lagi untuk mengacak ulang; sistem mengutamakan pemain yang masih kurang main.</div>
+      <div class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">${__hT('render.fairness.tips','Tips: jika ada panah naik/turun berjauhan, klik \"Terapkan\" lagi untuk mengacak ulang; sistem mengutamakan pemain yang masih kurang main.')}</div>
     `;
 
     // bind click handlers once per render
@@ -284,16 +285,16 @@ function __applyFairnessFilter(){
 (function uiSanitizer(){
   function cleanHeader(){
     try{ const el = byId('chipDateText'); if (el && !el.textContent.trim()) el.textContent = '-'; }catch{}
-    try{ const el = byId('btnTheme'); if (el && /[^\w\s]/.test(el.textContent||'')) el.textContent = 'Tema'; }catch{}
-    try{ const el = byId('btnHdrMenu'); if (el) el.textContent = 'Menu'; }catch{}
-    try{ const el = byId('btnSave'); if (el) el.textContent = 'Save'; }catch{}
-    try{ const el = byId('btnMakeEventLink'); if (el) el.textContent = 'Buat Link Event'; }catch{}
-    try{ const el = byId('btnReport'); if (el) el.textContent = 'Report'; }catch{}
-    try{ const el = byId('btnAddCourt'); if (el) el.textContent = '＋ Tambah Lapangan'; }catch{}
-    try{ const el = byId('btnResetActive'); if (el) el.textContent = 'Reset Lapangan Aktif'; }catch{}
-    try{ const el = byId('btnClearScoresActive'); if (el) el.textContent = 'Clear Skor (Lapangan Aktif)'; }catch{}
-    try{ const el = byId('btnClearScoresAll'); if (el) el.textContent = 'Clear Skor (Semua Lapangan)'; }catch{}
-    try{ const el = byId('btnLeaveEvent'); if (el) el.textContent = 'Keluar Event'; }catch{}
+    try{ const el = byId('btnTheme'); if (el && /[^\w\s]/.test(el.textContent||'')) el.textContent = (window.__i18n_get ? __i18n_get('theme.button','Tema') : 'Tema'); }catch{}
+    try{ const el = byId('btnHdrMenu'); if (el) el.textContent = (window.__i18n_get ? __i18n_get('header.menu','Menu') : 'Menu'); }catch{}
+    try{ const el = byId('btnSave'); if (el) el.textContent = (window.__i18n_get ? __i18n_get('header.save','Save') : 'Save'); }catch{}
+    try{ const el = byId('btnMakeEventLink'); if (el) el.textContent = (window.__i18n_get ? __i18n_get('event.createTitle','Buat/Cari Event') : 'Buat/Cari Event'); }catch{}
+    try{ const el = byId('btnReport'); if (el) el.textContent = (window.__i18n_get ? __i18n_get('header.report','Report') : 'Report'); }catch{}
+    try{ const el = byId('btnAddCourt'); if (el) el.textContent = (window.__i18n_get ? __i18n_get('controls.addCourt','＋ Tambah Lapangan') : '＋ Tambah Lapangan'); }catch{}
+    try{ const el = byId('btnResetActive'); if (el) el.textContent = (window.__i18n_get ? __i18n_get('controls.resetActive','Reset Lapangan Aktif') : 'Reset Lapangan Aktif'); }catch{}
+    try{ const el = byId('btnClearScoresActive'); if (el) el.textContent = (window.__i18n_get ? __i18n_get('controls.clearActive','Clear Skor (Lapangan Aktif)') : 'Clear Skor (Lapangan Aktif)'); }catch{}
+    try{ const el = byId('btnClearScoresAll'); if (el) el.textContent = (window.__i18n_get ? __i18n_get('controls.clearAll','Clear Skor (Semua Lapangan)') : 'Clear Skor (Semua Lapangan)'); }catch{}
+    try{ const el = byId('btnLeaveEvent'); if (el) el.textContent = (window.__i18n_get ? __i18n_get('header.leave','Keluar Event') : 'Keluar Event'); }catch{}
     try{ const el = byId('filterChevron'); if (el){ const open = !!byId('filterPanel')?.classList.contains('open'); el.textContent = open ? '▾' : '▸'; } }catch{}
   }
   // // Small badge for Wasit (score-only) in header chips

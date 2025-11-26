@@ -2,6 +2,7 @@
 
 // Match Recap: builds a quick summary from current UI/locals (no Supabase fetch)
 (function(){
+  const t = (k,f)=> (window.__i18n_get ? __i18n_get(k,f) : f);
   function byId(id){ return document.getElementById(id); }
 
   function ensureRecapButton(){
@@ -18,7 +19,7 @@
     const btn = document.createElement('button');
     btn.id = 'btnMatchRecap';
     btn.className = 'recap-btn';
-    btn.textContent = 'Match Recap';
+    btn.textContent = t('recap.button','Match Recap');
     btn.addEventListener('click', openRecapModal);
     wrap.appendChild(btn);
 
@@ -58,20 +59,20 @@
     header.className = 'recap-header';
     const title = document.createElement('div');
     title.className = 'recap-title';
-    title.innerHTML = '<div class="text-xs uppercase tracking-wide text-indigo-100 mb-1">Rangkuman</div><div class="text-lg font-bold text-white">Match Recap</div>';
+    title.innerHTML = `<div class="text-xs uppercase tracking-wide text-indigo-100 mb-1">${t('recap.summary','Rangkuman')}</div><div class="text-lg font-bold text-white">${t('recap.button','Match Recap')}</div>`;
     const actions = document.createElement('div');
     actions.className = 'recap-actions';
     const saveBtn = document.createElement('button');
     saveBtn.className = 'recap-action';
-    saveBtn.innerHTML = '<span>💾</span><span>Simpan gambar</span>';
+    saveBtn.innerHTML = `<span>💾</span><span>${t('recap.saveImage','Simpan gambar')}</span>`;
     saveBtn.addEventListener('click', ()=> saveRecapAsImage());
     const copyBtn = document.createElement('button');
     copyBtn.className = 'recap-action';
-    copyBtn.innerHTML = '<span>📋</span><span>Salin teks</span>';
+    copyBtn.innerHTML = `<span>📋</span><span>${t('recap.copyText','Salin teks')}</span>`;
     copyBtn.addEventListener('click', copyRecapText);
     const closeBtn = document.createElement('button');
     closeBtn.className = 'recap-action';
-    closeBtn.innerHTML = '<span>✕</span><span>Tutup</span>';
+    closeBtn.innerHTML = `<span>✕</span><span>${t('recap.close','Tutup')}</span>`;
     closeBtn.addEventListener('click', closeRecapModal);
     actions.appendChild(saveBtn);
     actions.appendChild(copyBtn);
@@ -121,7 +122,7 @@
 
     // Header title
     const courtNo = (typeof activeCourt !== 'undefined') ? (Number(activeCourt)+1) : (Number(window.activeCourt||0)+1);
-    const headerTitle = `${textFrom(byId('appTitle')) || 'Match Recap'} — Court ${courtNo}`;
+    const headerTitle = t('recap.header','Match Recap — Court {court}').replace('{court}', courtNo).replace('{title}', textFrom(byId('appTitle')) || 'Match Recap').replace('{courtNo}', courtNo);
     const hdr = document.createElement('div');
     hdr.className = 'recap-titlebar';
     hdr.textContent = headerTitle;
@@ -134,12 +135,12 @@
     const tight = matches.length ? matches.slice().sort((a,b)=>a.margin-b.margin || a.round-b.round)[0] : null;
     const cards = document.createElement('div');
     cards.className = 'recap-cards';
-    const tightLabel = tight ? `Match ${tight.round} (${tight.teamA} vs ${tight.teamB || '-'})` : 'Belum ada';
+    const tightLabel = tight ? t('recap.tightLabel','Match {round} ({teamA} vs {teamB})').replace('{round}', tight.round).replace('{teamA}', tight.teamA).replace('{teamB}', tight.teamB || '-') : t('recap.empty','Belum ada data.');
     cards.innerHTML = `
-      ${cardMetric(totalMatch, 'Total Match', 'Berapa banyak laga sudah dimainkan.')}
-      ${cardMetric(totalPoint, 'Total Poin', 'Akumulasi poin semua match (A+B).')}
-      ${cardMetric(avgMargin.toFixed(1), 'Rata Selisih', 'Rata-rata margin skor per match.')}
-      ${tight ? cardMetric(`${tight.saN}–${tight.sbN}`, `Paling Ketat`, `Terketat: ${tightLabel}`) : cardMetric('-', 'Paling Ketat', 'Menunggu skor terisi.')}
+      ${cardMetric(totalMatch, t('recap.metric.totalMatch','Total Match'), t('recap.metric.totalMatchHint','Berapa banyak laga sudah dimainkan.'))}
+      ${cardMetric(totalPoint, t('recap.metric.totalPoint','Total Poin'), t('recap.metric.totalPointHint','Akumulasi poin semua match (A+B).'))}
+      ${cardMetric(avgMargin.toFixed(1), t('recap.metric.avgMargin','Rata Selisih'), t('recap.metric.avgMarginHint','Rata-rata margin skor per match.'))}
+      ${tight ? cardMetric(`${tight.saN}–${tight.sbN}`, t('recap.metric.tight','Paling Ketat'), t('recap.metric.tightHint','Terketat: {label}').replace('{label}', tightLabel)) : cardMetric('-', t('recap.metric.tight','Paling Ketat'), t('recap.metric.wait','Menunggu skor terisi.'))}
     `;
     root.appendChild(cards);
 
@@ -149,14 +150,14 @@
 
     const left = document.createElement('div');
     left.className = 'recap-col-left';
-    left.appendChild(sectionTitle('Jalannya Pertandingan'));
+    left.appendChild(sectionTitle(t('recap.section.matches','Jalannya Pertandingan')));
     const matchWrap = document.createElement('div');
     matchWrap.className = 'recap-match-wrap';
 
     if (!matches.length){
       const empty = document.createElement('div');
       empty.className = 'recap-empty';
-      empty.innerHTML = '<div class="font-semibold mb-1">Belum ada skor yang tercatat</div><div class="text-sm text-gray-600">Masukkan skor dulu agar recap terisi otomatis.</div>';
+      empty.innerHTML = `<div class="font-semibold mb-1">${t('recap.noScoreTitle','Belum ada skor yang tercatat')}</div><div class="text-sm text-gray-600">${t('recap.noScoreDesc','Masukkan skor dulu agar recap terisi otomatis.')}</div>`;
       matchWrap.appendChild(empty);
     } else {
       matches.forEach(m=> matchWrap.appendChild(matchCard(m)));
@@ -165,9 +166,9 @@
 
     const right = document.createElement('div');
     right.className = 'recap-col-right';
-    right.appendChild(sectionTitle('Klasemen Pemain'));
+    right.appendChild(sectionTitle(t('recap.section.standings','Klasemen Pemain')));
     right.appendChild(standingsTable(standings));
-    right.appendChild(sectionTitle('Aturan Ranking'));
+    right.appendChild(sectionTitle(t('recap.section.rules','Aturan Ranking')));
     right.appendChild(rankingRules());
 
     grid.appendChild(left);
@@ -184,7 +185,7 @@
     const hh = String(now.getHours()).padStart(2,'0');
     const mm = String(now.getMinutes()).padStart(2,'0');
     ft.className = 'recap-updated';
-    ft.textContent = `Terakhir diperbarui ${hh}:${mm}`;
+    ft.textContent = t('recap.updated','Dihasilkan dari Data Pertandingan', `${hh}:${mm}`);
     root.appendChild(ft);
 
     return root;
@@ -204,7 +205,7 @@
   function matchCard(m){
     const el = document.createElement('div');
     el.className = 'recap-match-card';
-    const winnerTxt = m.winner==='A' ? 'Menang: Team A' : m.winner==='B' ? 'Menang: Team B' : 'Seri';
+    const winnerTxt = m.winner==='A' ? t('recap.winA','Menang: Team A') : m.winner==='B' ? t('recap.winB','Menang: Team B') : t('recap.draw','Seri');
     const badgeClass = m.winner==='A' ? 'badge-a' : m.winner==='B' ? 'badge-b' : 'badge-d';
     el.innerHTML = `
       <div class="rmc-top"><span>Match ${m.round} • Court ${m.court}</span><span>${escapeHtml(m.time||'')}</span></div>
@@ -225,14 +226,14 @@
     const tbl = document.createElement('table');
     tbl.innerHTML = `
       <thead><tr>
-        <th>Rank</th>
-        <th>Pemain</th>
-        <th>Total</th>
-        <th>Selisih</th>
-        <th>W</th>
-        <th>L</th>
-        <th>D</th>
-        <th>WinRate</th>
+        <th>${t('standings.rank','Rank')}</th>
+        <th>${t('standings.player','Pemain')}</th>
+        <th>${t('standings.total','Total')}</th>
+        <th>${t('standings.diff','Selisih')}</th>
+        <th>${t('standings.w','W')}</th>
+        <th>${t('standings.l','L')}</th>
+        <th>${t('standings.d','D')}</th>
+        <th>${t('standings.winrate','WinRate')}</th>
       </tr></thead><tbody></tbody>`;
     const tbody = tbl.querySelector('tbody');
     rows.forEach(r=>{
@@ -263,10 +264,10 @@
     div.className = 'recap-rules cardlike';
     div.innerHTML = `
       <ol>
-        <li><strong>Total</strong> — poin total lebih tinggi berada di peringkat lebih atas.</li>
-        <li><strong>Selisih</strong> — jika Total sama, peringkat ditentukan oleh selisih skor (point for − point against).</li>
-        <li><strong>Menang</strong> — jika Total & Selisih sama, dilihat jumlah kemenangan (W).</li>
-        <li>Jika semua sama — diurutkan alfabetis nama pemain.</li>
+        <li>${t('recap.rule.total','Total — poin total lebih tinggi berada di peringkat lebih atas.')}</li>
+        <li>${t('recap.rule.diff','Selisih — jika Total sama, peringkat ditentukan oleh selisih skor (point for – point against).')}</li>
+        <li>${t('recap.rule.win','Menang — jika Total & Selisih sama, dilihat jumlah kemenangan (W).')}</li>
+        <li>${t('recap.rule.alphabet','Jika semua sama — diurutkan alfabetis nama pemain.')}</li>
       </ol>`;
     return div;
   }
@@ -279,10 +280,10 @@
     hdr.className = 'recap-insight-heading';
     const h1 = document.createElement('div');
     h1.className = 'rih-title';
-    h1.textContent = 'Padel Match Recap';
+    h1.textContent = t('recap.title','Padel Match Recap');
     const h2 = document.createElement('div');
     h2.className = 'rih-subtitle';
-    h2.textContent = 'Analisis Performa & Strategi Pemain';
+    h2.textContent = t('recap.subtitle','Analisis Performa & Strategi Pemain');
     hdr.appendChild(h1);
     hdr.appendChild(h2);
     const line = document.createElement('div');
@@ -304,7 +305,7 @@
   }
 
   function buildTopRankingCard(standings, matches, avgMargin){
-    const card = createInsightCard('Top Performers', '🏆');
+    const card = createInsightCard(t('recap.topPerformers','Top Performers'), '🏆');
     const list = document.createElement('div');
     list.className = 'insight-player-list';
     const top = standings.slice().sort((a,b)=> a.rank-b.rank || b.pf-a.pf).slice(0,3);
@@ -324,8 +325,8 @@
         left.appendChild(av);
         const meta = document.createElement('div');
         const nm = document.createElement('div'); nm.className='p-name'; nm.textContent = p.player;
-        const statWin = document.createElement('div'); statWin.className='p-stat'; statWin.textContent = `WinRate ${formatWinRate(p)}`;
-        const statDiff = document.createElement('div'); statDiff.className='p-stat p-stat-diff'; if (p.diff<0) statDiff.classList.add('neg'); statDiff.textContent = `Selisih ${p.diff>=0?'+':''}${p.diff}`;
+        const statWin = document.createElement('div'); statWin.className='p-stat'; statWin.textContent = t('recap.winrate','WinRate {value}').replace('{value}', formatWinRate(p));
+        const statDiff = document.createElement('div'); statDiff.className='p-stat p-stat-diff'; if (p.diff<0) statDiff.classList.add('neg'); statDiff.textContent = t('recap.diff','Selisih {value}').replace('{value}', `${p.diff>=0?'+':''}${p.diff}`);
         meta.appendChild(nm);
         meta.appendChild(statWin);
         meta.appendChild(statDiff);
@@ -362,13 +363,13 @@
   }
 
   function buildPairingCard(standings){
-    const card = createInsightCard('Rekomendasi Pairing', '🤝');
+    const card = createInsightCard(t('recap.pair','Pasangan'), '🤝');
     const wrap = document.createElement('div');
     wrap.className = 'insight-pairing-wrap';
     const lows = standings.filter(s=>s.diff<0).sort((a,b)=>a.diff-b.diff).slice(0,2);
     const highs = standings.filter(s=>s.diff>0).sort((a,b)=>b.diff-a.diff).slice(0,2);
     if (!lows.length || !highs.length){
-      wrap.appendChild(emptyInsightText('Belum ada rekomendasi – butuh data W/L dan selisih.'));
+      wrap.appendChild(emptyInsightText(t('recap.empty','Belum ada data.')));
     } else {
       lows.forEach((low, idx)=>{
         const high = highs[idx % highs.length];
@@ -376,10 +377,12 @@
         box.className = 'pairing-box insight-pairing';
         const line = document.createElement('div');
         const lowSpan = document.createElement('span'); lowSpan.className='pair-low'; lowSpan.textContent = `${low.player} (WR ${formatWinRate(low)})`;
-        const arrow = document.createElement('span'); arrow.className='pair-arrow'; arrow.textContent = '→';
+        const arrow = document.createElement('span'); arrow.className='pair-arrow'; arrow.textContent = t('recap.arrow','→');
         const highSpan = document.createElement('span'); highSpan.className='pair-high'; highSpan.textContent = `${high.player} (WR ${formatWinRate(high)})`;
         const reason = document.createElement('span'); reason.className='reason';
-        reason.textContent = `Menyeimbangkan selisih ${low.diff} ke ${high.diff>=0?'+':''}${high.diff}`;
+        reason.textContent = t('recap.balance','Menyeimbangkan selisih {low} ke {high}')
+          .replace('{low}', low.diff)
+          .replace('{high}', `${high.diff>=0?'+':''}${high.diff}`);
         line.appendChild(lowSpan); line.appendChild(arrow); line.appendChild(highSpan); line.appendChild(reason);
         box.appendChild(line);
         wrap.appendChild(box);
@@ -390,14 +393,14 @@
   }
 
   function buildPairPerformanceCard(matches){
-    const card = createInsightCard('Pairing Performance', '🔀');
+    const card = createInsightCard(t('recap.pair','Pasangan'), '🔀');
     const list = document.createElement('div');
     list.className = 'pair-perf-list';
     const agg = aggregatePairs(matches);
     const best = agg.slice().sort((a,b)=> (b.pf - a.pf) || (b.diff - a.diff))[0];
     const worst = agg.slice().sort((a,b)=> (a.pf - b.pf) || (a.diff - b.diff))[0];
     if (!agg.length){
-      list.appendChild(emptyInsightText('Belum ada data pairing.'));
+      list.appendChild(emptyInsightText(t('recap.empty','Belum ada data.')));
     } else {
       if (best) list.appendChild(pairPerfRow(best, 'Best Pairing', false, 'best'));
       if (worst && worst.name !== best?.name) list.appendChild(pairPerfRow(worst, 'Bad Pairing', true, 'bad'));
@@ -437,11 +440,14 @@
     const meta = document.createElement('div');
     meta.className = 'pair-perf-meta';
     const rounds = Array.from(new Set((pair.rounds||[]).filter(Boolean))).sort((a,b)=>a-b);
-    let roundLabel = pair.count ? `${pair.count} match` : 'Match';
-    if (rounds.length===1) roundLabel = `Match ke ${rounds[0]}`;
-    else if (rounds.length>1 && rounds.length<=3) roundLabel = `Match ke ${rounds.join(', ')}`;
-    else if (rounds.length>3) roundLabel = `Match ke ${rounds.slice(0,3).join(', ')} +${rounds.length-3} lagi`;
-    meta.textContent = `${roundLabel} | Total ${pair.pf}`;
+    let roundLabel = pair.count
+      ? t('recap.pair.roundLabel.count','{count} match').replace('{count}', pair.count)
+      : t('recap.pair.roundLabel.single','Match');
+    if (rounds.length===1) roundLabel = t('recap.pair.roundLabel.one','Match ke {round}').replace('{round}', rounds[0]);
+    else if (rounds.length>1 && rounds.length<=3) roundLabel = t('recap.pair.roundLabel.some','Match ke {rounds}').replace('{rounds}', rounds.join(', '));
+    else if (rounds.length>3) roundLabel = t('recap.pair.roundLabel.more','Match ke {rounds} +{extra} lagi')
+      .replace('{rounds}', rounds.slice(0,3).join(', ')).replace('{extra}', rounds.length-3);
+    meta.textContent = `${roundLabel} | ${t('recap.total','Total {value}').replace('{value}', pair.pf)}`;
     if (type==='best') title.classList.add('pair-perf-best');
     if (type==='bad') title.classList.add('pair-perf-bad');
     const score = document.createElement('div');
@@ -460,13 +466,13 @@
   }
 
   function buildSupportCard(standings){
-    const card = createInsightCard('Butuh Penyangga', '⚠️');
+    const card = createInsightCard(t('recap.support.title','Butuh Penyangga'), '⚠️');
     const needs = standings.filter(s=>{
       const wr = winRateValue(s);
       return s.diff<0 || wr<=25;
     }).sort((a,b)=> a.diff-b.diff).slice(0,4);
     if (!needs.length){
-      card.appendChild(emptyInsightText('Semua pemain aman, tidak ada selisih negatif.'));
+      card.appendChild(emptyInsightText(t('recap.support.safe','Semua pemain aman, tidak ada selisih negatif.')));
       return card;
     }
     needs.forEach(p=>{
@@ -474,8 +480,8 @@
       row.className = 'insight-support-row';
       const name = document.createElement('span'); name.className='p-name'; name.textContent = p.player;
       const pills = document.createElement('div'); pills.className='pill-row';
-      const wr = document.createElement('span'); wr.className='pill red'; wr.textContent = `WR ${formatWinRate(p)}`;
-      const diff = document.createElement('span'); diff.className='pill red'; diff.textContent = `Selisih ${p.diff}`;
+      const wr = document.createElement('span'); wr.className='pill red'; wr.textContent = t('recap.winrate','WinRate {value}').replace('{value}', formatWinRate(p));
+      const diff = document.createElement('span'); diff.className='pill red'; diff.textContent = t('recap.diff','Selisih {value}').replace('{value}', p.diff);
       pills.appendChild(wr); pills.appendChild(diff);
       row.appendChild(name); row.appendChild(pills);
       card.appendChild(row);
@@ -484,7 +490,7 @@
   }
 
   function buildInsightCard(matches, avgMargin, standings){
-    const card = createInsightCard('Insight & Konsistensi', '📈');
+    const card = createInsightCard(t('recap.insight','Insight & Konsistensi'), '📈');
     const container = document.createElement('div');
     container.className = 'insight-progress';
     const cand = pickConsistencyCandidate(standings);
@@ -492,9 +498,9 @@
       const label = document.createElement('div');
       label.className = 'progress-label';
       const left = document.createElement('span');
-      left.textContent = `Consistency Watch: ${cand.player}`;
+      left.textContent = `${t('recap.consistency','Consistency Watch')}: ${cand.player}`;
       const right = document.createElement('span');
-      right.textContent = `Total ${cand.pf}`;
+      right.textContent = t('recap.total','Total {value}').replace('{value}', cand.pf);
       label.appendChild(left); label.appendChild(right);
       const bg = document.createElement('div'); bg.className='insight-progress-bg';
       const fill = document.createElement('div'); fill.className='insight-progress-fill';
@@ -506,10 +512,10 @@
       container.appendChild(bg);
       const quote = document.createElement('div');
       quote.className = 'insight-quote';
-      quote.textContent = 'Kontribusi bagus, hasil belum stabil.';
+      quote.textContent = t('recap.consistencyNote','Kontribusi bagus, hasil belum stabil.');
       container.appendChild(quote);
     } else {
-      container.appendChild(emptyInsightText('Belum ada data konsistensi.'));
+      container.appendChild(emptyInsightText(t('recap.consistency.empty','Belum ada data konsistensi.')));
     }
     card.appendChild(container);
 
@@ -517,8 +523,8 @@
     statGrid.className = 'insight-stat-grid';
     const tight = matches.length ? matches.slice().sort((a,b)=>a.margin-b.margin || a.round-b.round)[0] : null;
     const stats = [
-      { label: 'Match Ketat', value: tight ? `Match ${tight.round}` : 'Belum ada', sub: tight ? `${tight.saN}–${tight.sbN}` : ''},
-      { label: 'Rata Margin', value: avgMargin ? avgMargin.toFixed(1) : '0.0', sub: 'Skor per match'}
+      { label: t('recap.card.tight','Match Ketat'), value: tight ? `Match ${tight.round}` : t('recap.empty','Belum ada data.'), sub: tight ? `${tight.saN}–${tight.sbN}` : ''},
+      { label: t('recap.card.avgMargin','Rata Margin'), value: avgMargin ? avgMargin.toFixed(1) : '0.0', sub: t('recap.card.avgMarginSub','Skor per match')}
     ];
     stats.forEach(s=>{
       const box = document.createElement('div');
@@ -550,7 +556,7 @@
   function emptyInsightText(text){
     const el = document.createElement('div');
     el.className = 'insight-empty';
-    el.textContent = text || 'Belum ada data.';
+    el.textContent = text || t('recap.empty','Belum ada data.');
     return el;
   }
 
@@ -585,30 +591,31 @@
     const bullets = [];
     const topTotal = standings.slice().sort((a,b)=>b.pf-a.pf).slice(0,3)
       .map(s=>`${escapeHtml(s.player)} (${s.pf})`).join('; ');
-    if (topTotal) bullets.push(`<strong>Peringkat berdasarkan Total:</strong> ${topTotal} mengejar.`);
+    if (topTotal) bullets.push(t('recap.fallback.topTotal','<strong>Peringkat berdasarkan Total:</strong> {list} mengejar.').replace('{list}', topTotal));
     const topDiff = standings.slice().sort((a,b)=>b.diff-a.diff).slice(0,2)
       .map(s=>`${escapeHtml(s.player)} (+${s.diff})`).join(' & ');
-    if (topDiff) bullets.push(`<strong>Selisih terbaik:</strong> ${topDiff} menunjukkan kontrol game tinggi.`);
+    if (topDiff) bullets.push(t('recap.fallback.topDiff','<strong>Selisih terbaik:</strong> {list} menunjukkan kontrol game tinggi.').replace('{list}', topDiff));
     const wrHigh = standings.filter(s=>{ const gp=s.w+s.l+(s.d||0); return gp && (s.w/gp)>=0.7; })
       .map(s=>{ const gp=s.w+s.l+(s.d||0); return `${escapeHtml(s.player)} ${(s.w/gp*100).toFixed(0)}%`; }).join(', ');
-    if (wrHigh) bullets.push(`<strong>WinRate unggul (≥ 70%):</strong> ${wrHigh} — kandidat kunci untuk pairing berat.`);
+    if (wrHigh) bullets.push(t('recap.fallback.wrHigh','<strong>WinRate unggul (>= 70%):</strong> {list} - kandidat kunci untuk pairing berat.').replace('{list}', wrHigh));
     const needs = standings.filter(s=>{ const gp=s.w+s.l+(s.d||0); const wr=gp?(s.w/gp):0; return wr<=0.25 && s.diff<0; })
       .slice(0,4)
-      .map(s=>{ const gp=s.w+s.l+(s.d||0); const wr=gp?(s.w/gp*100).toFixed(0):'0'; return `${escapeHtml(s.player)} (${wr}%, ±${s.diff})`; }).join(', ');
-    if (needs) bullets.push(`<strong>Butuh perbaikan:</strong> ${needs} — coba pairing dengan pemain ± positif.`);
+      .map(s=>{ const gp=s.w+s.l+(s.d||0); const wr=gp?(s.w/gp*100).toFixed(0):'0'; const diffLabel=`${s.diff>=0?'+':''}${s.diff}`; return `${escapeHtml(s.player)} (${wr}%, ${diffLabel})`; }).join(', ');
+    if (needs) bullets.push(t('recap.needsImprove','<strong>Butuh perbaikan:</strong> {list} - coba pairing dengan pemain +/- positif.').replace('{list}', needs));
     const mid = standings.filter(s=>{ const gp=s.w+s.l+(s.d||0); if(!gp) return false; const wr=s.w/gp; return wr>=0.45 && wr<=0.55; })
       .sort((a,b)=>b.pf-a.pf)[0];
-    if (mid){ const gp=mid.w+mid.l+(mid.d||0); const wr=((mid.w/gp)*100).toFixed(0); bullets.push(`<strong>Consistency watch:</strong> ${escapeHtml(mid.player)} ${wr}% namun Total tinggi (${mid.pf}) → kontribusi poin bagus meski hasil belum stabil.`); }
+    if (mid){ const gp=mid.w+mid.l+(mid.d||0); const wr=((mid.w/gp)*100).toFixed(0); bullets.push(t('recap.consistency.watch','<strong>Consistency watch:</strong> {name} {wr}% namun Total tinggi ({total}) -> kontribusi poin bagus meski hasil belum stabil.').replace('{name}', escapeHtml(mid.player)).replace('{wr}', wr).replace('{total}', mid.pf)); }
     try {
       const counts = new Map();
       matches.forEach(m=>{ [m.a1,m.a2,m.b1,m.b2].forEach(p=>counts.set(p,(counts.get(p)||0)+1)); });
       const vals = [...counts.values()];
       const min = Math.min(...vals), max = Math.max(...vals);
       const spread = (isFinite(min)&&isFinite(max))? (max-min) : 0;
-      bullets.push(`<strong>Rotasi & keseimbangan:</strong> sebaran main ${spread===0?'merata':`selisih ${spread}`}.`);
+      const spreadTxt = spread===0 ? t('recap.fallback.rotationEven','merata') : t('recap.fallback.rotationGap','selisih {spread}').replace('{spread}', spread);
+      bullets.push(t('recap.fallback.rotation','<strong>Rotasi & keseimbangan:</strong> sebaran main {spread}.').replace('{spread}', spreadTxt));
     } catch {}
     const tight = matches.length ? matches.slice().sort((a,b)=>a.margin-b.margin)[0] : null;
-    if (tight) bullets.push(`Match paling ketat: Match ${tight.round} (Skor ${tight.saN}–${tight.sbN}).`);
+    if (tight) bullets.push(t('recap.tightest','Match paling ketat: Match {round} (Skor {score}).').replace('{round}', tight.round).replace('{score}', `${tight.saN}-${tight.sbN}`));
     return bullets;
   }
 
@@ -630,6 +637,8 @@
 
   function applyTemplates(templates, ctx){
     const bullets=[];
+    let langIsEn = false;
+    try{ langIsEn = (localStorage.getItem('app.lang')||'id') === 'en'; }catch{}
     const standings = ctx.standings.map(s=>({
       name: s.player,
       pf: s.pf,
@@ -673,16 +682,18 @@
       if (!build) return '';
       switch(build.type){
         case 'text':
-          return build.label || '';
+          return pick(build.label, build.label_en) || '';
         case 'top_list':{
           const src = build.source || 'pf';
           const count = build.count || 3;
           const arr = standings.slice().sort((a,b)=> (b[src]||0)-(a[src]||0)).slice(0,count);
           if (!arr.length) return '';
-          const fmt = build.format || '{name} ({value})';
-          const s = arr.map(x=> fmt.replace('{name}', escapeHtml(x.name)).replace('{value}', String(x[src])) ).join(build.join||'; ');
-          const label = build.label ? `<strong>${build.label}:</strong> ` : '';
-          const suf = build.suffix ? ` ${build.suffix}` : '';
+          const fmt = pick(build.format, build.format_en) || '{name} ({value})';
+          const s = arr.map(x=> fmt.replace('{name}', escapeHtml(x.name)).replace('{value}', String(x[src])) ).join(pick(build.join, build.join_en) || '; ');
+          const labelVal = pick(build.label, build.label_en);
+          const sufVal = pick(build.suffix, build.suffix_en);
+          const label = labelVal ? `<strong>${labelVal}:</strong> ` : '';
+          const suf = sufVal ? ` ${sufVal}` : '';
           return `${label}${s}${suf}`;
         }
         case 'list_filter':{
@@ -691,29 +702,32 @@
           if (!arr.length) return '';
           const s = arr.map(x=>{
             const pct = asPct(x.w,x.l,x.d);
-            return (build.format||'{name}').replace('{name}', escapeHtml(x.name)).replace('{pct}', String(pct));
-          }).join(build.join||', ');
-          const label = build.label ? `<strong>${build.label}:</strong> ` : '';
-          const suf = build.suffix ? ` ${build.suffix}` : '';
+            return (pick(build.format, build.format_en)||'{name}').replace('{name}', escapeHtml(x.name)).replace('{pct}', String(pct));
+          }).join(pick(build.join, build.join_en) || ', ');
+          const labelVal = pick(build.label, build.label_en);
+          const sufVal = pick(build.suffix, build.suffix_en);
+          const label = labelVal ? `<strong>${labelVal}:</strong> ` : '';
+          const suf = sufVal ? ` ${sufVal}` : '';
           return `${label}${s}${suf}`;
         }
         case 'needs_improve':{
           const th = build.threshold||0.25; const limit=build.limit||4;
           const arr = standings.filter(s=>{ const gp=s.w+s.l+s.d; const wr=gp? (s.w/gp):0; return wr<=th && s.diff<0; })
-            .slice(0,limit).map(s=>{ const gp=s.w+s.l+s.d; const wr=gp? Math.round((s.w/gp)*100):0; return `${escapeHtml(s.name)} (${wr}%, ±${s.diff})`; });
+            .slice(0,limit).map(s=>{ const gp=s.w+s.l+s.d; const wr=gp? Math.round((s.w/gp)*100):0; const diffLabel=`${s.diff>=0?'+':''}${s.diff}`; return `${escapeHtml(s.name)} (${wr}%, ${diffLabel})`; });
           if (!arr.length) return '';
-          return `<strong>Butuh perbaikan:</strong> ${arr.join(', ')} — coba pairing dengan pemain ± positif.`;
+          return t('recap.needsImprove','<strong>Butuh perbaikan:</strong> {list} - coba pairing dengan pemain +/- positif.').replace('{list}', arr.join(', '));
         }
         case 'consistency':{
           const mn=build.min||0.45, mx=build.max||0.55;
           const cand = standings.filter(s=>{ const gp=s.w+s.l+s.d; if(!gp) return false; const wr=s.w/gp; return wr>=mn && wr<=mx; }).sort((a,b)=>b.pf-a.pf)[0];
           if (!cand) return '';
           const gp=cand.w+cand.l+cand.d; const wr=Math.round((cand.w/gp)*100);
-          return `<strong>Consistency watch:</strong> ${escapeHtml(cand.name)} ${wr}% namun Total tinggi (${cand.pf}) → kontribusi poin bagus meski hasil belum stabil.`;
+          return t('recap.consistency.watch','<strong>Consistency watch:</strong> {name} {wr}% namun Total tinggi ({total}) -> kontribusi poin bagus meski hasil belum stabil.')
+            .replace('{name}', escapeHtml(cand.name)).replace('{wr}', wr).replace('{total}', cand.pf);
         }
         case 'tightest':{
           if (!tight) return '';
-          return `Match paling ketat: Match ${tight.round} (Skor ${tight.saN}–${tight.sbN}).`;
+          return t('recap.tightest','Match paling ketat: Match {round} (Skor {score}).').replace('{round}', tight.round).replace('{score}', `${tight.saN}-${tight.sbN}`);
         }
         case 'rotation':{
           try{
@@ -721,35 +735,39 @@
             matches.forEach(m=>{ [m.a1,m.a2,m.b1,m.b2].forEach(p=>counts.set(p,(counts.get(p)||0)+1)); });
             const vals=[...counts.values()]; const min=Math.min(...vals), max=Math.max(...vals); const spread=max-min;
             const goodMax = build.good_max ?? 1;
-            const msg = spread<=goodMax ? 'sebaran main merata' : `sebaran main selisih ${spread}`;
-            return `<strong>Rotasi & keseimbangan:</strong> ${msg}.`;
+            const msg = spread<=goodMax
+              ? t('recap.rotation.msgEven','sebaran main merata')
+              : t('recap.rotation.msgGap','sebaran main selisih {spread}').replace('{spread}', spread);
+            return `<strong>${t('recap.rotation.title','Rotasi & keseimbangan')}:</strong> ${msg}.`;
           }catch{ return ''; }
         }
         case 'biggest':{
           if (!haveMatches) return '';
           const m = matches.slice().sort((a,b)=>b.margin-a.margin)[0];
           const who = (m.saN>m.sbN) ? `${escapeHtml(m.a1)} & ${escapeHtml(m.a2)}` : `${escapeHtml(m.b1)} & ${escapeHtml(m.b2)}`;
-          return `Margin terbesar: Match ${m.round} — ${who} menang ${m.saN}–${m.sbN} (margin ${m.margin}).`;
+          return t('recap.biggest','Margin terbesar: Match {round} - {team} menang {scoreA}-{scoreB} (margin {margin}).')
+            .replace('{round}', m.round).replace('{team}', who).replace('{scoreA}', m.saN).replace('{scoreB}', m.sbN).replace('{margin}', m.margin);
         }
         case 'highest_total':{
           if (!haveMatches) return '';
           const m = matches.slice().sort((a,b)=>((b.saN+b.sbN)-(a.saN+a.sbN)))[0];
           const total = m.saN+m.sbN;
-          return `Skor total tertinggi: Match ${m.round} — ${m.saN}–${m.sbN} (total ${total}).`;
+          return t('recap.highestTotal','Skor total tertinggi: Match {round} - {scoreA}-{scoreB} (total {total}).')
+            .replace('{round}', m.round).replace('{scoreA}', m.saN).replace('{scoreB}', m.sbN).replace('{total}', total);
         }
         case 'close_count':{
           if (!haveMatches) return '';
           const th = Number(build.threshold||3);
           const n = matches.filter(m=>m.margin<=th).length;
           if (!n) return '';
-          return `${n} pertandingan tergolong ketat (margin ≤ ${th}).`;
+          return t('recap.closeCount','{count} pertandingan tergolong ketat (margin <= {threshold}).').replace('{count}', n).replace('{threshold}', th);
         }
         case 'best_pairs':{
           if (!haveMatches) return '';
           const count = build.count||3;
           const pair = new Map();
           matches.forEach(m=>{
-            const pA = `${m.a1} • ${m.a2}`; const pB = `${m.b1} • ${m.b2}`;
+            const pA = `${m.a1} - ${m.a2}`; const pB = `${m.b1} - ${m.b2}`;
             const keyA = `A:${pA}`; const keyB = `B:${pB}`;
             const prevA = pair.get(keyA) || { name:pA, pf:0, diff:0 };
             const prevB = pair.get(keyB) || { name:pB, pf:0, diff:0 };
@@ -758,13 +776,16 @@
           });
           const arr = [...pair.values()].sort((a,b)=> (b.pf - a.pf) || (b.diff - a.diff)).slice(0,count);
           if (!arr.length) return '';
-          const s = arr.map(x=> `${escapeHtml(x.name)} (${x.pf}, ±${x.diff})`).join('; ');
-          return `<strong>Pair produktif:</strong> ${s}.`;
+          const s = arr.map(x=> `${escapeHtml(x.name)} (${x.pf}, ${x.diff>=0?'+':''}${x.diff})`).join('; ');
+          return t('recap.pair.productive','<strong>Pair produktif:</strong> {list}.').replace('{list}', s);
         }
         default: return '';
+
+
       }
     }
     function compare(a,op,b){ if(op==='>=') return a>=b; if(op==='>') return a>b; if(op==='<=') return a<=b; if(op==='<') return a<b; if(op==='==') return a==b; return false; }
+    function pick(idVal, enVal){ return langIsEn ? (enVal || idVal) : idVal; }
   }
 
   function bottomPanels(matches, avgMargin, standings){
@@ -772,20 +793,20 @@
     grid.className = 'recap-bottom-grid';
     // Rules
     const rulesSec = document.createElement('section');
-    rulesSec.appendChild(sectionTitle('Aturan Ranking'));
+    rulesSec.appendChild(sectionTitle(t('recap.section.rules','Aturan Ranking')));
     const rules = document.createElement('div');
     rules.className = 'recap-rules cardlike';
     rules.innerHTML = `
       <ol>
-        <li><strong>Total</strong> — poin total lebih tinggi berada di peringkat lebih atas.</li>
-        <li><strong>Selisih</strong> — jika Total sama, peringkat ditentukan oleh selisih skor (point for − point against).</li>
-        <li><strong>Menang</strong> — jika Total & Selisih sama, dilihat jumlah kemenangan (W).</li>
-        <li>Jika semua sama — diurutkan alfabetis nama pemain.</li>
+        <li>${t('recap.rule.total','Total - poin total lebih tinggi berada di peringkat lebih atas.')}</li>
+        <li>${t('recap.rule.diff','Selisih - jika Total sama, peringkat ditentukan oleh selisih skor (point for - point against).')}</li>
+        <li>${t('recap.rule.win','Menang - jika Total & Selisih sama, dilihat jumlah kemenangan (W).')}</li>
+        <li>${t('recap.rule.alphabet','Jika semua sama - diurutkan alfabetis nama pemain.')}</li>
       </ol>`;
     rulesSec.appendChild(rules);
     // Notes
     const notesSec = document.createElement('section');
-    notesSec.appendChild(sectionTitle('Catatan & Insight'));
+    notesSec.appendChild(sectionTitle(t('recap.section.notes','Catatan & Insight')));
     notesSec.appendChild(insightBox(matches, avgMargin, standings));
 
     grid.appendChild(rulesSec);
@@ -804,13 +825,13 @@
       const vals = [...counts.values()];
       const min = Math.min(...vals), max = Math.max(...vals);
       const spread = (isFinite(min)&&isFinite(max))? (max-min) : 0;
-      bullets.push(spread<=1 ? 'Rotasi sudah seimbang.' : `Sebaran rotasi belum merata (selisih main ${spread}).`);
+      bullets.push(spread<=1 ? t('recap.rotation.ok','Rotasi sudah seimbang.') : t('recap.rotation.warn','Sebaran rotasi belum merata (selisih main {spread}).').replace('{spread}', spread));
     } catch {}
     // Insight 2: competitiveness by avg margin
-    bullets.push(avgMargin<=6 ? 'Selisih rata-rata rendah → pertandingan kompetitif.' : 'Selisih rata-rata cukup tinggi → disparitas performa terlihat.');
+    bullets.push(avgMargin<=6 ? t('recap.margin.low','Selisih rata-rata rendah → pertandingan kompetitif.') : t('recap.margin.high','Selisih rata-rata cukup tinggi → disparitas performa terlihat.'));
     // Insight 3: tightest match
     const tight = matches.length ? matches.slice().sort((a,b)=>a.margin-b.margin)[0] : null;
-    if (tight) bullets.push(`Match paling ketat: Match ${tight.round} (Skor ${tight.saN}–${tight.sbN}).`);
+    if (tight) bullets.push(t('recap.tightest','Match paling ketat: Match {round} (Skor {score}).').replace('{round}', tight.round).replace('{score}', `${tight.saN}–${tight.sbN}`));
 
     bullets.forEach(t=>{ const li=document.createElement('li'); li.textContent=t; ul.appendChild(li); });
     const box = document.createElement('div'); box.className = 'recap-insight-box'; box.appendChild(ul); return box;
@@ -879,24 +900,29 @@
     const matches = collectMatches();
     const standings = [...(byId('standings')?.querySelectorAll('tbody tr')||[])].map(tr=>{
       const t = [...tr.children].map(td=>td.textContent.trim());
-      return `${t[0]}. ${t[1]} | Total ${t[2]} | Δ${t[3]} | W${t[4]}-L${t[5]}-D${t[6]} | ${t[7]}`;
+      return `${t[0]}. ${t[1]} | Total ${t[2]} | Diff ${t[3]} | W${t[4]}-L${t[5]}-D${t[6]} | ${t[7]}`;
     });
-    let out = `Match Recap — ${title}${date?` (${date})`:''}\n\n`;
+    const header = t('recap.copyHeader','Match Recap - {title}').replace('{title}', title);
+    let out = `${header}${date?` (${date})`:''}\n\n`;
     if (matches.length){
-      out += `Matches (${matches.length})\n`;
-      matches.forEach(m=>{ out += `Lap ${m.court} • Match ${m.round}${m.time?` • ${m.time}`:''} — ${m.a1} & ${m.a2} vs ${m.b1} & ${m.b2} → ${m.sa}:${m.sb}\n`; });
+      out += `${t('recap.copyMatches','Matches ({count})').replace('{count}', matches.length)}\n`;
+      matches.forEach(m=>{
+        const courtLabel = t('recap.courtLabel','Lap {court}').replace('{court}', m.court);
+        const matchLabel = t('recap.matchLabel','Match {round}').replace('{round}', m.round);
+        const timePart = m.time ? ` - ${m.time}` : '';
+        out += `${courtLabel} - ${matchLabel}${timePart} - ${m.a1} & ${m.a2} vs ${m.b1} & ${m.b2} -> ${m.sa}:${m.sb}\n`;
+      });
       out += `\n`;
     }
     if (standings.length){
-      out += `Standings\n` + standings.join('\n') + `\n`;
+      out += `${t('recap.copyStandings','Standings')}\n` + standings.join('\n') + `\n`;
     }
     try{ navigator.clipboard.writeText(out); }catch{
       const ta = document.createElement('textarea');
       ta.value = out; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); }catch{} ta.remove();
     }
-    try{ window.showToast?.('Recap disalin ke clipboard', 'success'); }catch{}
+    try{ window.showToast?.(t('recap.copySuccess','Recap disalin ke clipboard'), 'success'); }catch{}
   }
-
   async function ensureHtml2Canvas(){
     if (window.html2canvas) return true;
     return new Promise((resolve)=>{
@@ -910,7 +936,7 @@
 
   async function saveRecapAsImage(){
     const ok = await ensureHtml2Canvas();
-    if (!ok) { try{ showToast?.('Gagal memuat html2canvas', 'error'); }catch{} return; }
+    if (!ok) { try{ showToast?.(t('recap.html2canvasFail','Gagal memuat html2canvas'), 'error'); }catch{} return; }
     const panel = document.querySelector('#matchRecapOverlay .recap-panel');
     if (!panel) return;
     const body = panel.querySelector('.recap-body');

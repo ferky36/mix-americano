@@ -7,6 +7,7 @@
   const qs = (s, r=document)=> r.querySelector(s);
   const qsa = (s, r=document)=> Array.from(r.querySelectorAll(s));
   const escapeHtml = (s)=> String(s ?? '').replace(/[&<>"']/g, (c)=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const __c = (k, f)=> (window.__i18n_get ? __i18n_get(k, f) : f);
   const fmtDateID = (raw)=>{
     try{
       if (!raw) return '';
@@ -66,8 +67,8 @@
         <td class="py-2 pr-2 text-right font-semibold">${fmtIDR(total)}</td>
         <td class="py-2 pr-2 text-right">
           <div class="flex justify-end gap-1">
-            <button data-act="edit" class="px-2 py-1 rounded border dark:border-gray-700 text-xs ${!can?'hidden':''}">Edit</button>
-            <button data-act="del"  class="px-2 py-1 rounded border dark:border-gray-700 text-xs ${!can?'hidden':''}">Hapus</button>
+            <button data-act="edit" class="px-2 py-1 rounded border dark:border-gray-700 text-xs ${!can?'hidden':''}">${__c('cash.edit','Edit')}</button>
+            <button data-act="del"  class="px-2 py-1 rounded border dark:border-gray-700 text-xs ${!can?'hidden':''}">${__c('cash.delete','Hapus')}</button>
           </div>
         </td>`;
       tr.dataset.id = it.id;
@@ -252,7 +253,7 @@
     const sumIn = sum(cash.masuk), sumOut = sum(cash.keluar), remain = sumIn - sumOut;
     const ctx = (byId('cashEventInfo')?.textContent||'').trim();
     const ringkasan = [
-      [rangeMode.active ? 'Cashflow Range' : 'Cashflow Event', ctx],
+      [rangeMode.active ? __c('cash.titleRange','Cashflow Range') : __c('cash.title','Cashflow Event'), ctx],
       [],
       ['Uang Masuk', sumIn],
       ['Uang Keluar', sumOut],
@@ -386,7 +387,7 @@
 
           const out = await wbT.xlsx.writeBuffer();
           const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-          const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Laporan Cashflow Padel NBC.xlsx'; a.click(); setTimeout(()=> URL.revokeObjectURL(a.href), 2000);
+          const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = __c('cash.exportFile','Laporan Cashflow Padel NBC.xlsx'); a.click(); setTimeout(()=> URL.revokeObjectURL(a.href), 2000);
           return true;
         }catch(e){ console.warn('Template export failed:', e); return false; }
       }
@@ -415,7 +416,7 @@
       const redFill   = { type:'pattern', pattern:'solid', fgColor:{argb:'FFFCE8E6'} };
 
       let r = 1;
-      safeMerge(r,1,r,11); ws.getCell(r,1).value = 'Laporan Cashflow Padel NBC'; ws.getCell(r,1).font = titleFont; r+=2;
+      safeMerge(r,1,r,11); ws.getCell(r,1).value = __c('cash.exportTitle','Laporan Cashflow Padel NBC'); ws.getCell(r,1).font = titleFont; r+=2;
 
       let periodText = '';
       if (rangeMode.active){
@@ -508,11 +509,11 @@
       safeMerge(r,1,r,3); const gBal = ws.getCell(r,1); gBal.value = 'Sisa:'; gBal.font = { bold:true, color:{argb:'FF0EA5E9'} }; gBal.border = borderThin;
       ws.getCell(r,4).value = { formula: `D${r-1}-J${r-1}` }; ws.getCell(r,4).numFmt = fmtMoney; ws.getCell(r,4).font = { bold:true, color:{argb:'FF0EA5E9'} }; ws.getCell(r,4).alignment = { horizontal:'right' }; ws.getCell(r,4).border = borderThin;
 
-      const name = 'Laporan Cashflow Padel NBC.xlsx';
+      const name = __c('cash.exportFile','Laporan Cashflow Padel NBC.xlsx');
       const buf = await wb.xlsx.writeBuffer();
       const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(()=> URL.revokeObjectURL(a.href), 2000);
-    }catch(e){ console.error(e); alert('Gagal export Excel.'); }
+    }catch(e){ console.error(e); alert(__c('cash.exportExcelFail','Gagal export Excel.')); }
   }
   // New PDF export that mirrors the Excel layout using pdfmake
   async function exportCashflowPDFNBC(){
@@ -561,7 +562,7 @@
         return [head, ...rows, totalRow];
       }
       const content = [];
-      content.push({ text:'Laporan Cashflow Padel NBC', alignment:'center', fontSize:18, bold:true, margin:[0,0,0,8] });
+      content.push({ text:__c('cash.exportTitle','Laporan Cashflow Padel NBC'), alignment:'center', fontSize:18, bold:true, margin:[0,0,0,8] });
       if (periodText) content.push({ text: periodText, alignment:'center', margin:[0,0,0,16] });
       let grandIn=0, grandOut=0;
       events.forEach(ev=>{
@@ -575,8 +576,8 @@
       content.push({ text:'Total Keseluruhan', bold:true, alignment:'center', margin:[0,0,0,6] });
       content.push({ columns:[ {width:'48%', table:{ widths:['*',100], body:[ [ {text:'Masuk:', fillColor:'#E6F4EA', color:'#059669', bold:true}, {text:`Rp ${money(grandIn)}`, alignment:'right', fillColor:'#E6F4EA', color:'#059669', bold:true} ], [ {text:'Sisa:', color: balAll>=0?'#0EA5E9':'#DC2626', bold:true}, {text:`Rp ${money(balAll)}`, alignment:'right', color: balAll>=0?'#0EA5E9':'#DC2626', bold:true} ] ]}, layout:{hLineColor:'#E5E7EB', vLineColor:'#E5E7EB'} }, {width:8, text:''}, {width:'48%', table:{ widths:['*',100], body:[ [ {text:'Keluar:', fillColor:'#FCE8E6', color:'#DC2626', bold:true}, {text:`Rp ${money(grandOut)}`, alignment:'right', fillColor:'#FCE8E6', color:'#DC2626', bold:true} ] ]}, layout:{hLineColor:'#E5E7EB', vLineColor:'#E5E7EB'} } ], columnGap:8 });
       const docDef={ pageSize:'A4', pageOrientation:'landscape', pageMargins:[20,24,20,28], defaultStyle:{ font:'Roboto', fontSize:10 }, content };
-      pdfMake.createPdf(docDef).download('Laporan Cashflow Padel NBC.pdf');
-    }catch(e){ console.error(e); alert('Gagal export PDF.'); }
+      pdfMake.createPdf(docDef).download(__c('cash.exportFilePdf','Laporan Cashflow Padel NBC.pdf'));
+    }catch(e){ console.error(e); alert(__c('cash.exportPDFFail','Gagal export PDF.')); }
   }
   // Route any legacy calls to the new exporter
   try{ exportCashflowExcel = exportCashflowExcelNBC; }catch{}
@@ -598,7 +599,7 @@
       const info = (byId('cashEventInfo')?.textContent||'').trim().replace(/[\\/:*?"<>|]+/g,'');
       const name = `${title||'Event'}_Cashflow_${info||new Date().toISOString().slice(0,10)}.xlsx`;
       XLSX.writeFile(wb, name);
-    }catch(e){ console.error(e); alert('Gagal export Excel.'); }
+    }catch(e){ console.error(e); alert(__c('cash.exportExcelFail','Gagal export Excel.')); }
   }
 
   function buildCashflowHTML(){
@@ -665,10 +666,10 @@
         ${tbl([['Keterangan','Amount','Pax','Total'], ...cash.keluar.map(it=>[(rangeMode.active&&it.eventTitle?`[${it.eventTitle}] `:'') + (it.label||'-'), Number(it.amount||0), Number(it.pax||1), Number(it.amount||0)*Number(it.pax||1)])])}
       </body></html>`;
       const w = window.open('', '_blank');
-      if (!w){ alert('Popup diblokir. Izinkan popup untuk export PDF.'); return; }
+      if (!w){ alert(__c('cash.popupBlocked','Popup diblokir. Izinkan popup untuk export PDF.')); return; }
       w.document.open(); w.document.write(html); w.document.close();
       w.focus(); setTimeout(()=>{ try{ w.print(); }catch{} }, 200);
-    }catch(e){ console.error(e); alert('Gagal export PDF.'); }
+    }catch(e){ console.error(e); alert(__c('cash.exportPDFFail','Gagal export PDF.')); }
   }
 
   function exportCashflow(format){
@@ -691,17 +692,17 @@
   }
 
   async function delRow(id){
-    if (rangeMode.active) { alert('Hapus tidak tersedia pada mode rentang.'); return; }
+    if (rangeMode.active) { alert(__c('cash.rangeDeleteNA','Hapus tidak tersedia pada mode rentang.')); return; }
     const can = (typeof isCashAdmin==='function') ? isCashAdmin() : (!!window._isCashAdmin);
-    if (!can) { alert('Anda tidak memiliki akses Cashflow untuk event ini.'); return; }
-    if (!confirm('Hapus baris ini?')) return;
+    if (!can) { alert(__c('cash.accessDenied','Anda tidak memiliki akses Cashflow untuk event ini.')); return; }
+    if (!confirm(__c('cash.deleteConfirm','Hapus baris ini?'))) return;
     try{
       if (isCloudMode() && window.sb && currentEventId){
         // Prefer RPC (security definer) to bypass RLS visibility issues
         try{
           const { error: rpcErr } = await sb.rpc('delete_cashflow', { p_event_id: currentEventId, p_id: id });
           if (rpcErr) throw rpcErr;
-        }catch(e){
+      }catch(e){
           // Fallback to direct delete (policy must allow)
           await sb.from('event_cashflows').delete().eq('id', id);
         }
@@ -715,7 +716,7 @@
         cash = obj;
       }
       render();
-    }catch(e){ console.error(e); alert('Gagal hapus.'); }
+    }catch(e){ console.error(e); alert(__c('cash.deleteFail','Gagal hapus.')); }
   }
 
   function readLocal(key){ try{ return JSON.parse(localStorage.getItem(key)||'{"masuk":[],"keluar":[]}'); }catch{ return {masuk:[],keluar:[]}; } }
@@ -792,8 +793,16 @@
     const amt = byId('cashAmount');
     const pax = byId('cashPax');
     const tot = byId('cashTotal');
-    if (title) title.textContent = row ? (editing.kind==='masuk'?'Edit Uang Masuk':'Edit Uang Keluar') : (editing.kind==='masuk'?'Tambah Uang Masuk':'Tambah Uang Keluar');
-    if (labLbl) labLbl.textContent = (editing.kind==='masuk') ? 'Source' : 'Items';
+    if (title) title.textContent = row
+      ? (editing.kind==='masuk'
+          ? __c('cash.form.title.editIn', 'Edit Uang Masuk')
+          : __c('cash.form.title.editOut', 'Edit Uang Keluar'))
+      : (editing.kind==='masuk'
+          ? __c('cash.form.title.addIn', 'Tambah Uang Masuk')
+          : __c('cash.form.title.addOut', 'Tambah Uang Keluar'));
+    if (labLbl) labLbl.textContent = (editing.kind==='masuk')
+      ? __c('cash.form.label.in', 'Source')
+      : __c('cash.form.label.out', 'Items');
     // date removed from UI
     if (lab) lab.value = row?.label || '';
     if (amt) amt.value = Number(row?.amount||0);
@@ -813,7 +822,7 @@
   async function submitForm(e){
     e.preventDefault();
     const can = (typeof isCashAdmin==='function') ? isCashAdmin() : (!!window._isCashAdmin);
-    if (!can) { alert('Anda tidak memiliki akses Cashflow untuk event ini.'); return; }
+    if (!can) { alert(__c('cash.accessDenied','Anda tidak memiliki akses Cashflow untuk event ini.')); return; }
     const payload = {
       event_id: currentEventId || null,
       kind: editing.kind,
@@ -859,12 +868,12 @@
       }
       render();
       closeForm();
-    }catch(err){ console.error(err); alert('Gagal menyimpan.'); }
+    }catch(err){ console.error(err); alert(__c('cash.saveFail','Gagal menyimpan.')); }
   }
 
   async function onOpen(){
-    if (!rangeMode.active && !currentEventId){ showToast?.('Buka event dulu.', 'warn'); return; }
-    if (!(typeof isCashAdmin==='function' && isCashAdmin())){ alert('Anda tidak memiliki akses Cashflow untuk event ini.'); return; }
+    if (!rangeMode.active && !currentEventId){ showToast?.(__c('cash.toast.openEvent','Buka event dulu.'), 'warn'); return; }
+    if (!(typeof isCashAdmin==='function' && isCashAdmin())){ alert(__c('cash.accessDenied','Anda tidak memiliki akses Cashflow untuk event ini.')); return; }
     showLoading?.('Memuat kas…');
     try{
       if (rangeMode.active){ await loadRangeSafe(); } else { await loadFromCloud(); }
@@ -902,14 +911,14 @@
   async function loadRangeSafe(){
     try{
       await loadRangeFromCloud(rangeMode.start, rangeMode.end);
-    }catch(e){ console.error(e); showToast?.('Range hanya tersedia di mode cloud.', 'warn'); cash = {masuk:[],keluar:[]}; }
+    }catch(e){ console.error(e); showToast?.(__c('cash.toast.rangeCloudOnly','Range hanya tersedia di mode cloud.'), 'warn'); cash = {masuk:[],keluar:[]}; }
   }
 
   async function applyRange(){
     const s = (byId('cashStart')?.value||'').trim();
     const e = (byId('cashEnd')?.value||'').trim();
-    if (!s || !e){ alert('Isi tanggal Start dan End.'); return; }
-    if (s > e){ alert('Tanggal Start harus <= End.'); return; }
+    if (!s || !e){ alert(__c('cash.rangeRequired','Isi tanggal Start dan End.')); return; }
+    if (s > e){ alert(__c('cash.rangeInvalid','Tanggal Start harus <= End.')); return; }
     rangeMode = { active:true, start:s, end:e };
     showLoading?.('Memuat kas (range)…');
     try{ await loadRangeSafe(); } finally { hideLoading?.(); }

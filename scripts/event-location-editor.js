@@ -1,4 +1,5 @@
 "use strict";
+const __locT = (k, f)=> (window.__i18n_get ? __i18n_get(k, f) : f);
 // ================== Event Location (Editor) ================== //
 function ensureLocationFields(){
   let wrap = byId('locationWrap');
@@ -12,20 +13,20 @@ function ensureLocationFields(){
 
   const label1 = document.createElement('label');
   label1.className = 'filter-label block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300';
-  label1.textContent = 'Lokasi (opsional)';
+  label1.textContent = __locT('settings.locText','Lokasi (opsional)');
   const input1 = document.createElement('input');
   input1.id = 'locationTextInput';
   input1.type = 'text';
-  input1.placeholder = 'Mis. Lapangan A, GBK';
+  input1.placeholder = __locT('settings.locText.placeholder','Mis. Lapangan A, GBK');
   input1.className = 'filter-input border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100';
 
   const label2 = document.createElement('label');
   label2.className = 'filter-label mt-3 block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300';
-  label2.textContent = 'Link Maps (opsional)';
+  label2.textContent = __locT('settings.locUrl','Link Maps (opsional)');
   const input2 = document.createElement('input');
   input2.id = 'locationUrlInput';
   input2.type = 'url';
-  input2.placeholder = 'https://maps.app.goo.gl/...';
+  input2.placeholder = __locT('settings.locUrl.placeholder','https://maps.app.goo.gl/...');
   input2.className = 'filter-input border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100';
 
   // Save on blur (best-effort)
@@ -96,7 +97,7 @@ function ensureJoinOpenFields(){
     wrap.className = 'filter-field filter-field--full';
     wrap.innerHTML = `
       <label class="filter-label block text-[11px] uppercase tracking-wide font-semibold text-gray-600 dark:text-gray-300 mb-1">
-        Buka Join
+        ${__locT('event.joinOpen','Buka Join')}
       </label>
       <div class="join-open-row">
         <input id="joinOpenDateInput" type="date"  class="join-open-input filter-input" />
@@ -136,9 +137,9 @@ function ensureJoinOpenFields(){
       try {
         if (currentEventId && window.sb) {
           await sb.from('events').update({ join_open_at: window.joinOpenAt }).eq('id', currentEventId);
-          showToast?.('Waktu buka join disimpan', 'success');
+          showToast?.(__locT('joinOpen.saved','Waktu buka join disimpan'), 'success');
         }
-      } catch (e) { console.warn(e); showToast?.('Gagal menyimpan waktu buka join', 'error'); }
+      } catch (e) { console.warn(e); showToast?.(__locT('joinOpen.failed','Gagal menyimpan waktu buka join'), 'error'); }
       try { refreshJoinUI?.(); } catch {}
     };
     di && di.addEventListener('change', onChange);
@@ -200,17 +201,17 @@ function addPlayer(name) {
 
   const norm = s => String(s||'').trim().toLowerCase();
   if ((players||[]).some(n => norm(n) === norm(name))) {
-    showToast('Nama sudah ada di daftar pemain', 'info');
+    showToast(__locT('join.nameUsed','Nama sudah ada di daftar pemain'), 'info');
     return false;
   }
   if ((waitingList||[]).some(n => norm(n) === norm(name))) {
-    showToast('Nama sudah ada di waiting list', 'info');
+    showToast(__locT('join.waitingDuplicate','Nama sudah ada di waiting list'), 'info');
     return false;
   }
 
   if (Number.isInteger(currentMaxPlayers) && currentMaxPlayers > 0 && players.length >= currentMaxPlayers) {
     waitingList.push(name);
-    showToast('List sudah penuh, Pemain masuk ke waiting list', 'warn');
+    showToast(__locT('join.waitlistFull','List sudah penuh, Pemain masuk ke waiting list'), 'warn');
   } else {
     players.push(name);
   }

@@ -5,6 +5,7 @@
   const isStandalone = () =>
     (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
     window.navigator.standalone;
+  const t = (k,f)=> (window.__i18n_get ? __i18n_get(k,f) : f);
 
   function registerSW(){
     if (!('serviceWorker' in navigator)) return;
@@ -25,8 +26,8 @@
         hdrBtn = document.createElement('button');
         hdrBtn.id = 'btnInstallAppHdr';
         hdrBtn.className = 'px-3 py-2 rounded-xl bg-white/20 text-white font-semibold shadow hover:bg-white/30';
-        hdrBtn.title = 'Install aplikasi ke perangkat';
-        hdrBtn.textContent = 'Install App';
+        hdrBtn.title = t('pwa.installHeader','Install aplikasi ke perangkat');
+        hdrBtn.textContent = t('pwa.installCta','Install App');
         chips.appendChild(hdrBtn);
       }
     }
@@ -57,15 +58,15 @@
     const ua = (navigator.userAgent||'').toLowerCase();
     const isiOS = /iphone|ipad|ipod/.test(ua);
     const isAndroid = /android/.test(ua);
-    let html = '<div style="font-weight:700;margin-bottom:6px">Install ke Perangkat</div>';
+    let html = '<div style="font-weight:700;margin-bottom:6px">'+t('pwa.installTitle','Install ke Perangkat')+'</div>';
     if (isiOS){
-      html += '<div>Di iOS Safari: buka ikon <b>Share</b>, lalu pilih <b>Add to Home Screen</b>.</div>';
+      html += '<div>'+t('pwa.installHelp.ios','Di iOS Safari: buka ikon Share, lalu pilih Add to Home Screen.')+'</div>';
     } else if (isAndroid){
-      html += '<div>Di Chrome Android: buka menu ⋮, pilih <b>Install app</b> atau <b>Add to Home screen</b>.</div>';
+      html += '<div>'+t('pwa.installHelp.android','Di Chrome Android: buka menu ⋮, pilih Install app atau Add to Home screen.')+'</div>';
     } else {
-      html += '<div>Buka menu browser dan pilih <b>Install app</b> / <b>Add to Home screen</b>.</div>';
+      html += '<div>'+t('pwa.installHelp.desktop','Buka menu browser dan pilih Install app / Add to Home screen.')+'</div>';
     }
-    const btn = document.createElement('button'); btn.textContent='Tutup';
+    const btn = document.createElement('button'); btn.textContent=t('pwa.close','Tutup');
     btn.style.cssText='margin-top:10px;padding:6px 10px;border:1px solid #475569;background:transparent;color:#e5e7eb;border-radius:10px';
     btn.onclick = ()=> wrap.remove();
     panel.innerHTML = html; panel.appendChild(btn); wrap.appendChild(panel); document.body.appendChild(wrap);
@@ -91,17 +92,17 @@
 
     const texts = document.createElement('div');
     texts.style.cssText = 'flex:1 1 auto; min-width:0;';
-    const h = document.createElement('div'); h.style.cssText='font-weight:700;'; h.textContent='Pasang ScoreMate ke perangkat?';
-    const p = document.createElement('div'); p.style.cssText='opacity:.9;color:#cbd5e1;'; p.textContent='Akses lebih cepat, hemat data, bisa offline.';
+    const h = document.createElement('div'); h.style.cssText='font-weight:700;'; h.textContent=t('pwa.tip.title','Pasang ScoreMate ke perangkat?');
+    const p = document.createElement('div'); p.style.cssText='opacity:.9;color:#cbd5e1;'; p.textContent=t('pwa.tip.body','Akses lebih cepat, hemat data, bisa offline.');
     texts.appendChild(h); texts.appendChild(p);
 
     const actions = document.createElement('div');
     actions.style.cssText = 'display:flex; gap:8px; align-items:center;';
     const later = document.createElement('button');
-    later.textContent = 'Nanti';
+    later.textContent = t('pwa.tip.later','Nanti');
     later.style.cssText = 'padding:6px 12px;border-radius:10px;background:transparent;color:#e5e7eb;border:1px solid #475569;font-weight:600';
     const install = document.createElement('button');
-    install.textContent = 'Pasang';
+    install.textContent = t('pwa.tip.install','Pasang');
     install.style.cssText = 'padding:6px 12px;border-radius:10px;background:#10b981;color:#0b1020;border:1px solid #059669;font-weight:700';
 
     const close = document.createElement('button'); close.textContent='×';

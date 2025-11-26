@@ -1,5 +1,6 @@
 "use strict";
 function roleDebug(){ try{ if (window.__debugRole) console.debug('[role]', ...arguments); }catch{} }
+const __toastT = (k,f)=> (window.__i18n_get ? __i18n_get(k,f) : f);
 // ============== Toast helper ==============
 function showToast(message, type='info'){
   try{
@@ -68,7 +69,7 @@ async function loadAccessRoleFromCloud(){
   if (window.__roleLoadingBusy) { try{ roleDebug('loadAccessRole dedup'); }catch{} return; }
   window.__roleLoadingBusy = true;
   try{
-    showLoading('Memuat akses…');
+    showLoading(__toastT('toast.loadingAccess','Memuat akses…'));
     if (!isCloudMode() || !window.sb?.auth || !currentEventId) { setAccessRole('editor'); return; }
     const userData = await (window.getAuthUserCached ? getAuthUserCached() : sb.auth.getUser().then(r=>r.data));
     const uid = userData?.user?.id || null;
@@ -145,7 +146,7 @@ async function ensureCashAdminFlag(){
 
 async function fetchEventTitleFromDB(eventId){
   try{
-    showLoading('Memuat judul event…');
+    showLoading(__toastT('toast.loadingTitle','Memuat judul event…'));
     const { data, error } = await sb
       .from('events')
       .select('title')
@@ -163,7 +164,7 @@ async function fetchEventTitleFromDB(eventId){
 
 // Load state (JSONB) sekali saat buka/refresh
 async function loadStateFromCloud() {
-  showLoading('Memuat data dari Cloud…');
+  showLoading(__toastT('toast.loadingState','Memuat data dari Cloud…'));
   const { data, error } = await sb.from('event_states')
     .select('state, version, updated_at')
     .eq('event_id', currentEventId)
@@ -200,7 +201,7 @@ async function saveStateToCloud() {
     try{
       const locked = window.__lockedEventDateKey || '';
       if (isCloudMode() && currentEventId && locked && locked !== currentSessionDate){
-        showToast?.('Tanggal event tidak boleh diubah. Buat event baru untuk tanggal berbeda.', 'error');
+        showToast?.(__toastT('toast.dateLocked','Tanggal event tidak boleh diubah. Buat event baru untuk tanggal berbeda.'), 'error');
         try{ leaveEventMode?.(true); }catch{}
         return false;
       }
@@ -239,12 +240,12 @@ async function saveStateToCloud() {
     console.error(e);
     const msg = String(e?.message||'');
     if (msg.includes('event_states_event_id_fkey') || msg.includes('Key is not present in table "events"') || e?.code==='23503'){
-      showToast?.('Event tidak ditemukan / sudah dihapus. Keluar dari mode event.', 'error');
+      showToast?.(__toastT('toast.eventMissing','Event tidak ditemukan / sudah dihapus. Keluar dari mode event.'), 'error');
       try{ leaveEventMode?.(true); }catch{}
       try{ openSearchEventModal?.(); }catch{}
       return false;
     }
-    alert('Gagal menyimpan ke Cloud. Coba lagi.');
+    alert(__toastT('toast.saveFailed','Gagal menyimpan ke Cloud. Coba lagi.'));
     return false;
   }
 }
@@ -328,10 +329,10 @@ function subscribeRealtimeForState(){
           if (waitingDelta >= 1 && (added.length >= 1 || removedPlayers.length >= 1)) {
             const promotedName = candidate || added[0];
             if (promotedName) {
-              try{ showToast(`Auto-promote: ${promotedName} masuk dari waiting list`, 'info'); }catch{}
+              try{ showToast(__toastT('toast.autoPromoteNamed','Auto-promote: {name} masuk dari waiting list').replace('{name}', promotedName), 'info'); }catch{}
               try{ highlightPlayer(promotedName); }catch{}
             } else {
-              try{ showToast('Auto-promote: 1 pemain masuk dari waiting list', 'info'); }catch{}
+              try{ showToast(__toastT('toast.autoPromote','Auto-promote: 1 pemain masuk dari waiting list'), 'info'); }catch{}
             }
           }
         }catch(e){ /* noop */ }

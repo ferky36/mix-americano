@@ -1,12 +1,13 @@
 "use strict";
 // ===== Join Event (Viewer self-join) =====
+const __joinT = (k,f)=> (window.__i18n_get ? __i18n_get(k,f) : f);
 function ensureJoinControls(){
   const bar = byId('hdrControls'); if (!bar) return;
   if (!byId('btnJoinEvent')){
     const j = document.createElement('button');
     j.id='btnJoinEvent';
     j.className='px-3 py-2 rounded-xl bg-emerald-600 text-white font-semibold shadow hover:opacity-90 hidden';
-    j.textContent='Join Event';
+    j.textContent=__joinT('join.button','Join Event');
     j.addEventListener('click', openJoinFlow);
     bar.appendChild(j);
   }
@@ -15,22 +16,22 @@ function ensureJoinControls(){
     wrap.id='joinStatus';
     wrap.className='flex items-center gap-2 text-sm hidden';
     const label = document.createElement('span');
-    label.textContent = 'Joined as';
+    label.textContent = __joinT('join.joinedAs','Joined as');
     const name = document.createElement('span'); name.id='joinedPlayerName'; name.className='font-semibold';
     const edit = document.createElement('button');
     edit.id='btnEditSelfName';
     edit.className='px-2 py-1 rounded-lg border dark:border-gray-700';
-    edit.textContent='Edit';
+    edit.textContent=__joinT('join.edit','Edit');
     edit.addEventListener('click', editSelfNameFlow);
     const leave = document.createElement('button');
     leave.id='btnLeaveSelf';
     leave.className='px-2 py-1 rounded-lg border dark:border-gray-700';
-    leave.textContent='Leave';
+    leave.textContent=__joinT('join.leave','Leave');
     leave.addEventListener('click', async ()=>{
       if (!currentEventId) return;
-      if (!confirm('Keluar dari event (hapus nama Anda dari daftar pemain)?')) return;
+      if (!confirm(__joinT('join.leaveConfirm','Keluar dari event (hapus nama Anda dari daftar pemain)?'))) return;
       try{
-        showLoading('Leaving...');
+        showLoading(__joinT('join.leave','Leave')+'...');
         const res = await requestLeaveEventRPC();
         let removedName = null;
         try{
@@ -45,11 +46,11 @@ function ensureJoinControls(){
           }catch{}
         }
         if (res && res.promoted) {
-          try{ showToast('Slot Anda digantikan oleh '+ res.promoted, 'info'); }catch{}
+          try{ showToast(__joinT('join.slotReplaced','Slot Anda digantikan oleh')+' '+ res.promoted, 'info'); }catch{}
         }
         await loadStateFromCloud();
         renderPlayersList?.(); renderAll?.();
-      }catch(e){ alert('Gagal leave: ' + (e?.message||'')); }
+      }catch(e){ alert(__joinT('join.leaveFail','Gagal leave:') + ' ' + (e?.message||'')); }
       finally{ hideLoading(); refreshJoinUI(); }
     });
     wrap.appendChild(label); wrap.appendChild(name); wrap.appendChild(edit); wrap.appendChild(leave);
@@ -58,7 +59,7 @@ function ensureJoinControls(){
 }
 
 async function openJoinFlow(){
-  if (!currentEventId){ alert('Buka event terlebih dahulu.'); return; }
+  if (!currentEventId){ alert(__joinT('join.openFirst','Buka event terlebih dahulu.')); return; }
   try{
     const data = await (window.getAuthUserCached ? getAuthUserCached() : sb.auth.getUser().then(r=>r.data));
     const user = data?.user || null;
@@ -76,34 +77,34 @@ function ensureJoinModal(){
     <div class="absolute inset-0 bg-black/40" id="joinBackdrop"></div>
     <div class="relative mx-auto mt-16 w-[92%] max-w-md rounded-2xl bg-white dark:bg-gray-800 shadow p-4 md:p-6">
       <div class="flex items-center justify-between mb-3">
-        <h3 class="text-lg font-semibold">Join Event</h3>
-        <button id="joinCancelBtn" class="px-3 py-1 rounded-lg border dark:border-gray-700">Tutup</button>
+        <h3 class="text-lg font-semibold">${__joinT('join.button','Join Event')}</h3>
+        <button id="joinCancelBtn" class="px-3 py-1 rounded-lg border dark:border-gray-700">${__joinT('join.close','Tutup')}</button>
       </div>
       <div class="space-y-3">
         <div>
-          <label class="block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Nama</label>
-          <input id="joinNameInput" type="text" class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" />
+          <label class="block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">${__joinT('join.nameLabel','Nama')}</label>
+          <input id="joinNameInput" type="text" class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" placeholder="${__joinT('join.namePlaceholder','Nama Anda')}" />
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Gender</label>
+            <label class="block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">${__joinT('join.gender','Gender')}</label>
             <select id="joinGenderSelect" class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100">
-              <option value="">-</option>
+              <option value="">${__joinT('join.genderPlaceholder','-')}</option>
               <option value="M">M</option>
               <option value="F">F</option>
             </select>
           </div>
           <div>
-            <label class="block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Level</label>
+            <label class="block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">${__joinT('join.level','Level')}</label>
             <select id="joinLevelSelect" class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100">
-              <option value="">-</option>
+              <option value="">${__joinT('join.levelPlaceholder','-')}</option>
               <option value="beg">beg</option>
               <option value="pro">pro</option>
             </select>
           </div>
         </div>
         <div class="flex justify-end gap-2">
-          <button id="joinSubmitBtn" class="px-3 py-2 rounded-xl bg-emerald-600 text-white font-semibold">Join</button>
+          <button id="joinSubmitBtn" class="px-3 py-2 rounded-xl bg-emerald-600 text-white font-semibold">${__joinT('join.button','Join Event')}</button>
         </div>
         <div id="joinMsg" class="text-xs"></div>
       </div>
@@ -143,11 +144,13 @@ async function submitJoinForm(){
   // Gate: belum masuk waktu buka join
   if (!isJoinOpen()) {
     const msg = byId('joinMessage') || byId('joinError');
-    const t = window.joinOpenAt
-      ? `Belum bisa join. Pendaftaran dibuka pada ${toLocalDateValue(window.joinOpenAt)} ${toLocalTimeValue(window.joinOpenAt)}.`
-      : 'Belum bisa join. Pendaftaran belum dibuka.';
-    if (msg) { msg.textContent = t; msg.className = 'text-xs mt-2 text-amber-600 dark:text-amber-400'; }
-    try{ showToast?.(t, 'info'); }catch{}
+    const tMsg = window.joinOpenAt
+      ? __joinT('join.notOpenAt','Belum bisa join. Pendaftaran dibuka pada {date} {time}.')
+          .replace('{date}', toLocalDateValue(window.joinOpenAt))
+          .replace('{time}', toLocalTimeValue(window.joinOpenAt))
+      : __joinT('join.notOpen','Belum bisa join. Pendaftaran belum dibuka.');
+    if (msg) { msg.textContent = tMsg; msg.className = 'text-xs mt-2 text-amber-600 dark:text-amber-400'; }
+    try{ showToast?.(tMsg, 'info'); }catch{}
     return;
   }
 
@@ -155,20 +158,20 @@ async function submitJoinForm(){
   const gender = byId('joinGenderSelect').value||'';
   const level = byId('joinLevelSelect').value||'';
   const msg = byId('joinMsg');
-  if (!currentEventId){ msg.textContent='Tidak ada event aktif.'; return; }
-  if (!name){ msg.textContent='Nama wajib diisi.'; return; }
+  if (!currentEventId){ msg.textContent=__joinT('join.noEvent','Tidak ada event aktif.'); return; }
+  if (!name){ msg.textContent=__joinT('join.nameRequired','Nama wajib diisi.'); return; }
   // disallow same name if already in waiting list or players (client-side friendly check)
   try {
     const norm = (s) => String(s || '').trim().toLowerCase();
     const n = norm(name);
 
     if (Array.isArray(waitingList) && waitingList.some(x => norm(x) === n)) {
-      const t = 'Nama sudah ada di waiting list.'; 
+      const t = __joinT('join.waitingDuplicate','Nama sudah ada di waiting list.'); 
       msg.textContent = t; msg.className = 'text-xs mt-2 text-amber-600 dark:text-amber-400';
       return;
     }
     if (Array.isArray(players) && players.some(x => norm(x) === n)) {
-      const t = 'Nama sudah ada di daftar pemain.';
+      const t = __joinT('join.playerDuplicate','Nama sudah ada di daftar pemain.');
       msg.textContent = t; msg.className = 'text-xs mt-2 text-amber-600 dark:text-amber-400';
       return;
     }
@@ -178,52 +181,52 @@ async function submitJoinForm(){
     const { data } = await sb.auth.getUser();
     const uid = data?.user?.id || '';
     const found = findJoinedPlayerByUid(uid);
-    if (found){ msg.textContent='Anda sudah join sebagai '+found.name; return; }
+    if (found){ msg.textContent=__joinT('join.already','Anda sudah join sebagai')+' '+found.name; return; }
   }catch{}
   try{
-    showLoading('Joining…');
+    showLoading(__joinT('join.loading','Joining…'));
     const res = await requestJoinEventRPC({ name, gender, level });
     const status = (res && res.status) || '';
     const joinedName = res?.name || name;
     if (status === 'joined') {
-      showToast('Berhasil join sebagai '+ joinedName, 'success');
+      showToast(__joinT('join.success','Berhasil join sebagai')+' '+ joinedName, 'success');
       const ok = await loadStateFromCloud();
-      if (!ok) showToast('Berhasil join, tapi gagal memuat data terbaru.', 'warn');
+      if (!ok) showToast(__joinT('join.partialLoadFail','Berhasil join, tapi gagal memuat data terbaru.'), 'warn');
       renderPlayersList?.(); renderAll?.(); validateNames?.();
       byId('joinModal')?.classList.add('hidden');
     } else if (status === 'already') {
       const nm = res?.name || name;
-      const t = 'Anda sudah terdaftar sebagai '+ nm;
+      const t = __joinT('join.alreadyRegistered','Anda sudah terdaftar sebagai')+' '+ nm;
       msg.textContent = t; msg.className = 'text-xs mt-2 text-amber-600 dark:text-amber-400';
       showToast(t, 'warn');
     } else if (status === 'waitlisted' || status === 'full') {
-      const t = 'List sudah penuh, Anda masuk ke waiting list';
+      const t = __joinT('join.waitlistFull','List sudah penuh, Anda masuk ke waiting list');
       msg.textContent = t; msg.className = 'text-xs mt-2 text-amber-600 dark:text-amber-400';
       showToast(t, 'warn');
       const ok = await loadStateFromCloud();
-      if (!ok) showToast('Berhasil masuk waiting list, tapi gagal memuat data.', 'warn');
+      if (!ok) showToast(__joinT('join.waitlistPartial','Berhasil masuk waiting list, tapi gagal memuat data.'), 'warn');
       renderPlayersList?.(); renderAll?.(); validateNames?.();
       byId('joinModal')?.classList.add('hidden');
     } else if (status === 'closed') {
-      const t = 'Pendaftaran ditutup. Hanya member yang bisa join.';
+      const t = __joinT('join.closed','Pendaftaran ditutup. Hanya member yang bisa join.');
       msg.textContent = t; msg.className = 'text-xs mt-2 text-amber-600 dark:text-amber-400';
       showToast(t, 'warn');
     } else if (status === 'unauthorized') {
-      const t = 'Silakan login terlebih dahulu.';
+      const t = __joinT('join.loginFirst','Silakan login terlebih dahulu.');
       msg.textContent = t; msg.className = 'text-xs mt-2 text-red-600 dark:text-red-400';
       showToast(t, 'error');
     } else if (status === 'not_found') {
-      const t = 'Event tidak ditemukan.';
+      const t = __joinT('join.eventNotFound','Event tidak ditemukan.');
       msg.textContent = t; msg.className = 'text-xs mt-2 text-red-600 dark:text-red-400';
       showToast(t, 'error');
     } else {
-      const t = 'Gagal join. Silakan coba lagi.';
+      const t = __joinT('join.failed','Gagal join. Silakan coba lagi.');
       msg.textContent = t; msg.className = 'text-xs mt-2 text-red-600 dark:text-red-400';
       showToast(t, 'error');
     }
   }catch(e){
     console.error(e);
-    const t = 'Gagal join: ' + (e?.message || '');
+    const t = __joinT('join.failedPrefix','Gagal join:') + ' ' + (e?.message || '');
     msg.textContent = t;
     msg.className = 'text-xs mt-2 text-red-600 dark:text-red-400';
     showToast(t, 'error');
@@ -268,29 +271,29 @@ function ensureEditNameModal(){
   div.innerHTML = `
     <div class="absolute inset-0 bg-black/40" id="editNameBackdrop"></div>
     <div class="relative mx-auto mt-20 w-[92%] max-w-md rounded-2xl bg-white dark:bg-gray-800 shadow p-4 md:p-6 border dark:border-gray-700">
-      <h3 id="editNameTitle" class="text-base md:text-lg font-semibold mb-3">Ubah Nama</h3>
+      <h3 id="editNameTitle" class="text-base md:text-lg font-semibold mb-3">${__joinT('join.editTitle','Ubah Nama')}</h3>
       <input id="editNameInput" type="text" class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" />
       <div id="editNameMetaRow" class="grid grid-cols-2 gap-3 mt-3">
         <div>
-          <label class="block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Gender</label>
+          <label class="block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">${__joinT('join.gender','Gender')}</label>
           <select id="editGenderSelect" class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100">
-            <option value="">-</option>
+            <option value="">${__joinT('join.genderPlaceholder','-')}</option>
             <option value="M">M</option>
             <option value="F">F</option>
           </select>
         </div>
         <div>
-          <label class="block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Level</label>
+          <label class="block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">${__joinT('join.level','Level')}</label>
           <select id="editLevelSelect" class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100">
-            <option value="">-</option>
+            <option value="">${__joinT('join.levelPlaceholder','-')}</option>
             <option value="beg">beg</option>
             <option value="pro">pro</option>
           </select>
         </div>
       </div>
       <div class="flex justify-end gap-3 mt-4">
-        <button id="editNameOk" class="px-3 py-2 rounded-xl bg-indigo-600 text-white">Simpan</button>
-        <button id="editNameCancel" class="px-3 py-2 rounded-xl border dark:border-gray-700">Cancel</button>
+        <button id="editNameOk" class="px-3 py-2 rounded-xl bg-indigo-600 text-white">${__joinT('join.save','Simpan')}</button>
+        <button id="editNameCancel" class="px-3 py-2 rounded-xl border dark:border-gray-700">${__joinT('join.cancel','Batal')}</button>
       </div>
       <div id="editNameMsg" class="text-xs mt-2"></div>
     </div>`;
@@ -311,7 +314,7 @@ function ensureEditNameModal(){
 function openEditNameModal(ctx){
   ensureEditNameModal();
   __editNameCtx = ctx || {};
-  const title = ctx?.title || 'Ubah Nama';
+  const title = ctx?.title || __joinT('join.editTitle','Ubah Nama');
   const initial = ctx?.initialName || '';
   const allowMeta = !!ctx?.allowMeta;
   const g = ctx?.initialGender || '';
@@ -335,15 +338,15 @@ function hideEditNameModal(){
 
 async function editSelfNameFlow(){
   try{
-    if (!currentEventId){ showToast?.('Buka event terlebih dahulu.', 'warn'); return; }
+    if (!currentEventId){ showToast?.(__joinT('join.openFirst','Buka event terlebih dahulu.'), 'warn'); return; }
     let user=null; try{ const data = await (window.getAuthUserCached ? getAuthUserCached() : sb.auth.getUser().then(r=>r.data)); user = data?.user || null; }catch{}
     if (!user){ byId('loginModal')?.classList.remove('hidden'); return; }
     const found = findJoinedPlayerByUid(user.id);
-    if (!found || !found.name){ showToast?.('Anda belum join di event ini.', 'warn'); return; }
+    if (!found || !found.name){ showToast?.(__joinT('join.notJoined','Anda belum join di event ini.'), 'warn'); return; }
     const meta = (playerMeta && playerMeta[found.name]) ? playerMeta[found.name] : {};
     openEditNameModal({
       mode:'self',
-      title:'Ubah nama tampilan Anda',
+      title:__joinT('join.editSelfTitle','Ubah nama tampilan Anda'),
       initialName: found.name,
       initialGender: meta?.gender || '',
       initialLevel: meta?.level || '',
@@ -351,7 +354,7 @@ async function editSelfNameFlow(){
       userId: user.id,
       originalName: found.name
     });
-  }catch(e){ console.warn('editSelfNameFlow failed', e); showToast?.('Gagal membuka editor nama.', 'error'); }
+  }catch(e){ console.warn('editSelfNameFlow failed', e); showToast?.(__joinT('join.editOpenFail','Gagal membuka editor nama.'), 'error'); }
 }
 
 async function submitEditNameModal(){
@@ -363,7 +366,7 @@ async function submitEditNameModal(){
     const newName = (editNameInputEl?.value || '').trim();
     const newGender = allowMeta ? (editGenderSelectEl?.value || '') : '';
     const newLevel  = allowMeta ? (editLevelSelectEl?.value || '') : '';
-    if (!newName){ if (msg){ msg.textContent='Nama tidak boleh kosong.'; msg.className='text-xs mt-2 text-red-600 dark:text-red-400'; } return; }
+    if (!newName){ if (msg){ msg.textContent=__joinT('join.nameEmpty','Nama tidak boleh kosong.'); msg.className='text-xs mt-2 text-red-600 dark:text-red-400'; } return; }
     const norm = (s)=>String(s||'').trim().toLowerCase();
     const targetN = norm(newName);
     const oldN = norm(oldName);
@@ -376,18 +379,18 @@ async function submitEditNameModal(){
       if (!userId){ byId('loginModal')?.classList.remove('hidden'); return; }
       const dupPlayers = Array.isArray(players) && players.some(n=>{ const k=norm(n); return k===targetN && k!==oldN; });
       const dupWaiting = Array.isArray(waitingList) && waitingList.some(n=>{ const k=norm(n); return k===targetN && k!==oldN; });
-      if (dupPlayers || dupWaiting){ if (msg){ msg.textContent='Nama sudah digunakan. Pilih nama lain.'; msg.className='text-xs mt-2 text-amber-600 dark:text-amber-400'; } return; }
+      if (dupPlayers || dupWaiting){ if (msg){ msg.textContent=__joinT('join.nameUsed','Nama sudah digunakan. Pilih nama lain.'); msg.className='text-xs mt-2 text-amber-600 dark:text-amber-400'; } return; }
       if (newName === oldName){
-        try{
-          playerMeta = (typeof playerMeta==='object' && playerMeta) ? playerMeta : {};
-          const prev = playerMeta[oldName] ? {...playerMeta[oldName]} : {};
-          playerMeta[oldName] = { ...prev, uid: prev.uid || userId, gender: newGender || '', level: newLevel || '' };
-        }catch{}
-        try{ markDirty?.(); renderPlayersList?.(); renderAll?.(); validateNames?.(); refreshJoinUI?.(); }catch{}
-        try{ if (typeof maybeAutoSaveCloud==='function') maybeAutoSaveCloud(); else if (typeof saveStateToCloud==='function') await saveStateToCloud(); }catch{}
-        showToast?.('Profil diperbarui.', 'success');
-        hideEditNameModal();
-        return;
+      try{
+        playerMeta = (typeof playerMeta==='object' && playerMeta) ? playerMeta : {};
+        const prev = playerMeta[oldName] ? {...playerMeta[oldName]} : {};
+        playerMeta[oldName] = { ...prev, uid: prev.uid || userId, gender: newGender || '', level: newLevel || '' };
+      }catch{}
+      try{ markDirty?.(); renderPlayersList?.(); renderAll?.(); validateNames?.(); refreshJoinUI?.(); }catch{}
+      try{ if (typeof maybeAutoSaveCloud==='function') maybeAutoSaveCloud(); else if (typeof saveStateToCloud==='function') await saveStateToCloud(); }catch{}
+      showToast?.(__joinT('join.profileUpdated','Profil diperbarui.'), 'success');
+      hideEditNameModal();
+      return;
       }
       // rename self entry in players/waiting list
       let renamed=false;
@@ -409,7 +412,7 @@ async function submitEditNameModal(){
       try{ if (typeof replaceNameInRounds === 'function') replaceNameInRounds(oldName, newName); }catch{}
       try{ markDirty?.(); renderPlayersList?.(); renderAll?.(); validateNames?.(); refreshJoinUI?.(); }catch{}
       try{ if (typeof maybeAutoSaveCloud==='function') maybeAutoSaveCloud(); else if (typeof saveStateToCloud==='function') await saveStateToCloud(); }catch{}
-      showToast?.('Nama diperbarui menjadi '+ newName, 'success');
+      showToast?.(__joinT('join.selfRenamed','Nama diperbarui menjadi {name}').replace('{name}', newName), 'success');
       hideEditNameModal();
       return;
     }
@@ -417,10 +420,10 @@ async function submitEditNameModal(){
     if (ctx.mode === 'playerList'){
       if (typeof isViewer === 'function' && isViewer()) { hideEditNameModal(); return; }
       const idx = Array.isArray(players) ? players.findIndex(n => norm(n)===oldN) : -1;
-      if (idx < 0){ if (msg){ msg.textContent='Nama tidak ditemukan di daftar pemain.'; msg.className='text-xs mt-2 text-red-600 dark:text-red-400'; } return; }
+      if (idx < 0){ if (msg){ msg.textContent=__joinT('join.nameNotFound','Nama tidak ditemukan di daftar pemain.'); msg.className='text-xs mt-2 text-red-600 dark:text-red-400'; } return; }
       const dupPlayers = players.some((n,i)=>{ const k=norm(n); return i!==idx && k===targetN; });
       const dupWaiting = Array.isArray(waitingList) && waitingList.some(n=> norm(n)===targetN);
-      if (dupPlayers || dupWaiting){ if (msg){ msg.textContent='Nama sudah digunakan. Pilih nama lain.'; msg.className='text-xs mt-2 text-amber-600 dark:text-amber-400'; } return; }
+      if (dupPlayers || dupWaiting){ if (msg){ msg.textContent=__joinT('join.nameUsed','Nama sudah digunakan. Pilih nama lain.'); msg.className='text-xs mt-2 text-amber-600 dark:text-amber-400'; } return; }
       if (newName === oldName){ hideEditNameModal(); return; }
       players[idx] = newName;
       try{
@@ -433,23 +436,23 @@ async function submitEditNameModal(){
       try{ if (typeof replaceNameInRounds === 'function') replaceNameInRounds(oldName, newName); }catch{}
       try{ markDirty?.(); renderPlayersList?.(); renderAll?.(); validateNames?.(); refreshJoinUI?.(); }catch{}
       try{ if (typeof maybeAutoSaveCloud==='function') maybeAutoSaveCloud(); else if (typeof saveStateToCloud==='function') await saveStateToCloud(); }catch{}
-      showToast?.('Nama pemain diperbarui.', 'success');
+      showToast?.(__joinT('join.playerUpdated','Nama pemain diperbarui.'), 'success');
       hideEditNameModal();
       return;
     }
 
     hideEditNameModal();
-  }catch(e){ console.warn('submitEditSelfName failed', e); showToast?.('Gagal memperbarui nama. Coba lagi.', 'error'); }
+  }catch(e){ console.warn('submitEditSelfName failed', e); showToast?.(__joinT('join.updateFail','Gagal memperbarui nama. Coba lagi.'), 'error'); }
 }
 
 function openPlayerNameEditModal(name){
   if (!name || (typeof isViewer==='function' && isViewer())) return;
   const norm = s=>String(s||'').trim().toLowerCase();
   const exists = Array.isArray(players) && players.some(n=>norm(n)===norm(name));
-  if (!exists){ showToast?.('Nama tidak ditemukan di daftar pemain.', 'warn'); return; }
+  if (!exists){ showToast?.(__joinT('join.nameNotFound','Nama tidak ditemukan di daftar pemain.'), 'warn'); return; }
   openEditNameModal({
     mode:'playerList',
-    title:'Ubah nama pemain',
+    title:__joinT('join.editPlayerTitle','Ubah nama pemain'),
     initialName: name,
     allowMeta:false,
     originalName: name

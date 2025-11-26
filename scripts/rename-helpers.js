@@ -1,4 +1,5 @@
 "use strict";
+const __renameT = (k,f)=> (window.__i18n_get ? __i18n_get(k,f) : f);
 // ===== Rename helpers (robust mapping for multi-rename) =====
 function _normName(s){ return String(s||'').trim().toLowerCase(); }
 function _lev(a,b){
@@ -64,7 +65,7 @@ async function ensureEventExistsOrReset(){
     if (!isCloudMode() || !currentEventId) return true;
     const { data, error } = await sb.from('events').select('id').eq('id', currentEventId).maybeSingle();
     if (error || !data?.id){
-      showToast?.('Event tidak ditemukan atau sudah dihapus.', 'warn');
+      showToast?.(__renameT('rename.eventMissing','Event tidak ditemukan atau sudah dihapus.'), 'warn');
       try{ leaveEventMode?.(true); }catch{}
       try{ openSearchEventModal?.(); }catch{}
       return false;
@@ -80,7 +81,7 @@ function autoPromoteIfSlot(){
   if (!Array.isArray(waitingList) || waitingList.length === 0) return;
   const nm = waitingList.shift();
   if (!players.includes(nm)) players.push(nm);
-  showToast('Memindahkan '+ nm +' dari waiting list', 'info');
+  showToast(__renameT('rename.waitingMove','Memindahkan {name} dari waiting list').replace('{name}', nm), 'info');
   return nm;
 }
 
@@ -96,20 +97,20 @@ function promoteAllFromWaiting(){
     }
   }
   if (moved > 0){
-    showToast('Promote '+moved+' pemain dari waiting list', 'success');
+    showToast(__renameT('rename.promote','Promote {count} pemain dari waiting list').replace('{count}', moved), 'success');
     markDirty();
     renderPlayersList();
     renderAll?.();
   } else {
-    if (players.length >= cap) showToast('List aktif penuh. Hapus/geser pemain dulu.', 'warn');
-    else showToast('Tidak ada pemain di waiting list.', 'info');
+    if (players.length >= cap) showToast(__renameT('rename.listFull','List aktif penuh. Hapus/geser pemain dulu.'), 'warn');
+    else showToast(__renameT('rename.waitingEmpty','Tidak ada pemain di waiting list.'), 'info');
   }
 }
 
 function promoteFromWaiting(name){
   const cap = (Number.isInteger(currentMaxPlayers) && currentMaxPlayers > 0) ? currentMaxPlayers : Infinity;
   if (players.includes(name)) return;
-  if (players.length >= cap){ showToast('List aktif penuh. Hapus/geser pemain dulu.', 'warn'); return; }
+  if (players.length >= cap){ showToast(__renameT('rename.listFull','List aktif penuh. Hapus/geser pemain dulu.'), 'warn'); return; }
   const idx = (waitingList||[]).indexOf(name);
   if (idx >= 0) waitingList.splice(idx,1);
   players.push(name);
@@ -121,7 +122,7 @@ function promoteFromWaiting(name){
 
 function removeFromWaiting(name){
   const target = String(name||'').trim().toLowerCase();
-  if (!confirm('Hapus '+name+' dari waiting list?')) return;
+  if (!confirm(__renameT('rename.waitingRemoveConfirm','Hapus {name} dari waiting list?').replace('{name}', name))) return;
   if (!Array.isArray(waitingList)) waitingList = [];
   for (let i = waitingList.length - 1; i >= 0; i--) {
     if (String(waitingList[i]||'').trim().toLowerCase() === target) {

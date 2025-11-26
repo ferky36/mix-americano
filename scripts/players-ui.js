@@ -1,5 +1,6 @@
 "use strict";
 // ================== PLAYERS UI ================== //
+const t = (k,f)=> (window.__i18n_get ? __i18n_get(k,f) : f);
 function escapeHtml(s) {
   return s.replace(
     /[&<>'"]/g,
@@ -22,14 +23,14 @@ function renderPlayersList() {
     li.innerHTML =
       "<span class='player-name flex-1'>" +
       escapeHtml(name) +
-      "</span><button class='del px-2 py-0.5 text-xs rounded border flex items-center gap-1 bg-emerald-600 text-white border-red-600'>hapus</button>";
+      "</span><button class='del px-2 py-0.5 text-xs rounded border flex items-center gap-1 bg-emerald-600 text-white border-red-600'>"+t('players.deleteBtn','hapus')+"</button>";
       // === meta mini controls (gender + level)
       const meta = playerMeta[name] || { gender:'', level:'' };
 
       // gender select
       const gSel = document.createElement('select');
       gSel.className = 'player-meta border rounded px-1 py-0.5 text-xs dark:bg-gray-900 dark:border-gray-700';
-      ['','M','F'].forEach(v => gSel.appendChild(new Option(v || '-Pilih Gender-', v)));
+      ['','M','F'].forEach(v => gSel.appendChild(new Option(v || t('players.gender.placeholder','-Pilih Gender-'), v)));
       gSel.value = meta.gender || '';
       gSel.disabled = isViewer();
       gSel.onchange = () => {
@@ -41,8 +42,8 @@ function renderPlayersList() {
       // level select
       const lSel = document.createElement('select');
       lSel.className = 'player-meta border rounded px-1 py-0.5 text-xs dark:bg-gray-900 dark:border-gray-700';
-      [['','-Pilih Level-'], ['beg','Beginner'], ['pro','Pro']]
-        .forEach(([v,t]) => lSel.add(new Option(t, v)));
+      [['', t('players.level.beginner','Beginner')], ['beg', t('players.level.beginner','Beginner')], ['pro', t('players.level.pro','Pro')]]
+        .forEach(([v,txt]) => lSel.add(new Option(txt, v)));
       lSel.value = meta.level || '';
       lSel.disabled = isViewer();
       lSel.onchange = () => {
@@ -57,8 +58,8 @@ function renderPlayersList() {
       if (!isViewer()){
         const editBtn = document.createElement('button');
         editBtn.className = 'px-2 py-0.5 text-xs rounded border dark:border-gray-700 flex items-center gap-1';
-        editBtn.textContent = 'edit';
-        editBtn.title = 'Rename pemain';
+        editBtn.textContent = t('players.edit','edit');
+        editBtn.title = t('players.editTitle','Rename pemain');
         editBtn.addEventListener('click', (e)=>{
           e.preventDefault(); e.stopPropagation();
           if (typeof openPlayerNameEditModal === 'function') openPlayerNameEditModal(name);
@@ -74,8 +75,8 @@ function renderPlayersList() {
         pBtn.className = 'px-2 py-0.5 text-xs rounded border flex items-center gap-1 ' +
                         (paid ? 'bg-emerald-600 text-white border-emerald-600'
                               : 'bg-transparent border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300');
-        pBtn.title = paid ? 'Tandai belum bayar' : 'Tandai sudah bayar';
-        pBtn.innerHTML = (paid ? '✓ ' : '') + 'Paid';
+        pBtn.title = paid ? t('players.markUnpaid','Tandai belum bayar') : t('players.markPaid','Tandai sudah bayar');
+        pBtn.innerHTML = (paid ? '✓ ' : '') + t('players.paid','Paid');
       }
       pBtn.addEventListener('click', () => {
         // Allow editor OR cash-admin (owner/admin)
@@ -102,7 +103,7 @@ function renderPlayersList() {
       // Badge Paid (bottom-right)
       const paidBadge = document.createElement('span');
       paidBadge.className = 'absolute -bottom-3 right-3 px-2 py-0.5 text-[11px] rounded-full bg-emerald-600 text-white shadow hidden';
-      paidBadge.textContent = 'Paid';
+      paidBadge.textContent = t('players.paid','Paid');
       if (isViewer()) li.appendChild(paidBadge);
 
       function __updatePaidCardStyle(){
@@ -134,7 +135,7 @@ function renderPlayersList() {
 
 
     li.querySelector(".del").addEventListener("click", () => {
-      if (!confirm("Hapus " + name + "?")) return;
+      if (!confirm(t('players.deleteConfirm','Hapus') + " " + name + "?")) return;
       players.splice(idx, 1);
       removePlayerFromRounds(name);
       delete playerMeta[name];
@@ -150,13 +151,13 @@ function renderPlayersList() {
     });
     ul.appendChild(li);
   });
-  byId("globalInfo").textContent =
-    "Pemain: " +
-    players.length +
-    " | Match/lapangan: " +
-    (byId("roundCount").value || 10) +
-    " | Menit/ronde: " +
-    (byId("minutesPerRound").value || 12);
+      byId("globalInfo").textContent = t(
+        'players.summary',
+        'Pemain: {count} | Match/lapangan: {round} | Menit/ronde: {minutes}'
+      )
+      .replace('{count}', players.length)
+      .replace('{round}', (byId("roundCount").value || 10))
+      .replace('{minutes}', (byId("minutesPerRound").value || 12));
   try { if (isViewer()) renderViewerPlayersList?.(); } catch {}
   try{ renderHeaderChips(); }catch{}
   // render waiting list (editor panel)
@@ -170,11 +171,11 @@ function renderPlayersList() {
       header.className = 'flex items-center justify-between mb-1';
       const h = document.createElement('div');
       h.className = 'text-xs font-semibold text-gray-600 dark:text-gray-300';
-      h.textContent = 'Waiting List';
+      h.textContent = t('players.waitingList','Waiting List');
       const btnAll = document.createElement('button');
       btnAll.id = 'btnPromoteAllWL';
       btnAll.className = 'px-2 py-0.5 text-xs rounded bg-emerald-600 text-white hidden';
-      btnAll.textContent = 'Promote semua';
+      btnAll.textContent = t('players.promoteAll','Promote semua');
       btnAll.addEventListener('click', promoteAllFromWaiting);
       header.append(h, btnAll);
       const ulw = document.createElement('ul');
@@ -201,7 +202,7 @@ function renderPlayersList() {
         if (!isViewer()){
           const promote = document.createElement('button');
           promote.className = 'px-2 py-0.5 text-xs rounded bg-emerald-600 text-white flex items-center gap-1';
-          promote.title = 'Promote dari waiting list';
+          promote.title = t('players.waiting.promoteTitle','Promote dari waiting list');
           promote.innerHTML = `
             <span class="sm:hidden" aria-hidden="true">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4">
@@ -212,7 +213,7 @@ function renderPlayersList() {
           promote.addEventListener('click', ()=> promoteFromWaiting(name));
           const del = document.createElement('button');
           del.className = 'px-2 py-0.5 text-xs rounded border dark:border-gray-700 flex items-center gap-1';
-          del.title = 'Hapus dari waiting list';
+          del.title = t('players.waiting.remove','Hapus dari waiting list');
           del.innerHTML = `
             <span class="sm:hidden" aria-hidden="true">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4">
@@ -222,7 +223,7 @@ function renderPlayersList() {
                 <path d="M10 10v8M14 10v8" />
               </svg>
             </span>
-            <span class="hidden sm:inline">hapus</span>`;
+            <span class="hidden sm:inline">${t('players.deleteBtn','hapus')}</span>`;
           del.addEventListener('click', ()=> removeFromWaiting(name));
           li.appendChild(promote);
           li.appendChild(del);
@@ -244,7 +245,7 @@ function ensureViewerPlayersPanel(){
   wrap.className = 'mt-4 hidden';
   const h3 = document.createElement('h3');
   h3.className = 'text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2';
-  h3.textContent = 'Daftar Pemain';
+  h3.textContent = t('players.heading','Daftar Pemain');
   const ul = document.createElement('ul');
   ul.id = 'viewerPlayersList';
   ul.className = 'min-h-[44px] grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2';
@@ -253,5 +254,3 @@ function ensureViewerPlayersPanel(){
   parent.appendChild(wrap);
   return wrap;
 }
-
-

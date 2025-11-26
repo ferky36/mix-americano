@@ -1,5 +1,6 @@
 "use strict";
 // ================== Editor Players Panel Relocation ================== //
+const __epT = (k, f)=> (window.__i18n_get ? __i18n_get(k, f) : f);
 function ensureEditorPlayersSection(){
   let host = document.getElementById('editorPlayersSection');
   if (host) return host;
@@ -62,14 +63,15 @@ function setupPlayersToolbarUI(){
     if (collapse && !collapse.dataset.iconified){
       collapse.dataset.iconified = '1';
       collapse.classList.add('icon-btn');
-      collapse.innerHTML = '<svg class="icon inline-block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg><span class="btn-label">Pemain</span>';
+      collapse.setAttribute('data-i18n','players.collapse');
+      collapse.innerHTML = '<svg class="icon inline-block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg><span class="btn-label">'+__epT('players.label','Pemain')+'</span>';
       const hint = collapse.parentElement?.querySelector('span');
       if (hint) hint.classList.add('helper-hint');
     }
     const map = [
-      ['btnPasteText', '<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>', 'Edit sebagai teks'],
-      ['btnApplyPlayerTemplate', '<path d="M5 12l5 5L20 7"/>', 'Apply Template'],
-      ['btnClearPlayers', '<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 10v8M14 10v8"/><path d="M8 6V4h8v2"/>', 'Kosongkan']
+      ['btnPasteText', '<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>', __epT('players.editText','Edit sebagai teks')],
+      ['btnApplyPlayerTemplate', '<path d="M5 12l5 5L20 7"/>', __epT('players.applyTemplate','Apply Template Pemain')],
+      ['btnClearPlayers', '<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 10v8M14 10v8"/><path d="M8 6V4h8v2"/>', __epT('players.clear','Kosongkan')]
     ];
     map.forEach(([id, svgPath, label])=>{
       const btn = byId(id);
@@ -106,7 +108,7 @@ function renderViewerPlayersList(){
     li.innerHTML = `<span class='flex-1 font-semibold'>${escapeHtml(name)}</span><span class='flex gap-1'>${badges}</span>`;
     const paidBadge = document.createElement('span');
     paidBadge.className = 'absolute -bottom-2 right-3 px-2 py-0.5 text-[11px] rounded-full bg-emerald-600 text-white shadow ' + (paid? '' : 'hidden');
-    paidBadge.textContent = 'Paid';
+    paidBadge.textContent = __epT('players.paid','Sudah bayar');
     li.appendChild(paidBadge);
     function update(){
       const p = isPlayerPaid(name);
@@ -135,7 +137,7 @@ function renderViewerPlayersList(){
       wwrap = document.createElement('div');
       wwrap.id = 'viewerWaitingWrap';
       wwrap.className = 'mt-3';
-      const h = document.createElement('div'); h.className='text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1'; h.textContent='Waiting List';
+      const h = document.createElement('div'); h.className='text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1'; h.textContent=__epT('players.waitingList','Waiting List');
       const ulw = document.createElement('ul'); ulw.id='viewerWaitingList'; ulw.className='min-h-[32px] grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2';
       wwrap.append(h, ulw);
       wrap.appendChild(wwrap);

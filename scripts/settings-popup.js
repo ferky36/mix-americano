@@ -20,7 +20,7 @@
     if (btn) return btn;
     btn = document.createElement('button');
     btn.id = 'btnSettings';
-    btn.title = 'Pengaturan (Filter/Jadwal)';
+    btn.title = (window.__i18n_get ? window.__i18n_get('settings.title','Pengaturan') : 'Pengaturan');
     btn.className = 'px-2 py-2 rounded-xl bg-white/20 text-white font-semibold shadow hover:bg-white/30';
     btn.textContent = '⚙️';
     themeBtn.insertAdjacentElement('afterend', btn);
@@ -36,27 +36,27 @@
       <div class="absolute inset-0" data-act="close"></div>
       <div class="relative mx-auto ${isMobile()? 'mt-4' : 'mt-10'} w-[95%] max-w-4xl rounded-2xl bg-white dark:bg-gray-800 border dark:border-gray-700 shadow p-3 md:p-6 max-h-[90vh] md:max-h-[85vh] overflow-y-auto">
         <div class="flex items-center justify-between mb-3">
-          <h3 class="text-lg md:text-xl font-semibold">Pengaturan</h3>
+          <h3 class="text-lg md:text-xl font-semibold" data-i18n="settings.title">Pengaturan</h3>
           <div class="flex items-center gap-2">
-            <button id="spSave" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-semibold">Simpan</button>
-            <button id="spClose" class="px-3 py-1.5 rounded-lg border dark:border-gray-700">Tutup</button>
+            <button id="spSave" data-i18n="settings.save" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-semibold">Simpan</button>
+            <button id="spClose" data-i18n="settings.close" class="px-3 py-1.5 rounded-lg border dark:border-gray-700">Tutup</button>
           </div>
         </div>
         <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3" id="spGrid">
           <div>
-            <label class="block text-[11px] uppercase font-semibold text-gray-500 dark:text-gray-300">Tanggal</label>
+            <label class="block text-[11px] uppercase font-semibold text-gray-500 dark:text-gray-300" data-i18n="settings.date">Tanggal</label>
             <input id="spDate" type="date" class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700" />
           </div>
           <div>
-            <label class="block text-[11px] uppercase font-semibold text-gray-500 dark:text-gray-300">Mulai</label>
+            <label class="block text-[11px] uppercase font-semibold text-gray-500 dark:text-gray-300" data-i18n="settings.start">Mulai</label>
             <input id="spStart" type="time" step="60" class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700" />
           </div>
           <div>
-            <label class="block text-[11px] uppercase font-semibold text-gray-500 dark:text-gray-300">Menit / Match</label>
+            <label class="block text-[11px] uppercase font-semibold text-gray-500 dark:text-gray-300" data-i18n="settings.minutes">Menit / Match</label>
             <input id="spMinutes" type="number" min="1" class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700" />
           </div>
           <div>
-            <label class="block text-[11px] uppercase font-semibold text-gray-500 dark:text-gray-300">Jeda per Match (menit)</label>
+            <label class="block text-[11px] uppercase font-semibold text-gray-500 dark:text-gray-300" data-i18n="settings.break">Jeda per Match (menit)</label>
             <div class="flex items-center gap-3 p-2 border rounded-xl dark:border-gray-700">
               <input id="spBreak" type="number" min="0" class="border rounded-lg px-3 py-2 w-24 bg-white dark:bg-gray-800 dark:border-gray-700" />
               <!-- Checkbox disembunyikan, selalu aktif -->
@@ -64,31 +64,31 @@
             </div>
           </div>
           <div>
-            <label class="block text-[11px] uppercase font-semibold text-gray-500 dark:text-gray-300">Match / Lapangan</label>
+            <label class="block text-[11px] uppercase font-semibold text-gray-500 dark:text-gray-300" data-i18n="settings.rounds">Match / Lapangan</label>
             <input id="spRounds" type="number" min="1" class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700" />
           </div>
           <div>
-            <label class="block text-[11px] uppercase font-semibold text-gray-500 dark:text-gray-300">Max Pemain</label>
-            <input id="spMaxPlayers" type="number" min="0" step="2" class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700" placeholder="0 = tak terbatas" />
+            <label class="block text-[11px] uppercase font-semibold text-gray-500 dark:text-gray-300" data-i18n="settings.maxPlayers">Max Pemain</label>
+            <input id="spMaxPlayers" type="number" min="0" step="2" class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700" data-i18n-placeholder="settings.maxPlayers.placeholder" placeholder="0 = tak terbatas" />
           </div>
           <div>
-            <label class="block text-[11px] uppercase font-semibold text-gray-500 dark:text-gray-300">Lokasi (opsional)</label>
-            <input id="spLocText" type="text" class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700" placeholder="Mis. Lapangan A, GBK" />
+            <label class="block text-[11px] uppercase font-semibold text-gray-500 dark:text-gray-300" data-i18n="settings.locText">Lokasi (opsional)</label>
+            <input id="spLocText" type="text" class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700" data-i18n-placeholder="settings.locText.placeholder" placeholder="Mis. Lapangan A, GBK" />
           </div>
           <div>
-            <label class="block text-[11px] uppercase font-semibold text-gray-500 dark:text-gray-300">Link Maps (opsional)</label>
-            <input id="spLocUrl" type="url" class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700" placeholder="https://maps.app.goo.gl/..." />
+            <label class="block text-[11px] uppercase font-semibold text-gray-500 dark:text-gray-300" data-i18n="settings.locUrl">Link Maps (opsional)</label>
+            <input id="spLocUrl" type="url" class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700" data-i18n-placeholder="settings.locUrl.placeholder" placeholder="https://maps.app.goo.gl/..." />
           </div>
           <div>
-            <label class="block text-[11px] uppercase font-semibold text-gray-500 dark:text-gray-300">Buka Join (tanggal)</label>
+            <label class="block text-[11px] uppercase font-semibold text-gray-500 dark:text-gray-300" data-i18n="settings.joinDate">Buka Join (tanggal)</label>
             <input id="spJoinDate" type="date" class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700" />
           </div>
           <div>
-            <label class="block text-[11px] uppercase font-semibold text-gray-500 dark:text-gray-300">Buka Join (waktu)</label>
+            <label class="block text-[11px] uppercase font-semibold text-gray-500 dark:text-gray-300" data-i18n="settings.joinTime">Buka Join (waktu)</label>
             <input id="spJoinTime" type="time" step="60" class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700" />
           </div>
           <div>
-            <label class="block text-[11px] uppercase font-semibold text-gray-500 dark:text-gray-300">HTM</label>
+            <label class="block text-[11px] uppercase font-semibold text-gray-500 dark:text-gray-300" data-i18n="settings.htm">HTM</label>
             <input id="spHTM" type="number" min="0" step="1000" class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700" placeholder="0" />
           </div>
         </div>
@@ -291,21 +291,30 @@
               });
             }
           }catch{}
-        }catch(e){ console.warn('Save events meta failed', e); try{ showToast?.('Gagal menyimpan ke tabel events', 'error'); }catch{} }
+        }catch(e){ console.warn('Save events meta failed', e); try{ showToast?.((window.__i18n_get ? __i18n_get('settings.saveMetaFail','Gagal menyimpan ke tabel events') : 'Gagal menyimpan ke tabel events'), 'error'); }catch{} }
       }
 
       try{ if (typeof maybeAutoSaveCloud==='function') maybeAutoSaveCloud(true); else if (typeof saveStateToCloud==='function') await saveStateToCloud(); }catch{}
       // Refresh UI across desktop/mobile without reload
-      try{ renderHeaderChips?.(); }catch{}
-      try{ ensureRoundsLengthForAllCourts?.(); }catch{}
+    try{ renderHeaderChips?.(); }catch{}
+    try{ ensureRoundsLengthForAllCourts?.(); }catch{}
       try{ renderAll?.(); }catch{}
       try{ refreshFairness?.(); }catch{}
       try{ renderFilterSummary?.(); }catch{}
       try{ renderEventLocation?.(byId('spLocText')?.value||'', byId('spLocUrl')?.value||''); }catch{}
       try{ refreshJoinUI?.(); }catch{}
-      try{ showToast?.('Pengaturan disimpan', 'success'); }catch{}
+      try{
+        const msg = window.__i18n_get ? window.__i18n_get('settings.toastSaved','Pengaturan disimpan') : 'Pengaturan disimpan';
+        showToast?.(msg, 'success');
+      }catch{}
       try{ hide(); }catch{}
-    }catch(e){ console.warn(e); try{ showToast?.('Gagal menyimpan pengaturan', 'error'); }catch{} }
+    }catch(e){
+      console.warn(e);
+      try{
+        const msg = window.__i18n_get ? window.__i18n_get('settings.toastFailed','Gagal menyimpan pengaturan') : 'Gagal menyimpan pengaturan';
+        showToast?.(msg, 'error');
+      }catch{}
+    }
   }
 
   function toggleBtnVisibility(){
@@ -317,6 +326,7 @@
   function init(){
     const btn = ensureButton();
     buildModal();
+    try{ window.__i18n_apply?.(); }catch{}
     btn && btn.addEventListener('click', async (e)=>{ e.preventDefault(); if (!isViewer()) await show(); });
     document.getElementById('spSave')?.addEventListener('click', (e)=>{ e.preventDefault(); if (!isViewer()) saveAll(); });
     // React to role changes via html[data-readonly]

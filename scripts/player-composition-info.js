@@ -48,7 +48,7 @@
     const box = ensureBox(); if (!box) return;
     const {pro,beg,male,female,total} = computeCounts();
     box.innerHTML = `
-      <div><b>Komposisi Pemain</b> — Total ${total}</div>
+      <div><b>${(window.__i18n_get ? __i18n_get('players.composition.title','Komposisi Pemain') : 'Komposisi Pemain')}</b> — ${(window.__i18n_get ? __i18n_get('players.composition.total','Total {count}') : 'Total {count}').replace('{count}', total)}</div>
       <div class="mt-0.5">PRO: <b>${pro}</b> • BEG: <b>${beg}</b> • M: <b>${male}</b> • F: <b>${female}</b></div>
     `;
   }

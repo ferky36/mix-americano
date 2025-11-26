@@ -134,7 +134,7 @@ let _autoSaveTimer = null;
 
 // Wrapper util untuk menampilkan loading saat menyimpan ke Cloud
 async function saveStateToCloudWithLoading(){
-  showLoading('Menyimpan ke Cloud…');
+  showLoading((window.__i18n_get ? __i18n_get('sessions.savingCloud','Menyimpan ke Cloud…') : 'Menyimpan ke Cloud…'));
   try{ return await saveStateToCloud(); }
   finally{ hideLoading(); }
 }
@@ -285,7 +285,7 @@ function markSaved(ts) {
 }
 function saveToStore() {
   const raw = byId("sessionDate").value || new Date().toISOString().slice(0,10);
-  if (!raw) { alert("Isi tanggal dulu ya."); return false; }
+  if (!raw) { alert(window.__i18n_get ? __i18n_get('sessions.dateRequired','Isi tanggal dulu ya.') : "Isi tanggal dulu ya."); return false; }
 
   const d = normalizeDateKey(raw);
   const payload = currentPayload();
@@ -436,10 +436,10 @@ function loadJSONFromFile(file){
 
       store = incoming;
       // removed: populateDatePicker UI
-      alert('JSON dimuat.');
+      alert(window.__i18n_get ? __i18n_get('sessions.jsonLoaded','JSON dimuat.') : 'JSON dimuat.');
     }catch(e){
       console.error(e);
-      alert('File JSON tidak valid.');
+      alert(window.__i18n_get ? __i18n_get('sessions.jsonInvalid','File JSON tidak valid.') : 'File JSON tidak valid.');
     }
   };
   r.readAsText(file);
@@ -447,11 +447,11 @@ function loadJSONFromFile(file){
 
 function loadSessionByDate(){
   // removed: no UI to pick arbitrary local dates
-  alert('Fitur muat berdasarkan tanggal lokal dinonaktifkan.');
+  alert(window.__i18n_get ? __i18n_get('sessions.featureOff','Fitur muat berdasarkan tanggal lokal dinonaktifkan.') : 'Fitur muat berdasarkan tanggal lokal dinonaktifkan.');
   return;
 
   let data = store.sessions[d];
-  if(!data){ alert('Tidak ada data untuk tanggal tsb.'); return; }
+  if(!data){ alert(window.__i18n_get ? __i18n_get('sessions.noData','Tidak ada data untuk tanggal tsb.') : 'Tidak ada data untuk tanggal tsb.'); return; }
   if (byId('breakPerRound'))  byId('breakPerRound').value  = data.breakPerRound ?? '1';
   if (byId('showBreakRows'))  byId('showBreakRows').checked = !!data.showBreakRows;
 

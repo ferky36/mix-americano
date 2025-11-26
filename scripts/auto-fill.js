@@ -332,11 +332,12 @@ function renderFairnessImbalanceAlert(){
     (roundsByCourt||[]).forEach((courtArr,ci)=>{
       (courtArr||[]).forEach((r,ri)=>{
         if (!r) return;
-        if ([r.a1,r.a2,r.b1,r.b2].includes(p)) locs.push(`Lap ${ci+1}/Match ${ri+1}`);
+        if ([r.a1,r.a2,r.b1,r.b2].includes(p)) locs.push(`<span data-i18n-fairness="lap-match" data-court="${ci+1}" data-round="${ri+1}">${(window.__i18n_get ? __i18n_get('fairness.lapMatch','Lap {court}/Match {round}') : 'Lap {court}/Match {round}').replace('{court}', ci+1).replace('{round}', ri+1)}</span>`);
       });
     });
     const n = cnt[p]||0;
-    return `<li><b>${escapeHtml(p)}</b> main ${n}x: ${locs.join(', ')||'-'}</li>`;
+    const label = (window.__i18n_get ? __i18n_get('fairness.playCount','main {count}x:') : 'main {count}x:').replace('{count}', n);
+    return `<li><b>${escapeHtml(p)}</b> <span data-i18n-fairness="play-count" data-count="${n}">${label}</span> ${locs.join(', ')||'-'}</li>`;
   }).join('');
 
   const overHtml = buildItems(over);
@@ -344,14 +345,14 @@ function renderFairnessImbalanceAlert(){
 
   const html = `
     <div id="${id}" class="mt-2 p-3 rounded-xl bg-red-50 text-red-700 border border-red-200 text-sm dark:bg-red-900/30 dark:text-red-100 dark:border-red-800">
-      <div class="font-semibold mb-1">Fairness Alert</div>
-      <div class="mb-1">Ada selisih kesempatan bermain (±${spread}).</div>
-      <div class="mb-1"><b>Pemain lebih banyak main (${max}x):</b></div>
+      <div class="font-semibold mb-1" data-i18n-fairness="alert-title">${(window.__i18n_get ? __i18n_get('fairness.alert.title','Fairness Alert') : 'Fairness Alert')}</div>
+      <div class="mb-1" data-i18n-fairness="alert-spread" data-spread="${spread}">${(window.__i18n_get ? __i18n_get('fairness.alert.spread','Ada selisih kesempatan bermain ({spread}).') : 'Ada selisih kesempatan bermain ({spread}).').replace('{spread}', spread)}</div>
+      <div class="mb-1"><b data-i18n-fairness="alert-over" data-count="${max}">${(window.__i18n_get ? __i18n_get('fairness.alert.over','Pemain lebih banyak main ({count}x):') : 'Pemain lebih banyak main ({count}x):').replace('{count}', max)}</b></div>
       <ul class="list-disc pl-5 space-y-1 mb-2">${overHtml}</ul>
-      <div class="mb-1"><b>Pemain kurang main (${min}x):</b></div>
+      <div class="mb-1"><b data-i18n-fairness="alert-under" data-count="${min}">${(window.__i18n_get ? __i18n_get('fairness.alert.under','Pemain kurang main ({count}x):') : 'Pemain kurang main ({count}x):').replace('{count}', min)}</b></div>
       <ul class="list-disc pl-5 space-y-1 mb-2">${underHtml}</ul>
       <div class="mt-2">
-        <button id="btnImproveFairness" class="px-3 py-1.5 rounded-lg border text-sm bg-white dark:bg-transparent dark:border-red-600 hover:bg-red-50 dark:hover:bg-red-800/40">Improve Fairness</button>
+        <button id="btnImproveFairness" class="px-3 py-1.5 rounded-lg border text-sm bg-white dark:bg-transparent dark:border-red-600 hover:bg-red-50 dark:hover:bg-red-800/40" data-i18n-fairness="alert-button">${(window.__i18n_get ? __i18n_get('fairness.alert.button','Improve Fairness') : 'Improve Fairness')}</button>
       </div>
     </div>`;
   if (prev) prev.outerHTML = html; else host.insertAdjacentHTML('beforeend', html);
@@ -361,7 +362,12 @@ function renderFairnessImbalanceAlert(){
   if (btn) btn.onclick = ()=> improveFairness();
 }
 
-// ====== Improve Fairness: reshuffle targeted rounds only ======
+// Refresh fairness alert text on language switch without changing logic
+try{
+  window.addEventListener('i18n:changed', ()=>{ try{ renderFairnessImbalanceAlert(); }catch{} });
+}catch{}
+
+// ====== ${(window.__i18n_get ? __i18n_get('fairness.alert.button','Improve Fairness') : 'Improve Fairness')}: reshuffle targeted rounds only ======
 function improveFairness(){
   try{
     const pairMode = byId('pairMode') ? byId('pairMode').value : 'free';
@@ -387,7 +393,7 @@ function improveFairness(){
     const min = Math.min(...vals), max=Math.max(...vals);
     const SPREAD_TH = (typeof window!=='undefined' && typeof window.FAIRNESS_SPREAD_THRESHOLD!=='undefined')
       ? Number(window.FAIRNESS_SPREAD_THRESHOLD) : 1;
-    if ((max-min)<=SPREAD_TH) { showToast?.('Fairness sudah cukup merata', 'info'); return; }
+    if ((max-min)<=SPREAD_TH) { showToast?.((window.__i18n_get ? __i18n_get('fairness.toast.ok','Fairness sudah cukup merata') : 'Fairness sudah cukup merata'), 'info'); return; }
 
     const over = new Set(allPlayers.filter(p=>(cnt[p]||0)===max));
     const under = new Set(allPlayers.filter(p=>(cnt[p]||0)===min));
@@ -459,9 +465,9 @@ function improveFairness(){
 
     if (changed){
       markDirty(); renderAll(); computeStandings(); validateAll(); renderFairnessInfo(); renderFairnessImbalanceAlert();
-      showToast?.('Fairness diperbaiki pada beberapa ronde', 'success');
+      showToast?.((window.__i18n_get ? __i18n_get('fairness.toast.fixed','Fairness diperbaiki pada beberapa ronde') : 'Fairness diperbaiki pada beberapa ronde'), 'success');
     } else {
-      showToast?.('Tidak ada perombakan minimal yang aman untuk fairness.', 'warn');
+      showToast?.((window.__i18n_get ? __i18n_get('fairness.toast.none','Tidak ada perombakan minimal yang aman untuk fairness.') : 'Tidak ada perombakan minimal yang aman untuk fairness.'), 'warn');
     }
   }catch(err){ console.error(err); }
 }

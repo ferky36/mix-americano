@@ -1,6 +1,7 @@
 "use strict";
 // ================== COURT ================== //
 function renderCourt(container, arr) {
+  const t = (k, f)=> (window.__i18n_get ? __i18n_get(k, f) : f);
   const start = byId("startTime").value || "19:00";
   const minutes = parseInt(byId("minutesPerRound").value || "12", 10);
   const R = parseInt(byId("roundCount").value || "10", 10);
@@ -19,15 +20,15 @@ function renderCourt(container, arr) {
     <thead>
       <tr class="border-b border-gray-200 dark:border-gray-700">
         <th class="py-2 pr-4"></th>
-        <th class="py-2 pr-4">Jadwal</th>
-        <th class="py-2 pr-4">Waktu</th>
-        <th class="py-2 pr-4">Player1A</th>
-        <th class="py-2 pr-4">Player2A</th>
-        <th class="py-2 pr-4">Player1B</th>
-        <th class="py-2 pr-4">Player2B</th>
-        <th class="py-2 pr-4">Skor Tim A</th>
-        <th class="py-2 pr-4">Skor Tim B</th>
-        <th class="py-2 pr-4">Action</th>
+        <th class="py-2 pr-4">${t('render.table.schedule','Jadwal')}</th>
+        <th class="py-2 pr-4">${t('render.table.time','Waktu')}</th>
+        <th class="py-2 pr-4">${t('render.table.player1A','Player1A')}</th>
+        <th class="py-2 pr-4">${t('render.table.player2A','Player2A')}</th>
+        <th class="py-2 pr-4">${t('render.table.player1B','Player1B')}</th>
+        <th class="py-2 pr-4">${t('render.table.player2B','Player2B')}</th>
+        <th class="py-2 pr-4">${t('render.table.scoreA','Skor Tim A')}</th>
+        <th class="py-2 pr-4">${t('render.table.scoreB','Skor Tim B')}</th>
+        <th class="py-2 pr-4">${t('render.table.action','Action')}</th>
       </tr>
     </thead>
     <tbody></tbody>`;
@@ -84,10 +85,10 @@ function renderCourt(container, arr) {
     tr.appendChild(tdHandle);
 
     const tdIdx = document.createElement("td");
-    tdIdx.textContent = "Match " + (i + 1);
+    tdIdx.textContent = t('render.match.label','Match {num}').replace('{num}', (i + 1));
     tdIdx.className = "py-2 pr-4 font-medium"; 
     tdIdx.classList.add("rnd-col-round", "text-center");
-    tdIdx.dataset.label = "Match";
+    tdIdx.dataset.label = t('render.match.labelShort','Match');
     tr.appendChild(tdIdx);
 
     // === Waktu (Start–End)
@@ -95,7 +96,7 @@ function renderCourt(container, arr) {
     tdTime.textContent = `${roundStartTime(i)}–${roundEndTime(i)}`;
     tdTime.className = "py-2 pr-4";
     tdTime.classList.add("rnd-col-time", "text-center");
-    tdTime.dataset.label = "Waktu";
+    tdTime.dataset.label = t('render.table.time','Waktu');
     // Override time separator to en dash
     try { tdTime.textContent = `${roundStartTime(i)}–${roundEndTime(i)}`; } catch {}
     tr.appendChild(tdTime);
@@ -176,9 +177,9 @@ function renderCourt(container, arr) {
     }
 
     // === Tim A | Tim B (urut: A1 | B1, A2 | B2)
-    const tdA1 = selCell("a1", "TIM A", "rnd-teamA-1");
+    const tdA1 = selCell("a1", t('render.table.teamA','TIM A'), "rnd-teamA-1");
     const tdA2 = selCell("a2", " ", "rnd-teamA-2");
-    const tdB1 = selCell("b1", "TIM B", "rnd-teamB-1");
+    const tdB1 = selCell("b1", t('render.table.teamB','TIM B'), "rnd-teamB-1");
     const tdB2 = selCell("b2", " ", "rnd-teamB-2");
 
     tr.appendChild(tdA1);
@@ -187,8 +188,8 @@ function renderCourt(container, arr) {
     tr.appendChild(tdB2);
 
     // === Skor Tim A | Tim B
-    const tdSA = scCell("scoreA","Skor"); tdSA.classList.add("rnd-scoreA");
-    const tdSB = scCell("scoreB","Skor"); tdSB.classList.add("rnd-scoreB");
+    const tdSA = scCell("scoreA",t('render.table.score','Skor')); tdSA.classList.add("rnd-scoreA");
+    const tdSB = scCell("scoreB",t('render.table.score','Skor')); tdSB.classList.add("rnd-scoreB");
 
     tr.appendChild(tdSA);
     tr.appendChild(tdSB);
@@ -196,18 +197,18 @@ function renderCourt(container, arr) {
     // Viewer mode: tampilkan kolom indikator (Live/Selesai) saja, tanpa tombol aksi
     if (isViewer() && !isScoreOnlyMode()) {
       const tdCalcV = document.createElement('td');
-      tdCalcV.dataset.label = 'Aksi';
+      tdCalcV.dataset.label = t('render.table.action','Action');
       tdCalcV.className = 'rnd-col-actions';
       // badge Live
       const liveV = document.createElement('span');
       liveV.className = 'inline-flex items-center gap-1 mr-2 px-2 py-0.5 rounded-full text-xs bg-red-600 text-white live-badge';
-      liveV.textContent = 'Live';
+      liveV.textContent = t('status.live', 'Live');
       if (!(r.startedAt && !r.finishedAt)) liveV.classList.add('hidden');
       tdCalcV.appendChild(liveV);
       // badge Selesai
       const doneV = document.createElement('span');
       doneV.className = 'inline-flex items-center gap-1 mr-2 px-2 py-0.5 rounded-full text-xs bg-gray-600 text-white done-badge';
-      doneV.textContent = 'Selesai';
+      doneV.textContent = t('status.done', 'Selesai');
       if (!r.finishedAt) doneV.classList.add('hidden');
       tdCalcV.appendChild(doneV);
 
@@ -224,10 +225,9 @@ function renderCourt(container, arr) {
         const fullCols = table.querySelector('thead tr').children.length;
         tdBreak.colSpan = fullCols;
         tdBreak.className = 'py-1 text-center opacity-80';
-        try { tdBreak.textContent = `Jeda ${brkMin}:00 - Next ${roundStartTime(i+1)}`; } catch {}
-        tdBreak.textContent = `Jeda ${brkMin}:00 - Next ${roundStartTime(i+1)}`;
+        try { tdBreak.textContent = `${t('render.break.info','Jeda {min}:00 - Next {next}').replace('{min}', brkMin).replace('{next}', roundStartTime(i+1))}`; } catch {}
+        tdBreak.textContent = `${t('render.break.info','Jeda {min}:00 - Next {next}').replace('{min}', brkMin).replace('{next}', roundStartTime(i+1))}`;
         trBreak.appendChild(tdBreak);
-        try { tdBreak.textContent = `Jeda ${brkMin}:00 - Next ${roundStartTime(i+1)}`; } catch {}
         tbody.appendChild(trBreak);
       }
       // lanjut ke ronde berikutnya tanpa tombol aksi
@@ -237,25 +237,25 @@ function renderCourt(container, arr) {
 
     // === tombol Hitung (aksi)
     const tdCalc = document.createElement('td');
-    tdCalc.dataset.label = 'Aksi';
+    tdCalc.dataset.label = t('render.table.action','Action');
     tdCalc.className = 'rnd-col-actions';
     // Live & Done badges
     const live = document.createElement('span');
     live.className = 'inline-flex items-center gap-1 mr-2 px-2 py-0.5 rounded-full text-xs bg-red-600 text-white live-badge';
-    live.textContent = 'Live';
+    live.textContent = t('status.live', 'Live');
     if (!(r.startedAt && !r.finishedAt)) live.classList.add('hidden');
     tdCalc.appendChild(live);
     const done = document.createElement('span');
     done.className = 'inline-flex items-center gap-1 mr-2 px-2 py-0.5 rounded-full text-xs bg-gray-600 text-white done-badge';
-    done.textContent = 'Selesai';
+    done.textContent = t('status.done', 'Selesai');
     if (!r.finishedAt) done.classList.add('hidden');
     tdCalc.appendChild(done);
     const btnCalc = document.createElement('button');
     btnCalc.className = 'px-3 py-1.5 rounded-lg border dark:border-gray-700 text-sm w-full sm:w-auto';
-    btnCalc.textContent = (r.scoreA || r.scoreB) ? '🔁 Hitung Ulang' : '🧮 Mulai Main';
+    btnCalc.textContent = (r.scoreA || r.scoreB) ? t('score.recalc', 'Hitung Ulang') : t('status.startMatch', 'Mulai Main');
     btnCalc.addEventListener('click', ()=> openScoreModal(activeCourt, i));
     // Clean label override
-    try { btnCalc.textContent = (r.scoreA || r.scoreB) ? 'Hitung Ulang' : 'Mulai Main'; } catch {}
+    try { btnCalc.textContent = (r.scoreA || r.scoreB) ? t('score.recalc', 'Hitung Ulang') : t('status.startMatch', 'Mulai Main'); } catch {}
     tdCalc.appendChild(btnCalc);
     tr.appendChild(tdCalc);
     // Override visibility/label for table action button based on role and view mode
@@ -264,18 +264,18 @@ function renderCourt(container, arr) {
       const allowStart = (typeof canEditScore === 'function') ? canEditScore() : !isViewer();
       const allowRecalc = (typeof isOwnerNow==="function") ? isOwnerNow() : !!window._isOwnerUser; // only owner can recalc
       if (hasScore) {
-        btnCalc.textContent = 'Hitung Ulang';
+        btnCalc.textContent = t('score.recalc', 'Hitung Ulang');
         if (!allowRecalc) btnCalc.classList.add('hidden');
       } else {
         const started = !!r.startedAt;
         if (!allowStart || started) {
           btnCalc.classList.add('hidden');
         } else if (canStartRoundBySequence(activeCourt, i)) {
-          btnCalc.textContent = 'Mulai Main';
+          btnCalc.textContent = t('status.startMatch', 'Mulai Main');
           btnCalc.disabled = false;
           btnCalc.classList.remove('opacity-50','cursor-not-allowed');
         } else {
-          btnCalc.textContent = 'Incoming Match';
+          btnCalc.textContent = t('status.incoming', 'Incoming Match');
           btnCalc.disabled = true;
           btnCalc.classList.add('opacity-50','cursor-not-allowed');
           btnCalc.classList.remove('hidden');
@@ -297,12 +297,10 @@ function renderCourt(container, arr) {
       const fullCols = table.querySelector('thead tr').children.length;
       tdBreak.colSpan = fullCols;
       tdBreak.className = 'py-1 text-center opacity-80';
-      // Clean break text override
-      try { tdBreak.textContent = `Jeda ${brkMin}:00 • Next ${roundStartTime(i+1)}`; } catch {}
-      tdBreak.textContent = `🕒 Jeda ${brkMin}:00 • Next ${roundStartTime(i+1)}`;
+      const txtBreak = t('render.break.info','Jeda {min}:00 - Next {next}').replace('{min}', brkMin).replace('{next}', roundStartTime(i+1));
+      try { tdBreak.textContent = `🕒 ${txtBreak.replace('-', '•')}`; } catch {}
+      tdBreak.textContent = `🕒 ${txtBreak.replace('-', '•')}`;
       trBreak.appendChild(tdBreak);
-      // Force clean break text (override any garbled replacements)
-      try { tdBreak.textContent = `Jeda ${brkMin}:00 • Next ${roundStartTime(i+1)}`; } catch {}
       tbody.appendChild(trBreak);
     }
   }
@@ -319,3 +317,13 @@ function renderCourtActive(){
   const arr = roundsByCourt[activeCourt] || [];
   renderCourt(container, arr);  // gunakan fungsi renderCourt Anda yang sudah ada
 }
+
+// Re-render court UI when language changes so labels update without reload
+try{
+  window.addEventListener('i18n:changed', ()=>{ try{ renderCourtActive(); renderCourtsToolbar?.(); }catch{} });
+}catch{}
+
+// Re-render courts when language changes so labels update immediately
+try{
+  window.addEventListener('i18n:changed', ()=>{ try{ renderCourtActive(); }catch{} });
+}catch{}
