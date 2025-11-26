@@ -1456,8 +1456,7 @@
   "render.table.score": { "id": "Skor", "en": "Score" },
   "render.match.label": { "id": "Pertandingan {num}", "en": "Match {num}" },
   "render.match.labelShort": { "id": "Pertandingan", "en": "Match" },
-  "render.break.info": { "id": "Jeda {min}:00 - Next {next}", "en": "Break {min}:00 - Next {next}" }
-,
+  "render.break.info": { "id": "Jeda {min}:00 - Next {next}", "en": "Break {min}:00 - Next {next}" },
   "mobile.tab.schedule": { "id": "Jadwal & Pemain", "en": "Schedule & Players" },
   "mobile.tab.standings": { "id": "Klasemen", "en": "Standings" },
   "mobile.chips.show": { "id": "Tampilkan info", "en": "Show info" },
