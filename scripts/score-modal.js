@@ -1,5 +1,6 @@
 "use strict";
 // ================== SCORE MODAL ================== //
+const __s = (k, f)=> (window.__i18n_get ? __i18n_get(k, f) : f);
 function openScoreModal(courtIdx, roundIdx){
   scoreCtx.court = courtIdx;
   scoreCtx.round = roundIdx;
@@ -9,7 +10,7 @@ function openScoreModal(courtIdx, roundIdx){
   try{
     const hasScoreGuard = (r.scoreA !== undefined && r.scoreA !== null && r.scoreA !== '') || (r.scoreB !== undefined && r.scoreB !== null && r.scoreB !== '');
     if (!r.startedAt && !r.finishedAt && !hasScoreGuard && !canStartRoundBySequence(courtIdx, roundIdx)){
-      showToast?.('Belum waktunya match ini. Selesaikan match sebelumnya dahulu.', 'info');
+      showToast?.(__s('score.notYet','Belum waktunya match ini. Selesaikan match sebelumnya dahulu.'), 'info');
       return;
     }
   }catch{}
@@ -18,13 +19,13 @@ function openScoreModal(courtIdx, roundIdx){
 
   byId('scoreTeamA').textContent = [r.a1||'-', r.a2||'-'].join(' & ');
   byId('scoreTeamB').textContent = [r.b1||'-', r.b2||'-'].join(' & ');
-  byId('scoreRoundTitle').textContent = `Lap ${courtIdx+1} • Match ${roundIdx+1}`;
+  byId('scoreRoundTitle').textContent = __s('score.roundTitle','Lap {court} – Match {round}').replace('{court}', courtIdx+1).replace('{round}', roundIdx+1);
   byId('scoreAVal').textContent = scoreCtx.a;
   byId('scoreBVal').textContent = scoreCtx.b;
   renderServeBadgeInModal();
 
     const ready = r.a1 && r.a2 && r.b1 && r.b2;
-  if (!ready){ alert('Pemain di ronde ini belum lengkap. Lengkapi dulu ya.'); return; }
+  if (!ready){ alert(__s('score.playersIncomplete','Pemain di ronde ini belum lengkap. Lengkapi dulu ya.')); return; }
 
   // matikan timer yang tersisa
   if (scoreCtx.timerId){ clearInterval(scoreCtx.timerId); scoreCtx.timerId = null; }
@@ -40,7 +41,7 @@ function openScoreModal(courtIdx, roundIdx){
   if (alreadyScored){
     // mode hasil final: kunci tombol, timer = "Permainan Selesai"
     setScoreModalLocked(true);
-    if (timerEl) timerEl.textContent = 'Permainan Selesai';
+    if (timerEl) timerEl.textContent = __s('score.finished', 'Permainan Selesai');
   } else {
     // mode main: tombol aktif & timer mm:ss dari Menit/Ronde
     const minutes = parseInt(byId('minutesPerRound').value || '12', 10);
@@ -63,7 +64,7 @@ function openScoreModal(courtIdx, roundIdx){
       // Tampilkan tombol +/- jika sudah mulai
       setScoreModalPreStart(false);
     }
-    if (alreadyStarted){ try{ showToast('Permainan sudah dimulai untuk match ini', 'info'); }catch{} }
+    if (alreadyStarted){ try{ showToast(__s('score.alreadyStarted','Permainan sudah dimulai untuk match ini'), 'info'); }catch{} }
   }catch{}
 
   byId('scoreModal').classList.remove('hidden');
@@ -85,7 +86,7 @@ function onCloseScoreClick(){
     const isStarted = !!r.startedAt;
     const isFinished = !!r.finishedAt;
     if (isStarted && !isFinished){
-      const ok = confirm('Permainan untuk match ini sedang berjalan. Menutup akan membatalkan permainan. Lanjutkan?');
+      const ok = confirm(__s('score.confirm.cancelRunning','Permainan untuk match ini sedang berjalan. Menutup akan membatalkan permainan. Lanjutkan?'));
       if (!ok) return; // batal menutup
       try{ delete r.startedAt; }catch{}
       // pulihkan skor semula jika ada cadangan
@@ -121,11 +122,11 @@ function onCloseScoreClick(){
         const btn = actions?.querySelector('button');
         const allowStart = (typeof canEditScore === 'function') ? canEditScore() : !isViewer();
         if (btn){
-          btn.textContent = 'Mulai Main';
+          btn.textContent = __s('status.startMatch', 'Mulai Main');
           if (allowStart) btn.classList.remove('hidden');
         }
       }catch{}
-      try{ showToast('Permainan dibatalkan. Skor direset.', 'warn'); }catch{}
+      try{ showToast(__s('score.canceled','Permainan dibatalkan. Skor direset.'), 'warn'); }catch{}
       // simpan pembatalan ke Cloud (realtime)
       markDirty();
       try{ if (typeof maybeAutoSaveCloud === 'function') maybeAutoSaveCloud(); else if (typeof saveStateToCloud === 'function') saveStateToCloud(); }catch{}
@@ -145,7 +146,7 @@ function startScoreTimer(){
   // Set started flag once (and persist) to lock others realtime
   try {
     const r = (roundsByCourt[scoreCtx.court] || [])[scoreCtx.round] || {};
-    if (r.startedAt){ showToast?.("Permainan sudah dimulai untuk match ini", "warn"); const _btn=byId("btnStartTimer"); if(_btn) _btn.classList.add("hidden"); return; }
+    if (r.startedAt){ showToast?.(__s('score.alreadyStarted','Permainan sudah dimulai untuk match ini'), "warn"); const _btn=byId("btnStartTimer"); if(_btn) _btn.classList.add("hidden"); return; }
     // backup skor awal untuk pemulihan jika dibatalkan
     if (typeof r._prevScoreA === "undefined") r._prevScoreA = (typeof r.scoreA !== "undefined") ? r.scoreA : "";
     if (typeof r._prevScoreB === "undefined") r._prevScoreB = (typeof r.scoreB !== "undefined") ? r.scoreB : "";
@@ -186,15 +187,15 @@ function startScoreTimer(){
 
     if (scoreCtx.remainMs <= 0){
       clearInterval(scoreCtx.timerId); scoreCtx.timerId=null; scoreCtx.running=false;
-      const msg = 'Waktu habis untuk ronde ini.\nKlik OK untuk menyimpan skor saat ini.';
+    const msg = __s('score.timeUp','Waktu habis untuk ronde ini.\nKlik OK untuk menyimpan skor saat ini.');
       // Tanpa alert; langsung tampilkan status selesai di UI
-      const __t = byId('scoreTimer'); if (__t) __t.textContent = 'Permainan Selesai';
+    const __tEl = byId('scoreTimer'); if (__tEl) __tEl.textContent = __s('score.finished', 'Permainan Selesai');
       setScoreModalLocked(true);
       // auto commit skor → sama seperti Finish tapi TANPA konfirmasi tambahan
       {
         const zero = (Number(scoreCtx.a)===0 && Number(scoreCtx.b)===0);
         if (zero){
-          alert('Skor masih 0-0. Skor tidak akan disimpan.');
+      alert(__s('score.zeroNoSave','Skor masih 0-0. Skor tidak akan disimpan.'));
           try{ const r = (roundsByCourt[scoreCtx.court] || [])[scoreCtx.round] || {}; delete r.startedAt; delete r.finishedAt; }catch{}
           try{ setScoreModalPreStart(true); }catch{}
           try{
@@ -202,7 +203,7 @@ function startScoreTimer(){
             const actions = row?.querySelector('.rnd-col-actions');
             const live = actions?.querySelector('.live-badge'); if (live){ live.classList.add('fade-out'); setTimeout(()=>{ live.classList.add('hidden'); live.classList.remove('fade-out'); },150); }
             const done = actions?.querySelector('.done-badge'); if (done){ done.classList.add('fade-out'); setTimeout(()=>{ done.classList.add('hidden'); done.classList.remove('fade-out'); },150); }
-            const startBtn = actions?.querySelector('button'); if (startBtn){ startBtn.textContent='Mulai Main'; startBtn.classList.remove('hidden'); startBtn.classList.add('fade-in'); setTimeout(()=>startBtn.classList.remove('fade-in'),200); }
+            const startBtn = actions?.querySelector('button'); if (startBtn){ startBtn.textContent=__s('status.startMatch', 'Mulai Main'); startBtn.classList.remove('hidden'); startBtn.classList.add('fade-in'); setTimeout(()=>startBtn.classList.remove('fade-in'),200); }
           }catch{}
           markDirty();
           try{ if (typeof maybeAutoSaveCloud === 'function') maybeAutoSaveCloud(); else if (typeof saveStateToCloud === 'function') saveStateToCloud(); }catch{}
@@ -218,7 +219,7 @@ function startScoreTimer(){
 
 function commitScoreToRound(auto=false){
   const r = (roundsByCourt[scoreCtx.court] || [])[scoreCtx.round];
-  if(!r){ alert('Match tidak ditemukan.'); return; }
+  if(!r){ alert(__s('score.matchNotFound','Match tidak ditemukan.')); return; }
 
   if (!auto){
     const msg = `Simpan skor untuk Lap ${scoreCtx.court+1} • Match ${scoreCtx.round+1}\n`+
@@ -296,13 +297,13 @@ byId("btnTheme").addEventListener("click", toggleTheme);
 byId('btnSave')?.addEventListener('click', async ()=>{
   const btn = byId('btnSave'); if (!btn) return;
   const old = btn.textContent;
-  btn.disabled = true; btn.textContent = 'Saving...';
+  btn.disabled = true; btn.textContent = __s('score.saving', 'Saving...');
   try{
     let ok = false;
     if (isCloudMode()) ok = await saveStateToCloudWithLoading();
     else ok = saveToStore();
     if (ok !== false){
-      btn.textContent = 'Saved ✓';
+      btn.textContent = __s('score.saved', 'Saved ✓');
       setTimeout(()=>{ btn.textContent = old || 'Save'; btn.disabled = false; }, 1200);
     } else {
       btn.textContent = old || 'Save'; btn.disabled = false;
@@ -310,7 +311,7 @@ byId('btnSave')?.addEventListener('click', async ()=>{
   }catch(e){
     console.error(e);
     btn.textContent = old || 'Save'; btn.disabled = false;
-    alert('Gagal menyimpan.');
+    alert(__s('score.saveFail','Gagal menyimpan.'));
   }
 });
 
@@ -360,7 +361,7 @@ byId("btnCollapsePlayers").addEventListener("click", () =>
 byId('btnResetActive').addEventListener('click', ()=>{
   const arr = roundsByCourt[activeCourt] || [];
   const has = arr.some(r=>r&&(r.a1||r.a2||r.b1||r.b2||r.scoreA||r.scoreB));
-  if(has && !confirm('Data pada lapangan aktif akan dihapus. Lanjutkan?')) return;
+  if(has && !confirm(__s('score.resetConfirm','Data pada lapangan aktif akan dihapus. Lanjutkan?'))) return;
   roundsByCourt[activeCourt] = [];
   markDirty(); renderAll();refreshFairness();
 });
@@ -370,15 +371,15 @@ byId('btnClearScoresAll').addEventListener('click', clearScoresAll);
 // save ke cloud atau local storage
 byId('btnSave')?.addEventListener('click', async () => {
   console.log(isCloudMode());
-  if (isCloudMode()) {
-    console.log('Menyimpan ke cloud...');
-    const ok = await saveStateToCloudWithLoading();
-    if (!ok) alert('Gagal menyimpan ke Cloud. Coba lagi.');
-  } else {
-    const ok = saveToStore?.();
-    console.log('Menyimpan ke json...');
-    if (!ok) alert('Gagal menyimpan ke Local Storage.');
-  }
+    if (isCloudMode()) {
+      console.log('Menyimpan ke cloud...');
+      const ok = await saveStateToCloudWithLoading();
+      if (!ok) alert(__s('score.cloudFail','Gagal menyimpan ke Cloud. Coba lagi.'));
+    } else {
+      const ok = saveToStore?.();
+      console.log('Menyimpan ke json...');
+      if (!ok) alert(__s('score.localFail','Gagal menyimpan ke Local Storage.'));
+    }
 });
 // byId("btnLoadByDate").addEventListener("click", loadSessionByDate);
 // byId("btnImportJSON").addEventListener("click", () =>
@@ -411,7 +412,7 @@ byId('sessionDate')?.addEventListener('change', async (e) => {
   try{
     const locked = window.__lockedEventDateKey || '';
     if (isCloudMode() && currentEventId && locked && locked !== newDate){
-      showToast?.('Tanggal event tidak boleh diubah. Buat event baru untuk tanggal lain.', 'warn');
+      showToast?.(__s('score.dateLocked','Tanggal event tidak boleh diubah. Buat event baru untuk tanggal lain.'), 'warn');
       try{ leaveEventMode?.(true); }catch{}
       e.target.value = locked;
       currentSessionDate = locked;
@@ -462,7 +463,7 @@ byId("newPlayer").addEventListener("keydown", (e) => {
   }
 });
 byId("btnClearPlayers").addEventListener("click", () => {
-  if (!confirm("Kosongkan semua pemain dan waiting list?")) return;
+  if (!confirm(__s('score.clearAllConfirm','Kosongkan semua pemain dan waiting list?'))) return;
   players = [];
   try{
     if (!Array.isArray(waitingList)) waitingList = [];
@@ -474,7 +475,7 @@ byId("btnClearPlayers").addEventListener("click", () => {
   renderPlayersList?.();
   try{ renderViewerPlayersList?.(); }catch{}
   validateNames?.();
-  showToast?.('Semua pemain dan waiting list telah dikosongkan','success');
+  showToast?.(__s('score.clearedAll','Semua pemain dan waiting list telah dikosongkan'),'success');
   try{ maybeAutoSaveCloud(); }catch{}
 });
 byId("btnPasteText").addEventListener("click", () => {
@@ -506,7 +507,7 @@ byId("btnApplyText").addEventListener("click", () => {
   waitingList.splice(0, waitingList.length, ...newWaiting);
   window.waitingList = waitingList;
   if (overflow.length > 0 && cap !== Infinity) {
-    showToast('Beberapa nama masuk waiting list karena list penuh', 'warn');
+    showToast(__s('score.waitingFull','Beberapa nama masuk waiting list karena list penuh'), 'warn');
   }
   hideTextModal();
   markDirty();
@@ -661,7 +662,7 @@ byId('btnApplyPlayersActive').addEventListener('click', ()=>{
   }
   const arr = roundsByCourt[activeCourt] || [];
   const has = arr.some(r=>r&&(r.a1||r.a2||r.b1||r.b2||r.scoreA||r.scoreB));
-  if(has && !confirm('Menerapkan pemain akan reset pairing+skor pada lapangan aktif. Lanjutkan?')) return;
+  if(has && !confirm(__s('score.applyPlayersConfirm','Menerapkan pemain akan reset pairing+skor pada lapangan aktif. Lanjutkan?'))) return;
   autoFillActiveCourt(); markDirty(); renderAll(); computeStandings();refreshFairness();
   markDirty();
   renderPlayersList();
@@ -690,7 +691,7 @@ byId('btnFinishScore').addEventListener('click', ()=>{
   if (!canEditScore()) return;
   // Blokir finish jika skor 0-0
   if (Number(scoreCtx.a)===0 && Number(scoreCtx.b)===0){
-    alert('Skor masih 0-0. Skor belum disimpan.');
+    alert(__s('score.zeroNotSaved','Skor masih 0-0. Skor belum disimpan.'));
     return;
   }
   // Konfirmasi di sini agar Cancel tidak menutup popup
@@ -710,7 +711,7 @@ byId('btnRecalc').addEventListener('click', ()=>{
   if (!canEditScore()) return;
   setScoreModalLocked(false);                  // munculkan semua kontrol
   const start = byId('btnStartTimer'); if (start) start.disabled = true;   // tidak boleh start ulang
-  const t = byId('scoreTimer');     if (t)     t.textContent = 'Permainan Selesai';
+  const t = byId('scoreTimer');     if (t)     t.textContent = __s('score.finished', 'Permainan Selesai');
 });
 
 // Reset skor & timer (tapi tidak menghapus skor di ronde)
@@ -751,7 +752,7 @@ byId('btnResetScore').addEventListener('click', ()=>{
     const actions = row?.querySelector('.rnd-col-actions');
     const live = actions?.querySelector('.live-badge'); if (live){ live.classList.add('fade-out'); setTimeout(()=>{ live.classList.add('hidden'); live.classList.remove('fade-out'); },150); }
     const done = actions?.querySelector('.done-badge'); if (done){ done.classList.add('fade-out'); setTimeout(()=>{ done.classList.add('hidden'); done.classList.remove('fade-out'); },150); }
-    const btn = actions?.querySelector('button'); if (btn){ btn.textContent='Mulai Main'; btn.classList.remove('hidden'); btn.classList.add('fade-in'); setTimeout(()=>btn.classList.remove('fade-in'),200); }
+    const btn = actions?.querySelector('button'); if (btn){ btn.textContent=__s('status.startMatch', 'Mulai Main'); btn.classList.remove('hidden'); btn.classList.add('fade-in'); setTimeout(()=>btn.classList.remove('fade-in'),200); }
   }catch{}
   // Persist ke Cloud
   markDirty();

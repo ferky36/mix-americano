@@ -4,6 +4,7 @@
 // Keeps existing logic and CSS intact; only toggles visibility.
 (function(){
   const isMobile = () => window.matchMedia && window.matchMedia("(max-width: 640px)").matches;
+  const t = (window.__i18n_get ? __i18n_get : (k,f)=>f);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 
@@ -96,19 +97,30 @@
     ul.className = 'flex items-end justify-between gap-1 py-2';
     wrap.appendChild(ul); bar.appendChild(wrap);
 
+    const getTabLabel = (key)=>{
+      const t = (window.__i18n_get ? __i18n_get : (k,f)=>f);
+      switch(key){
+        case 'jadwal': return t('mobile.tab.schedule','Jadwal & Pemain');
+        case 'klasemen': return t('mobile.tab.standings','Klasemen');
+        case 'recap': return t('recap.button','Recap');
+        case 'insight': return t('recap.insight','Insight');
+        case 'kas': return t('cash.title','Cashflow');
+        default: return key;
+      }
+    };
+
     const tabs = [
-      // Combine Jadwal + Pemain in one tab
-      { key:'jadwal',  label:'Jadwal & Pemain',  icon: calIcon() },
-      { key:'klasemen',label:'Klasemen',         icon: upIcon() },
-      { key:'recap',   label:'Recap',            icon: clockIcon() },
-      { key:'insight', label:'Insight',          icon: screenIcon() },
+      { key:'jadwal',  label:getTabLabel('jadwal'),   icon: calIcon() },
+      { key:'klasemen',label:getTabLabel('klasemen'), icon: upIcon() },
+      { key:'recap',   label:getTabLabel('recap'),    icon: clockIcon() },
+      { key:'insight', label:getTabLabel('insight'),  icon: screenIcon() },
     ];
 
     // Optional: Cashflow tab (only when allowed like desktop button)
     const aloud = isCashflowAllowed();
     let hostKas = null;
     if (aloud){
-      tabs.push({ key:'kas', label:'Cashflow', icon: moneyIcon() });
+      tabs.push({ key:'kas', label:getTabLabel('kas'), icon: moneyIcon() });
       hostKas = document.createElement('section');
       hostKas.id = 'section-kas';
       hostKas.className = 'bg-white dark:bg-gray-800 p-4 rounded-2xl shadow hidden';
@@ -117,6 +129,13 @@
 
     tabs.forEach(t => ul.appendChild(tabItem(t.key, t.label, t.icon)));
     document.body.appendChild(bar);
+    function refreshTabLabels(){
+      tabs.forEach(t=>{
+        const span = document.querySelector(`#tab-${t.key} .mobtab-label`);
+        if (span) span.textContent = getTabLabel(t.key);
+      });
+    }
+    try{ window.refreshMobileTabLabels = refreshTabLabels; }catch{}
 
     // Reduce sticky focus/hover artifacts on mobile browsers
     try{
@@ -149,6 +168,12 @@
     // Ensure Kas tab reflects current role after init
     try{ updateMobileCashTab?.(); }catch{}
     setTimeout(()=>{ try{ updateMobileCashTab?.(); }catch{} }, 300);
+    // Listen to language changes
+    try{
+      window.addEventListener('i18n:changed', refreshTabLabels);
+      window.addEventListener('i18n:applied', refreshTabLabels);
+    }catch{}
+    refreshTabLabels();
 
     // --- helpers ---
     function initHdrChipsToggleMobile(){
@@ -165,7 +190,7 @@
         btn.type = 'button';
         // Absolutely align at the right edge of the title row (mobile only)
         btn.className = 'absolute right-0 md:hidden w-9 h-9 grid place-items-center rounded-xl bg-white/20 text-white shadow hover:bg-white/30';
-        btn.title = 'Tampilkan/sembunyikan info header';
+        btn.title = t('mobile.chips.toggle','Tampilkan/sembunyikan info header');
         // append into the same row container so we can position absolute relative to it
         row.appendChild(btn);
       }
@@ -174,7 +199,8 @@
         const up = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><polyline points="18 15 12 9 6 15"/></svg>';
         const down = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><polyline points="6 9 12 15 18 9"/></svg>';
         btn.innerHTML = hidden ? down : up;
-        btn.setAttribute('aria-label', hidden ? 'Tampilkan info' : 'Sembunyikan info');
+        const t = (window.__i18n_get ? __i18n_get : (k,f)=>f);
+        btn.setAttribute('aria-label', hidden ? t('mobile.chips.show','Tampilkan info') : t('mobile.chips.hide','Sembunyikan info'));
         btn.setAttribute('aria-expanded', hidden ? 'false' : 'true');
       }
       function alignBtn(){
@@ -216,7 +242,7 @@
       ].join(' ');
       btn.innerHTML = `
         <span class="w-6 h-6 grid place-items-center">${iconSvg}</span>
-        <span class="mt-0.5">${escapeHtml(label)}</span>`;
+        <span class="mt-0.5 mobtab-label">${escapeHtml(label)}</span>`;
       btn.addEventListener('click', () => select(key));
       li.appendChild(btn);
       return li;
@@ -233,6 +259,7 @@
 
       // Remember current tab for other guards
       try{ window.__mobileTabKey = key; }catch{}
+      try{ window.reapplyMobileTab = ()=> select(key); }catch{}
 
       // Hide/show groups without altering logic
       // Default: show jadwal (controls + courts), hide standings, collapse players panel
@@ -427,7 +454,7 @@ async function buildRecapInline(host){
   if (!root){
     host.style.minHeight = '';
     host.style.visibility = '';
-    host.innerHTML = '<div class="text-sm text-red-600">Gagal membuat recap.</div>';
+    host.innerHTML = `<div class="text-sm text-red-600">${t('mobile.recap.fail','Gagal membuat recap.')}</div>`;
     return;
   }
   try{
@@ -452,7 +479,7 @@ async function buildInsightInline(host){
   if (!host) return;
   const prevH = host.offsetHeight; host.style.minHeight = (prevH? prevH : 140) + 'px'; host.style.visibility = 'hidden';
   const root = await getRecapRootFromModal();
-  if (!root){ host.innerHTML = '<div class="text-sm text-red-600">Gagal membuat insight.</div>'; return; }
+  if (!root){ host.innerHTML = `<div class="text-sm text-red-600">${t('mobile.insight.fail','Gagal membuat insight.')}</div>`; return; }
   // Pick only the insight section (new layout)
   const insightSection = root.querySelector('.recap-insight-section');
   if (insightSection){
@@ -575,7 +602,7 @@ function buildRecapMobileUI(host){
   card.className = 'rounded-2xl border dark:border-gray-700 bg-white dark:bg-gray-800 p-3 md:p-4';
   const title = document.createElement('div');
   title.className = 'flex items-center gap-2 font-semibold text-gray-800 dark:text-gray-100';
-  title.innerHTML = `<span>📍</span><span>Match Recap — ${escapeHtml((document.getElementById('appTitle')?.textContent||'').trim()||'Event')}</span>`;
+  title.innerHTML = `<span>📍</span><span>${t('mobile.recap.title','Match Recap — {event}').replace('{event}', escapeHtml((document.getElementById('appTitle')?.textContent||'').trim()||'Event'))}</span>`;
   const sub = document.createElement('div');
   sub.className = 'mt-1 text-sm text-gray-600 dark:text-gray-300';
   const loc = (document.getElementById('chipLocText')?.textContent||'').trim();
@@ -586,7 +613,7 @@ function buildRecapMobileUI(host){
   // Search + filters
   const search = document.createElement('input');
   search.type = 'search';
-  search.placeholder = 'Cari pemain / skor...';
+  search.placeholder = t('mobile.recap.search','Cari pemain / skor...');
   search.className = 'mt-3 filter-input border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100';
   search.id = 'recapSearch';
 
@@ -596,24 +623,28 @@ function buildRecapMobileUI(host){
   const selCourt = document.createElement('select');
   selCourt.className = 'filter-input border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100';
   selCourt.id = 'recapSelCourt';
-  selCourt.appendChild(new Option('Semua Lapangan','all'));
-  courts.forEach(c=> selCourt.appendChild(new Option('Lapangan '+c, String(c))));
+  selCourt.appendChild(new Option(t('mobile.recap.allCourts','Semua Lapangan'),'all'));
+  courts.forEach(c=> selCourt.appendChild(new Option((window.__i18n_get ? __i18n_get('render.court','Lapangan') : 'Lapangan')+' '+c, String(c))));
 
   const selRes = document.createElement('select');
   selRes.className = 'filter-input border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100';
   selRes.id = 'recapSelResult';
-  [['all','Semua Hasil'],['win','Menang'],['lose','Kalah'],['draw','Seri']]
-    .forEach(([v,t])=> selRes.appendChild(new Option(t,v)));
+  [
+    ['all', t('mobile.recap.result.all','Semua Hasil')],
+    ['win', t('mobile.recap.result.win','Menang')],
+    ['lose', t('mobile.recap.result.lose','Kalah')],
+    ['draw', t('mobile.recap.result.draw','Seri')]
+  ].forEach(([v,label])=> selRes.appendChild(new Option(label, v)));
 
   row.appendChild(selCourt); row.appendChild(selRes);
 
   // Stats
   const stats = document.createElement('div');
   stats.className = 'mt-3 grid grid-cols-2 gap-2';
-  const stat1 = statBox('Total Match','0');
-  const stat2 = statBox('Total Poin','0');
-  const stat3 = statBox('Rata Selisih','0');
-  const stat4 = statBox('Skor Paling Ketat','-');
+  const stat1 = statBox(t('recap.metric.totalMatch','Total Match'),'0');
+  const stat2 = statBox(t('recap.metric.totalPoint','Total Poin'),'0');
+  const stat3 = statBox(t('recap.metric.avgMargin','Rata Selisih'),'0');
+  const stat4 = statBox(t('stats.tight','Skor Paling Ketat'),'-');
   stats.appendChild(stat1.wrap); stats.appendChild(stat2.wrap);
   stats.appendChild(stat3.wrap); stats.appendChild(stat4.wrap);
 
@@ -627,7 +658,7 @@ function buildRecapMobileUI(host){
   sec.className = 'rounded-2xl border dark:border-gray-700 bg-white dark:bg-gray-800 p-3 md:p-4';
   const secTitle = document.createElement('div');
   secTitle.className = 'font-semibold text-gray-800 dark:text-gray-100 mb-2 flex items-center gap-2';
-  secTitle.innerHTML = '<span>🎞️</span><span>Rekap Pertandingan</span>';
+  secTitle.innerHTML = `<span>🎞️</span><span>${t('mobile.recap.section','Rekap Pertandingan')}</span>`;
   const list = document.createElement('div');
   list.className = 'space-y-2';
   sec.appendChild(secTitle); sec.appendChild(list);
@@ -676,16 +707,16 @@ function buildRecapMobileUI(host){
         return da - db || a.round - b.round;
       })[0];
       stat4.val.textContent = `${tight.saN}–${tight.sbN}`;
-      if (stat4.label) stat4.label.textContent = `Skor Paling Ketat (Match ${tight.round})`;
+      if (stat4.label) stat4.label.textContent = `${(window.__i18n_get ? __i18n_get('stats.tight','Skor Paling Ketat') : 'Skor Paling Ketat')} (Match ${tight.round})`;
     } else {
       stat4.val.textContent = '-';
-      if (stat4.label) stat4.label.textContent = 'Skor Paling Ketat';
+      if (stat4.label) stat4.label.textContent = (window.__i18n_get ? __i18n_get('stats.tight','Skor Paling Ketat') : 'Skor Paling Ketat');
     }
     list.innerHTML = '';
     if (!rows.length){
       const empty = document.createElement('div');
       empty.className = 'text-sm text-gray-600 dark:text-gray-300';
-      empty.textContent = 'Tidak ada match untuk filter ini.';
+      empty.textContent = (window.__i18n_get ? __i18n_get('stats.noMatch','Tidak ada match untuk filter ini.') : 'Tidak ada match untuk filter ini.');
       list.appendChild(empty);
       return;
     }
@@ -715,11 +746,11 @@ function matchCardMobile(m){
   const top = document.createElement('div');
   top.className = 'text-xs text-gray-600 dark:text-gray-300 mb-2';
   const time = m.time ? ` • ${m.time}` : '';
-  top.textContent = `Match #${m.round} • Lapangan ${m.court}${time}`;
+  top.textContent = `${t('mobile.recap.match','Match #{round}').replace('{round}', m.round)} • ${t('render.court','Lapangan')} ${m.court}${time}`;
   const grid = document.createElement('div');
   grid.className = 'grid grid-cols-5 gap-1 items-center';
-  const a = teamBox('TEAM A', `${m.a1} & ${m.a2}`, m.winner==='A', m.winner==='D');
-  const b = teamBox('TEAM B', `${m.b1} & ${m.b2}`, m.winner==='B', m.winner==='D');
+    const a = teamBox((window.__i18n_get ? __i18n_get('tennis.teamA','Tim A') : 'TEAM A'), `${m.a1} & ${m.a2}`, m.winner==='A', m.winner==='D');
+    const b = teamBox((window.__i18n_get ? __i18n_get('tennis.teamB','Tim B') : 'TEAM B'), `${m.b1} & ${m.b2}`, m.winner==='B', m.winner==='D');
   const score = document.createElement('div');
   score.className='col-span-1 text-center text font-extrabold leading-none select-none';
   score.textContent=`${m.saN}–${m.sbN}`;

@@ -1,5 +1,6 @@
 "use strict";
 // Tennis/Padel Scoreboard overlay adapted from enhancement/tennis-score.html
+const __tsT = (k,f)=> (window.__i18n_get ? __i18n_get(k,f) : f);
 // This file creates a full-screen overlay with the scoreboard UI, brings over
 // all logic (timer, rally/tennis modes, server rotation, modals), and exposes
 // openScoreModal(courtIdx, roundIdx) so existing app buttons can open it.
@@ -14,37 +15,37 @@
       <div class="absolute inset-0 bg-black/50" data-ts-close></div>
       <div class="relative w-full max-w-3xl bg-white shadow-2xl rounded-xl p-4 md:p-8 border border-gray-100 overflow-auto max-h-[95vh]">
         <div class="flex items-start justify-between mb-2">
-          <h1 id="tsTitle" class="text-2xl md:text-3xl font-extrabold text-gray-800">Penghitung Skor</h1>
-          <button id="tsCloseBtn" class="px-3 py-1.5 rounded-lg border text-sm">Tutup</button>
+          <h1 id="tsTitle" class="text-2xl md:text-3xl font-extrabold text-gray-800">${__tsT('tennis.overlay.title','Penghitung Skor')}</h1>
+          <button id="tsCloseBtn" class="px-3 py-1.5 rounded-lg border text-sm">${__tsT('tennis.close','Tutup')}</button>
         </div>
-        <p id="tsSchedule" class="text-sm text-gray-500 mb-3 hidden">Waktu Main Terjadwal: -</p>
+        <p id="tsSchedule" class="text-sm text-gray-500 mb-3 hidden">${__tsT('tennis.schedule','Waktu Main Terjadwal: -')}</p>
 
         <div class="mb-4 flex flex-col md:flex-row justify-center items-center gap-2 md:gap-3 p-3 rounded-xl border border-indigo-200">
-          <label for="mode-selector" class="text-sm font-semibold text-indigo-700">Pilih Metode Skor:</label>
+          <label for="mode-selector" class="text-sm font-semibold text-indigo-700">${__tsT('tennis.modeLabel','Pilih Metode Skor:')}</label>
           <select id="mode-selector" class="py-1 px-3 border border-indigo-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-sm w-full md:w-auto transition duration-150">
-            <option value="TENNIS">Tennis/Padel Score (0, 15, 30, 40)</option>
-            <option value="RALLY">Rally Score (Poin Berlanjut)</option>
+            <option value="TENNIS">${__tsT('tennis.mode.tennis','Tennis/Padel Score (0, 15, 30, 40)')}</option>
+            <option value="RALLY">${__tsT('tennis.mode.rally','Rally Score (Poin Berlanjut)')}</option>
           </select>
         </div>
 
         <div id="timer-display" class="text-3xl font-extrabold text-center text-gray-700 mb-4 p-2 bg-yellow-100 rounded-lg shadow-inner transition duration-300 ease-in-out">11:00</div>
         <button id="start-match-btn" class="w-full py-3 mb-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/50 transition duration-150 ease-in-out">
-          Mulai Pertandingan (11 Menit)
+          ${__tsT('tennis.startWithMinutes','Mulai Pertandingan ({minutes} Menit)').replace('{minutes}','11')}
         </button>
 
         <div id="game-score-display" class="flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0 sm:space-x-8 mb-4 p-3 bg-gray-100 rounded-xl border">
-          <p id="set-score-label" class="text-base font-bold text-gray-700 text-center w-full sm:w-auto">Games Dimenangkan (Set):</p>
+          <p id="set-score-label" class="text-base font-bold text-gray-700 text-center w-full sm:w-auto">${__tsT('tennis.set.gamesLabel','Games Dimenangkan (Set):')}</p>
           <div class="flex justify-center space-x-4 md:space-x-6">
-            <div class="text-lg font-bold text-blue-700">Tim A: <span id="games-t1" class="text-2xl font-extrabold">0</span></div>
-            <div class="text-lg font-bold text-red-700">Tim B: <span id="games-t2" class="text-2xl font-extrabold">0</span></div>
+            <div class="text-lg font-bold text-blue-700">${__tsT('tennis.teamA','Tim A')}: <span id="games-t1" class="text-2xl font-extrabold">0</span></div>
+            <div class="text-lg font-bold text-red-700">${__tsT('tennis.teamB','Tim B')}: <span id="games-t2" class="text-2xl font-extrabold">0</span></div>
           </div>
         </div>
 
-        <div id="status-message" class="text-center text-gray-500 mt-2 text-sm h-6 mb-4 transition duration-300 ease-in-out">Pilih mode skor dan tekan Mulai Pertandingan.</div>
+        <div id="status-message" class="text-center text-gray-500 mt-2 text-sm h-6 mb-4 transition duration-300 ease-in-out">${__tsT('tennis.status.chooseMode','Pilih mode skor dan tekan Mulai Pertandingan.')}</div>
 
         <div class="flex flex-col md:flex-row justify-between items-stretch gap-4">
           <div class="flex-1 p-4 bg-blue-50/70 border border-blue-100 rounded-lg flex flex-col items-center">
-            <h2 class="text-lg md:text-xl font-extrabold text-blue-800 tracking-wider mb-2">Tim A</h2>
+            <h2 class="text-lg md:text-xl font-extrabold text-blue-800 tracking-wider mb-2">${__tsT('tennis.teamA','Tim A')}</h2>
             <div class="text-xs text-gray-600 mb-2 flex justify-center gap-3 w-full md:text-sm md:gap-4">
               <div class="player-name-wrap">
                 <span class="serve-badge" data-serve-player="1"></span>
@@ -62,7 +63,7 @@
             </div>
           </div>
           <div class="flex-1 p-4 bg-red-50/70 border border-red-100 rounded-lg flex flex-col items-center">
-            <h2 class="text-lg md:text-xl font-extrabold text-red-800 tracking-wider mb-2">Tim B</h2>
+            <h2 class="text-lg md:text-xl font-extrabold text-red-800 tracking-wider mb-2">${__tsT('tennis.teamB','Tim B')}</h2>
             <div class="text-xs text-gray-600 mb-2 flex justify-center gap-3 w-full md:text-sm md:gap-4">
               <div class="player-name-wrap">
                 <span class="serve-badge" data-serve-player="3"></span>
@@ -82,41 +83,41 @@
         </div>
 
         <div class="mt-4 space-y-3">
-          <button id="finish-match-btn" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg">Selesai & Lihat Hasil Pertandingan</button>
-          <button id="force-reset-btn" class="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg">Reset Skor (0–0)</button>
+          <button id="finish-match-btn" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg">${__tsT('tennis.finishMatch','Selesai & Lihat Hasil Pertandingan')}</button>
+          <button id="force-reset-btn" class="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg">${__tsT('tennis.resetZero','Reset Skor (0-0)')}</button>
         </div>
 
         <!-- Modal Game Won -->
         <div id="game-won-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 items-center justify-center p-4">
           <div class="bg-white rounded-xl p-6 max-w-sm w-full shadow-2xl text-center transform scale-100 transition-all duration-300">
             <svg class="mx-auto h-12 w-12 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            <h3 class="text-2xl font-bold text-gray-900 mt-3">GAME DIMENANGKAN!</h3>
-            <p class="text-lg text-gray-700 mt-2">Pemenang: <span id="winner-text" class="font-extrabold text-green-600"></span></p>
-            <p class="text-sm text-gray-500 mt-1">Skor game saat ini akan direset. Server berikutnya adalah <span id="next-server-text" class="font-bold text-indigo-600"></span>.</p>
-            <button id="start-new-game-btn" class="mt-5 w-full py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg">Mulai Game Berikutnya</button>
+            <h3 class="text-2xl font-bold text-gray-900 mt-3">${__tsT('tennis.gameWonTitle','GAME DIMENANGKAN!')}</h3>
+            <p class="text-lg text-gray-700 mt-2">${__tsT('tennis.winnerLabel','Pemenang:')} <span id="winner-text" class="font-extrabold text-green-600"></span></p>
+            <p class="text-sm text-gray-500 mt-1">${__tsT('tennis.gameResetNote','Skor game saat ini akan direset. Server berikutnya adalah ')}<span id="next-server-text" class="font-bold text-indigo-600"></span>.</p>
+            <button id="start-new-game-btn" class="mt-5 w-full py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg">${__tsT('tennis.startNextGame','Mulai Game Berikutnya')}</button>
           </div>
         </div>
 
         <!-- Modal Match Results -->
         <div id="match-results-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 items-center justify-center p-4">
           <div class="bg-white rounded-xl p-8 max-w-md w-full shadow-2xl text-center">
-            <h3 class="text-2xl md:text-3xl font-extrabold text-gray-900 mb-4">HASIL AKHIR PERTANDINGAN</h3>
+            <h3 class="text-2xl md:text-3xl font-extrabold text-gray-900 mb-4">${__tsT('tennis.matchResultTitle','HASIL AKHIR PERTANDINGAN')}</h3>
             <div class="border-t border-b py-4 mb-4">
-              <p class="text-xl text-gray-600 font-medium"><span id="final-score-label">Total Games</span>:</p>
+              <p class="text-xl text-gray-600 font-medium"><span id="final-score-label">${__tsT('tennis.finalScoreLabel','Total Games')}</span>:</p>
               <p id="final-score-text" class="text-5xl font-black text-indigo-600 mt-2">0 - 0</p>
             </div>
-            <p class="text-xl text-gray-700 font-semibold mt-4">Pemenang Pertandingan:</p>
+            <p class="text-xl text-gray-700 font-semibold mt-4">${__tsT('tennis.matchWinnerLabel','Pemenang Pertandingan:')}</p>
             <p id="match-winner-text" class="text-2xl font-extrabold text-green-700 mt-1"></p>
             <p id="match-winner-names" class="text-lg text-gray-600 mt-1 hidden"></p>
             <div id="next-match-info" class="mt-6 hidden">
               <div class="mx-auto max-w-sm rounded-2xl border border-indigo-100 bg-indigo-50/60 px-4 py-3 text-center">
-                <p class="text-xs font-semibold uppercase tracking-wide text-indigo-600">Pertandingan Selanjutnya</p>
+                <p class="text-xs font-semibold uppercase tracking-wide text-indigo-600">${__tsT('tennis.nextMatchTitle','Pertandingan Selanjutnya')}</p>
                 <p id="next-match-players" class="mt-2 text-base font-semibold text-gray-700"></p>
                 <p id="next-match-time" class="mt-1 text-xs text-gray-500"></p>
               </div>
             </div>
-            <p id="event-finished-note" class="mt-4 text-sm text-gray-500 hidden">Permainan di event ini sudah selesai.</p>
-            <button id="new-match-btn" class="mt-6 w-full py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg">Mulai Pertandingan Baru</button>
+            <p id="event-finished-note" class="mt-4 text-sm text-gray-500 hidden">${__tsT('tennis.eventFinished','Permainan di event ini sudah selesai.')}</p>
+            <button id="new-match-btn" class="mt-6 w-full py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg">${__tsT('tennis.newMatch','Mulai Pertandingan Baru')}</button>
           </div>
         </div>
 
@@ -125,10 +126,10 @@
           <div class="bg-white rounded-xl p-6 max-w-sm w-full shadow-2xl text-center">
             <svg class="mx-auto h-12 w-12 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
             <h3 id="confirm-modal-title" class="text-xl font-bold text-gray-900 mt-3"></h3>
-            <p id="confirm-modal-desc" class="text-sm text-gray-500 mt-2">Tindakan ini akan mengakhiri atau mereset skor pertandingan saat ini.</p>
+            <p id="confirm-modal-desc" class="text-sm text-gray-500 mt-2">${__tsT('tennis.confirm.desc','Tindakan ini akan mengakhiri atau mereset skor pertandingan saat ini.')}</p>
             <div class="mt-5 flex justify-between gap-3">
-              <button id="cancel-action-btn" class="flex-1 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold rounded-lg transition duration-150">Batal</button>
-              <button id="confirm-action-btn" class="flex-1 py-2 bg-orange-600 hover:bg-orange-700 text-white font-semibold rounded-lg transition duration-150">Ya, Lanjutkan</button>
+              <button id="cancel-action-btn" class="flex-1 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold rounded-lg transition duration-150">${__tsT('tennis.cancel','Batal')}</button>
+              <button id="confirm-action-btn" class="flex-1 py-2 bg-orange-600 hover:bg-orange-700 text-white font-semibold rounded-lg transition duration-150">${__tsT('tennis.confirm.ok','Ya, Lanjutkan')}</button>
             </div>
           </div>
         </div>
@@ -178,6 +179,60 @@
     </svg>
   `;
 
+  function localizeOverlayTexts(){
+    const setText = (el, key, fallback)=>{ if (el) el.textContent = __tsT(key, fallback); };
+    setText(document.getElementById('tsTitle'), 'tennis.overlay.title', 'Penghitung Skor');
+    setText(document.getElementById('tsCloseBtn'), 'tennis.close', 'Tutup');
+    const sched = document.getElementById('tsSchedule');
+    if (sched) sched.textContent = __tsT('tennis.schedule','Waktu Main Terjadwal: -');
+    const modeLabel = document.querySelector('label[for=\"mode-selector\"]');
+    setText(modeLabel, 'tennis.modeLabel','Pilih Metode Skor:');
+    if (modeSelectorEl){
+      const optTennis = modeSelectorEl.querySelector('option[value=\"TENNIS\"]');
+      const optRally = modeSelectorEl.querySelector('option[value=\"RALLY\"]');
+      setText(optTennis, 'tennis.mode.tennis','Tennis/Padel Score (0, 15, 30, 40)');
+      setText(optRally, 'tennis.mode.rally','Rally Score (Poin Berlanjut)');
+    }
+    setText(setScoreLabelEl, 'tennis.set.gamesLabel','Games Dimenangkan (Set):');
+    setText(statusMessage, 'tennis.status.chooseMode','Pilih mode skor dan tekan Mulai Pertandingan.');
+    setStartButtonLabel();
+    setText(finishBtnEl, 'tennis.finishMatch','Selesai & Lihat Hasil Pertandingan');
+    setText(forceResetBtnEl, 'tennis.resetZero','Reset Skor (0-0)');
+    setText(document.getElementById('start-new-game-btn'), 'tennis.startNextGame','Mulai Game Berikutnya');
+    setText(document.getElementById('new-match-btn'), 'tennis.newMatch','Mulai Pertandingan Baru');
+    setText(document.getElementById('final-score-label'), 'tennis.finalScoreLabel','Total Games');
+    const confirmCancelBtn = document.getElementById('cancel-action-btn');
+    const confirmOkBtn = document.getElementById('confirm-action-btn');
+    setText(confirmCancelBtn, 'tennis.cancel','Batal');
+    setText(confirmOkBtn, 'tennis.confirm.ok','Ya, Lanjutkan');
+    if (confirmModalDesc) confirmModalDesc.textContent = __tsT('tennis.confirm.desc','Tindakan ini akan mengakhiri atau mereset skor pertandingan saat ini.');
+    if (confirmModalTitle) confirmModalTitle.textContent = __tsT('tennis.confirm.title','Konfirmasi Tindakan');
+
+    // Team headings
+    const teamTitles = document.querySelectorAll('#tsOverlay h2');
+    if (teamTitles[0]) teamTitles[0].textContent = __tsT('tennis.teamA','Tim A');
+    if (teamTitles[1]) teamTitles[1].textContent = __tsT('tennis.teamB','Tim B');
+
+    // Game-won modal
+    const gwTitle = document.querySelector('#game-won-modal h3');
+    const gwParas = document.querySelectorAll('#game-won-modal p.text-lg, #game-won-modal p.text-sm');
+    setText(gwTitle, 'tennis.gameWonTitle','GAME DIMENANGKAN!');
+    if (gwParas[0]) gwParas[0].innerHTML = `${__tsT('tennis.winnerLabel','Pemenang:')} <span id="winner-text" class="font-extrabold text-green-600"></span>`;
+    if (gwParas[1]) gwParas[1].innerHTML = `${__tsT('tennis.gameResetNote','Skor game saat ini akan direset. Server berikutnya adalah ')}<span id="next-server-text" class="font-bold text-indigo-600"></span>.`;
+    setText(document.getElementById('start-new-game-btn'), 'tennis.startNextGame','Mulai Game Berikutnya');
+
+    // Match results modal
+    const mrTitle = document.querySelector('#match-results-modal h3');
+    setText(mrTitle, 'tennis.matchResultTitle','HASIL AKHIR PERTANDINGAN');
+    setText(document.getElementById('final-score-label'), 'tennis.finalScoreLabel','Total Games');
+    const winnerLabel = document.querySelector('#match-results-modal p.text-xl.text-gray-700.font-semibold');
+    setText(winnerLabel, 'tennis.matchWinnerLabel','Pemenang Pertandingan:');
+    const nextMatchTitle = document.querySelector('#next-match-info .text-xs.font-semibold');
+    setText(nextMatchTitle, 'tennis.nextMatchTitle','Pertandingan Selanjutnya');
+    setText(document.getElementById('event-finished-note'), 'tennis.eventFinished','Permainan di event ini sudah selesai.');
+    setText(document.getElementById('new-match-btn'), 'tennis.newMatch','Mulai Pertandingan Baru');
+  }
+
   function ensureOverlay(){
     if (tsCtx.initialized) return;
     const wrap = document.createElement('div');
@@ -187,6 +242,7 @@
     style.textContent = styleCss;
     document.head.appendChild(style);
     bindElements();
+    localizeOverlayTexts();
     tsCtx.initialized = true;
   }
 
@@ -211,7 +267,10 @@
     try { return Math.max(1, parseInt(byId('minutesPerRound').value || '11', 10)); } catch { return 11; }
   }
   function setStartButtonLabel(){
-    try { const m = getRoundMinutes(); if (startMatchBtn) startMatchBtn.textContent = `Mulai Pertandingan (${m} Menit)`; } catch {}
+    try {
+      const m = getRoundMinutes();
+      if (startMatchBtn) startMatchBtn.textContent = __tsT('tennis.startWithMinutes','Mulai Pertandingan ({minutes} Menit)').replace('{minutes}', m);
+    } catch {}
   }
 
   // ===== State and refs ===== //
@@ -351,7 +410,7 @@
   function formatTeamNames(teamId){
     const ids = teamId===1 ? [1,2] : teamId===2 ? [3,4] : [];
     const names = ids.map(id => (playerDetails[id]?.name || '').trim()).filter(Boolean);
-    if (!names.length) return teamId===1 ? 'Tim A' : teamId===2 ? 'Tim B' : 'Tim';
+    if (!names.length) return teamId===1 ? __tsT('tennis.teamA','Tim A') : teamId===2 ? __tsT('tennis.teamB','Tim B') : __tsT('tennis.team','Tim');
     return names.join(' & ');
   }
   function computeScheduledWindow(roundIdx){
@@ -382,7 +441,8 @@
     if (!tsScheduleEl) return;
     const slot = computeScheduledWindow(roundIdx);
     if (slot){
-      tsScheduleEl.textContent = `Waktu Main Terjadwal: ${slot.start} - ${slot.end}`;
+      tsScheduleEl.textContent = __tsT('tennis.scheduledRange','Terjadwal: {start} - {end}')
+        .replace('{start}', slot.start).replace('{end}', slot.end);
       tsScheduleEl.classList.remove('hidden');
     } else {
       tsScheduleEl.textContent = '';
@@ -438,8 +498,8 @@
     };
     const teamANames = getTeamNames(1);
     const teamBNames = getTeamNames(2);
-    const safeTeamA = teamANames.length ? teamANames.join(' & ') : 'Tim A';
-    const safeTeamB = teamBNames.length ? teamBNames.join(' & ') : 'Tim B';
+    const safeTeamA = teamANames.length ? teamANames.join(' & ') : __tsT('tennis.teamA','Tim A');
+    const safeTeamB = teamBNames.length ? teamBNames.join(' & ') : __tsT('tennis.teamB','Tim B');
     const hasPlayers = teamANames.length || teamBNames.length;
     const html = hasPlayers
       ? `<div class="flex flex-col items-center text-gray-700 text-sm md:text-base gap-1">
@@ -447,16 +507,16 @@
           <span class="text-xs uppercase tracking-wide text-indigo-500">vs</span>
           <span>${safeTeamB}</span>
         </div>`
-      : '<div class="text-gray-500 text-sm">Pemain belum ditentukan</div>';
+      : `<div class="text-gray-500 text-sm">${__tsT('tennis.nextMatchUnset','Pemain belum ditentukan')}</div>`;
     try{
       nextMatchPlayersEl.innerHTML = html;
     }catch{
-      nextMatchPlayersEl.textContent = hasPlayers ? `${safeTeamA} vs ${safeTeamB}` : 'Pemain belum ditentukan';
+      nextMatchPlayersEl.textContent = hasPlayers ? `${safeTeamA} vs ${safeTeamB}` : __tsT('tennis.nextMatchUnset','Pemain belum ditentukan');
     }
     if (nextMatchTimeEl){
       const slot = computeScheduledWindow(nextRoundIdx);
       if (slot){
-        nextMatchTimeEl.textContent = `Terjadwal: ${slot.start} - ${slot.end}`;
+        nextMatchTimeEl.textContent = __tsT('tennis.scheduledRange','Terjadwal: {start} - {end}').replace('{start}', slot.start).replace('{end}', slot.end);
         nextMatchTimeEl.classList.remove('hidden');
       } else {
         nextMatchTimeEl.textContent = '';
@@ -568,31 +628,32 @@ function showConfirmationModal(actionType, opts){
     let titleText = ""; let buttonText = "";
     if (actionType==='reset'){
       if (pendingCloseAfterReset){
-        titleText = 'Tutup & Batalkan Pertandingan?';
-        buttonText = 'Ya, Batalkan & Tutup';
-        if (confirmModalDesc) confirmModalDesc.textContent = 'Menutup popup akan membatalkan pertandingan yang sedang berlangsung dan mengosongkan skor.';
+        titleText = __tsT('tennis.confirm.closeTitle','Tutup & Batalkan Pertandingan?');
+        buttonText = __tsT('tennis.confirm.closeOk','Ya, Batalkan & Tutup');
+        if (confirmModalDesc) confirmModalDesc.textContent = __tsT('tennis.confirm.close','Menutup popup akan membatalkan pertandingan yang sedang berlangsung dan mengosongkan skor.');
       } else {
-        titleText = 'Yakin Ingin Me-Reset Pertandingan?';
-        buttonText = 'Ya, Reset Sekarang';
-        if (confirmModalDesc) confirmModalDesc.textContent = 'Tindakan ini akan mereset skor pertandingan saat ini.';
+        titleText = __tsT('tennis.confirm.resetTitle','Yakin Ingin Me-Reset Pertandingan?');
+        buttonText = __tsT('tennis.confirm.resetOk','Ya, Reset Sekarang');
+        if (confirmModalDesc) confirmModalDesc.textContent = __tsT('tennis.confirm.reset','Tindakan ini akan mereset skor pertandingan saat ini.');
       }
     }
     else if (actionType==='reset-clear'){
-      titleText = 'Yakin Ingin Me-Reset Pertandingan?';
-      buttonText = 'Ya, Reset Sekarang';
-      if (confirmModalDesc) confirmModalDesc.textContent = 'Tindakan ini akan mereset skor pertandingan saat ini menjadi kosong (0–0).';
+      titleText = __tsT('tennis.confirm.resetTitle','Yakin Ingin Me-Reset Pertandingan?');
+      buttonText = __tsT('tennis.confirm.resetOk','Ya, Reset Sekarang');
+      if (confirmModalDesc) confirmModalDesc.textContent = __tsT('tennis.confirm.resetZero','Tindakan ini akan mereset skor pertandingan saat ini menjadi kosong (0-0).');
     }
     else if (actionType==='finish'){
-      titleText = 'Yakin Ingin Menyelesaikan Pertandingan?';
-      buttonText = 'Ya, Selesaikan Sekarang';
-      if (confirmModalDesc) confirmModalDesc.textContent = 'Skor saat ini akan disimpan sebagai hasil akhir pertandingan.';
+      titleText = __tsT('tennis.confirm.finishTitle','Yakin Ingin Menyelesaikan Pertandingan?');
+      buttonText = __tsT('tennis.confirm.finishOk','Ya, Selesaikan Sekarang');
+      if (confirmModalDesc) confirmModalDesc.textContent = __tsT('tennis.confirm.save','Skor saat ini akan disimpan sebagai hasil akhir pertandingan.');
     }
     else return;
     if (confirmModalTitle) confirmModalTitle.textContent = titleText;
     if (confirmActionBtn) confirmActionBtn.textContent = buttonText;
     if (actionConfirmModal){ actionConfirmModal.classList.remove('hidden'); actionConfirmModal.classList.add('flex'); }
   }
-  function confirmAction(){
+
+function confirmAction(){
     if (actionConfirmModal) actionConfirmModal.classList.add('hidden');
     if (currentPendingAction==='reset') { performMatchReset(); if (pendingCloseAfterReset) hideOverlay(); }
     else if (currentPendingAction==='reset-clear') { clearRoundScoreImmediate(); }
@@ -628,7 +689,7 @@ function showConfirmationModal(actionType, opts){
           if (live) live.classList.add('hidden');
           if (done) done.classList.add('hidden');
           const btn = actions?.querySelector('button');
-          if (btn){ btn.textContent='Mulai Main'; btn.classList.remove('hidden'); }
+          if (btn){ btn.textContent=__tsT('tennis.start','Mulai Main'); btn.classList.remove('hidden'); }
         });
       }catch{}
       // Save to Cloud immediately
@@ -653,7 +714,7 @@ function showConfirmationModal(actionType, opts){
     resetMatch(true,true);
     setStartButtonLabel();
     try{ if (statusMessage) statusMessage.classList.remove('hidden'); }catch{}
-    try{ if (finishBtnEl) finishBtnEl.textContent = 'Selesai & Lihat Hasil Pertandingan'; }catch{}
+    try{ if (finishBtnEl) finishBtnEl.textContent = __tsT('tennis.finishMatch','Selesai & Lihat Hasil Pertandingan'); }catch{}
   }
 
   function toggleMatchState(){
@@ -666,7 +727,7 @@ function showConfirmationModal(actionType, opts){
     setStartButtonLabel();
     startMatchBtn.classList.remove('bg-red-600','hover:bg-red-700','shadow-red-500/50');
     startMatchBtn.classList.add('bg-indigo-600','hover:bg-indigo-700','shadow-indigo-500/50');
-    statusMessage.textContent = 'Pertandingan direset, siap dimulai.';
+    statusMessage.textContent = __tsT('tennis.status.reset','Pertandingan direset, siap dimulai.');
     statusMessage.className = 'text-center text-indigo-600 font-bold mt-2 text-md';
     // Total reset untuk ronde aktif: set skor kosong (tabel), hapus started/finished, dan simpan ke Cloud
     try{
@@ -688,7 +749,7 @@ function showConfirmationModal(actionType, opts){
               if (live){ live.classList.add('hidden'); }
               if (done){ done.classList.add('hidden'); }
               const btn = actions?.querySelector('button');
-              if (btn){ btn.textContent='Mulai Main'; btn.classList.remove('hidden'); }
+               if (btn){ btn.textContent=__tsT('tennis.start','Mulai Main'); btn.classList.remove('hidden'); }
               const aInp = row.querySelector('.rnd-scoreA input');
               const bInp = row.querySelector('.rnd-scoreB input');
               if (aInp) aInp.value = '';
@@ -711,14 +772,14 @@ function showConfirmationModal(actionType, opts){
       const r = (roundsByCourt?.[tsCtx.court]||[])[tsCtx.round] || {};
       const ready = !!(r.a1 && r.a2 && r.b1 && r.b2);
       if (!ready){
-        tsShowToast('Nama pemain belum lengkap untuk ronde ini. Lengkapi Tim A dan Tim B terlebih dahulu.', 'error');
+        tsShowToast(__tsT('tennis.error.incompletePlayers','Nama pemain belum lengkap untuk ronde ini. Lengkapi Tim A dan Tim B terlebih dahulu.'), 'error');
         return;
       }
     }catch{}
     resetMatch(true,false);
     state.timerSeconds = getRoundMinutes()*60;
     state.isMatchRunning = true;
-    startMatchBtn.textContent = 'Reset Pertandingan';
+    startMatchBtn.textContent = __tsT('tennis.resetMatch','Reset Pertandingan');
     startMatchBtn.classList.remove('bg-indigo-600','hover:bg-indigo-700','shadow-indigo-500/50');
     startMatchBtn.classList.add('bg-red-600','hover:bg-red-700','shadow-red-500/50');
 
@@ -779,17 +840,17 @@ function showConfirmationModal(actionType, opts){
       modeSelectorEl.classList.toggle('disabled-select', dis);
     }
     updateServeBadges();
-    if (state.isMatchFinished){ statusMessage.textContent='PERTANDINGAN SELESAI!'; statusMessage.className='text-center text-red-600 font-bold mt-2 text-md'; if (state.isRecalcMode && statusMessage) statusMessage.classList.add('hidden'); return; }
+    if (state.isMatchFinished){ statusMessage.textContent=__tsT('tennis.status.finished','PERTANDINGAN SELESAI!'); statusMessage.className='text-center text-red-600 font-bold mt-2 text-md'; if (state.isRecalcMode && statusMessage) statusMessage.classList.add('hidden'); return; }
     state.isDeuce=false; state.isAdvantageT1=false; state.isAdvantageT2=false;
     let scoreTextT1, scoreTextT2;
     if (state.scoringMode==='RALLY'){
       gamesDisplayContainer.classList.add('hidden');
-      setScoreLabelEl.textContent = 'Total Poin Dimenangkan:';
+      setScoreLabelEl.textContent = __tsT('tennis.set.scoreLabel','Total Poin Dimenangkan:');
       scoreTextT1 = String(state.gamesT1); scoreTextT2 = String(state.gamesT2);
       if (state.isMatchRunning){
         const totalPoints = state.gamesT1 + state.gamesT2;
         if (totalPoints===0 || totalPoints % 2 !== 0){
-          statusMessage.textContent = 'Mode RALLY: Poin diakumulasikan hingga waktu habis.';
+          statusMessage.textContent = __tsT('tennis.status.rally','Mode RALLY: Poin diakumulasikan hingga waktu habis.');
           statusMessage.className = 'text-center text-gray-500 mt-2 text-sm';
         }
       }
@@ -807,17 +868,17 @@ function showConfirmationModal(actionType, opts){
         else if (state.scoreT1===state.scoreT2+1){ state.isAdvantageT1=true; state.isAdvantageT2=false; scoreTextT1='Adv'; scoreTextT2='40'; }
         else if (state.scoreT2===state.scoreT1+1){ state.isAdvantageT2=true; state.isAdvantageT1=false; scoreTextT1='40'; scoreTextT2='Adv'; }
       }
-      setScoreLabelEl.textContent = 'Games Dimenangkan (Set):';
+      setScoreLabelEl.textContent = __tsT('tennis.set.gamesLabel','Games Dimenangkan (Set):');
       gamesDisplayT1.textContent = state.gamesT1;
       gamesDisplayT2.textContent = state.gamesT2;
       if (state.isRecalcMode){ if (statusMessage) statusMessage.classList.add('hidden'); }
       else if (state.isMatchRunning){
-        if (state.isDeuce){ statusMessage.textContent='Status: DEUCE (40-40)'; statusMessage.className='text-center text-yellow-600 font-bold mt-2 text-lg'; }
-        else if (state.isAdvantageT1){ statusMessage.textContent='Status: ADVANTAGE Tim A'; statusMessage.className='text-center text-green-600 font-bold mt-2 text-lg'; }
-        else if (state.isAdvantageT2){ statusMessage.textContent='Status: ADVANTAGE Tim B'; statusMessage.className='text-center text-red-600 font-bold mt-2 text-lg'; }
-        else { statusMessage.textContent='Permainan sedang berlangsung...'; statusMessage.className='text-center text-gray-500 mt-2 text-sm'; }
+        if (state.isDeuce){ statusMessage.textContent=__tsT('tennis.status.deuce','Status: DEUCE (40-40)'); statusMessage.className='text-center text-yellow-600 font-bold mt-2 text-lg'; }
+        else if (state.isAdvantageT1){ statusMessage.textContent=__tsT('tennis.status.advA','Status: ADVANTAGE Tim A'); statusMessage.className='text-center text-green-600 font-bold mt-2 text-lg'; }
+        else if (state.isAdvantageT2){ statusMessage.textContent=__tsT('tennis.status.advB','Status: ADVANTAGE Tim B'); statusMessage.className='text-center text-red-600 font-bold mt-2 text-lg'; }
+        else { statusMessage.textContent=__tsT('tennis.status.inProgress','Permainan sedang berlangsung...'); statusMessage.className='text-center text-gray-500 mt-2 text-sm'; }
       } else if (!state.isMatchFinished){
-        if (!state.isRecalcMode){ statusMessage.textContent = 'Pilih mode skor dan tekan Mulai Pertandingan.'; statusMessage.className = 'text-center text-gray-500 mt-2 text-sm'; }
+        if (!state.isRecalcMode){ statusMessage.textContent = __tsT('tennis.status.chooseMode','Pilih mode skor dan tekan Mulai Pertandingan.'); statusMessage.className = 'text-center text-gray-500 mt-2 text-sm'; }
         else if (statusMessage) statusMessage.classList.add('hidden');
       }
     }
@@ -832,7 +893,7 @@ function showConfirmationModal(actionType, opts){
     });
     if (timerDisplayEl){
       // In recalc mode, keep finished text; otherwise show ticking time
-      if (state.isRecalcMode) timerDisplayEl.textContent = 'Permainan Selesai';
+      if (state.isRecalcMode) timerDisplayEl.textContent = __tsT('tennis.status.finished','PERTANDINGAN SELESAI!');
       else timerDisplayEl.textContent = formatTime(state.timerSeconds);
       timerDisplayEl.classList.remove('bg-yellow-100','text-gray-700','bg-red-100','text-red-600','bg-green-100','text-green-800');
       if (state.timerInterval){
@@ -857,7 +918,7 @@ function showConfirmationModal(actionType, opts){
     if (dRaw===0) return;
     const d = dRaw;
     if (!state.isRecalcMode && (state.isMatchFinished || !state.isMatchRunning || (gameWonModal && !gameWonModal.classList.contains('hidden')))){
-      statusMessage.textContent = 'Mulai pertandingan terlebih dahulu!';
+      statusMessage.textContent = __tsT('tennis.status.startFirst','Mulai pertandingan terlebih dahulu!');
       statusMessage.className = 'text-center text-orange-600 font-bold mt-2 text-md';
       return;
     }
@@ -874,7 +935,8 @@ function showConfirmationModal(actionType, opts){
       if (!state.isRecalcMode){
         if (pointDelta>0 && totalPoints>0 && totalPoints % 2 === 0){
           rotateServer();
-          statusMessage.textContent = `Server berotasi ke ${playerDetails[state.currentPlayerServer].name} (Setiap 2 poin).`;
+          statusMessage.textContent = __tsT('tennis.serverRotate','Server berotasi ke {player} (Setiap 2 poin).')
+            .replace('{player}', playerDetails[state.currentPlayerServer].name || '');
           statusMessage.className = 'text-center text-orange-600 font-bold mt-2 text-md';
         } else if (pointDelta<0 && prevTotalPoints !== totalPoints){
           rewindServerAfterCorrection(prevTotalPoints, totalPoints);
@@ -925,7 +987,7 @@ function showConfirmationModal(actionType, opts){
     if (state.gameWinPending) return; // safety guard
     state.gameWinPending = true;
     if (winningTeam===1) state.gamesT1++; else state.gamesT2++;
-    const winnerName = winningTeam===1 ? 'Tim A' : 'Tim B';
+    const winnerName = winningTeam===1 ? __tsT('tennis.teamA','Tim A') : __tsT('tennis.teamB','Tim B');
     $("winner-text").textContent = winnerName;
     let nextServerId; switch(state.currentPlayerServer){case 1: nextServerId=3; break; case 3: nextServerId=2; break; case 2: nextServerId=4; break; case 4: nextServerId=1; break; }
     const nextServerEl = $("next-server-text"); if (nextServerEl) nextServerEl.textContent = playerDetails[nextServerId]?.name || '';
@@ -954,7 +1016,7 @@ function showConfirmationModal(actionType, opts){
     }catch{}
   }
   function startNewGame(){
-    if (!state.isMatchRunning){ statusMessage.textContent='Mulai pertandingan terlebih dahulu!'; statusMessage.className='text-center text-orange-600 font-bold mt-2 text-md'; return; }
+    if (!state.isMatchRunning){ statusMessage.textContent = __tsT('tennis.status.startFirst','Mulai pertandingan terlebih dahulu!'); statusMessage.className='text-center text-orange-600 font-bold mt-2 text-md'; return; }
     if (state.scoringMode==='TENNIS'){
       state.scoreT1=0; state.scoreT2=0; state.isDeuce=false; state.isAdvantageT1=false; state.isAdvantageT2=false; rotateServer();
     }
@@ -965,19 +1027,19 @@ function showConfirmationModal(actionType, opts){
   async function finishMatch(fromTimer=false, confirmed=false){
     if (state.isMatchRunning && !fromTimer && !confirmed){
       const totalScore = state.gamesT1 + state.gamesT2;
-      if (totalScore===0){ tsShowToast('PERINGATAN: Skor masih 0-0. Tidak ada hasil untuk diselesaikan.', 'error'); return; }
+      if (totalScore===0){ tsShowToast(__tsT('tennis.warn.noScoreFinish','PERINGATAN: Skor masih 0-0. Tidak ada hasil untuk diselesaikan.'), 'error'); return; }
       showConfirmationModal('finish'); return;
     }
     const totalScore = state.gamesT1 + state.gamesT2;
-    if (!fromTimer && totalScore===0){ tsShowToast('PERINGATAN: Skor masih 0-0. Hasil kosong tidak disimpan.', 'error'); return; }
+    if (!fromTimer && totalScore===0){ tsShowToast(__tsT('tennis.warn.noScoreSave','PERINGATAN: Skor masih 0-0. Hasil kosong tidak disimpan.'), 'error'); return; }
     state.isMatchFinished=true; state.isMatchRunning=false; state.gameWinPending=false;
     if (state.timerInterval){ clearInterval(state.timerInterval); state.timerInterval=null; setStartButtonLabel(); startMatchBtn.classList.remove('bg-red-600','hover:bg-red-700','shadow-red-500/50'); startMatchBtn.classList.add('bg-indigo-600','hover:bg-indigo-700','shadow-indigo-500/50'); if (!fromTimer) state.timerSeconds=0; }
     if (gameWonModal) gameWonModal.classList.add('hidden');
-    let matchWinner; const scoreLabel = state.scoringMode==='RALLY' ? 'Total Poin' : 'Total Games';
+    let matchWinner; const scoreLabel = state.scoringMode==='RALLY' ? __tsT('tennis.totalPointsLabel','Total Poin') : __tsT('tennis.finalScoreLabel','Total Games');
     let winnerTeam = 0;
-    if (state.gamesT1>state.gamesT2) { matchWinner='Tim A'; winnerTeam = 1; }
-    else if (state.gamesT2>state.gamesT1) { matchWinner='Tim B'; winnerTeam = 2; }
-    else matchWinner=`Seri/Tidak ditentukan (${scoreLabel} sama)`;
+    if (state.gamesT1>state.gamesT2) { matchWinner=__tsT('tennis.teamA','Tim A'); winnerTeam = 1; }
+    else if (state.gamesT2>state.gamesT1) { matchWinner=__tsT('tennis.teamB','Tim B'); winnerTeam = 2; }
+    else matchWinner=__tsT('tennis.matchTie','Seri/Tidak ditentukan ({label} sama)').replace('{label}', scoreLabel);
     $("final-score-text").textContent = `${state.gamesT1} - ${state.gamesT2}`;
     $("match-winner-text").textContent = matchWinner; $("final-score-label").textContent = scoreLabel;
     const winnerNamesTarget = matchWinnerNamesEl || $("match-winner-names");
@@ -1043,18 +1105,18 @@ function showConfirmationModal(actionType, opts){
               if (live) live.classList.add('hidden');
               if (done) done.classList.add('hidden');
               const btn = actions?.querySelector('button');
-              if (btn){ btn.textContent='Mulai Main'; btn.classList.remove('hidden'); }
+              if (btn){ btn.textContent=__tsT('tennis.start','Mulai Main'); btn.classList.remove('hidden'); }
             } else {
               if (live) { live.classList.add('fade-out'); setTimeout(()=>{ live.classList.add('hidden'); live.classList.remove('fade-out'); },150); }
               if (done) { done.classList.remove('hidden'); done.classList.add('fade-in'); setTimeout(()=>done.classList.remove('fade-in'),200); }
               const btn = actions?.querySelector('button');
-              if (btn){ btn.textContent='Hitung Ulang'; btn.classList.remove('hidden'); }
+              if (btn){ btn.textContent=__tsT('tennis.recalc','Hitung Ulang'); btn.classList.remove('hidden'); }
             }
             // Show "Hitung Ulang" for owner only after finished
             const btn = actions?.querySelector('button');
             const allowRecalc = (typeof window.isOwnerNow === 'function') ? window.isOwnerNow() : !!window._isOwnerUser;
             if (btn){
-              btn.textContent = 'Hitung Ulang';
+              btn.textContent = __tsT('tennis.recalc','Hitung Ulang');
               btn.disabled = false;
               btn.classList.remove('opacity-50','cursor-not-allowed');
               btn.classList.toggle('hidden', !allowRecalc);
@@ -1072,7 +1134,7 @@ function showConfirmationModal(actionType, opts){
               nextBtn = document.createElement('button');
               nextBtn.id = 'next-match-btn';
               nextBtn.className = 'w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg';
-              nextBtn.textContent = 'Lanjut ke Match Berikutnya';
+              nextBtn.textContent = __tsT('tennis.nextMatch','Lanjut ke Match Berikutnya');
               if (closeBtn && closeBtn.parentNode){
                 closeBtn.parentNode.insertBefore(nextBtn, closeBtn);
                 const spacer = document.createElement('div'); spacer.className = 'h-3'; closeBtn.parentNode.insertBefore(spacer, closeBtn);
@@ -1084,7 +1146,7 @@ function showConfirmationModal(actionType, opts){
                 try{
                   const c = tsCtx.court||0; const next = (tsCtx.round||0)+1;
                   const courtArr = roundsByCourt?.[c]||[];
-                  if (!courtArr[next]){ tsShowToast('Tidak ada match berikutnya di lapangan ini', 'warning'); return; }
+                  if (!courtArr[next]){ tsShowToast(__tsT('tennis.noNextMatch','Tidak ada match berikutnya di lapangan ini'), 'warning'); return; }
                   if (matchResultsModal) { matchResultsModal.classList.add('hidden'); matchResultsModal.classList.remove('flex'); }
                   openScoreModal(c, next);
                 }catch{}
@@ -1100,12 +1162,12 @@ function showConfirmationModal(actionType, opts){
               const note = modalBox?.querySelector('#event-finished-note');
               if (!hasNext){
                 if (nb) nb.classList.add('hidden');
-                closeBtn.textContent = 'Tutup';
+                closeBtn.textContent = __tsT('tennis.close','Tutup');
                 closeBtn.className = 'w-full py-3 bg-gray-300 hover:bg-gray-400 text-gray-900 font-semibold rounded-lg';
                 if (note) note.classList.remove('hidden');
               } else {
                 if (nb) nb.classList.remove('hidden');
-                closeBtn.textContent = 'Tidak, nanti dulu';
+                closeBtn.textContent = __tsT('tennis.notNow','Tidak, nanti dulu');
                 closeBtn.className = 'w-full py-3 bg-gray-300 hover:bg-gray-400 text-gray-900 font-semibold rounded-lg';
                 if (note) note.classList.add('hidden');
               }
@@ -1127,7 +1189,7 @@ function showConfirmationModal(actionType, opts){
     if (nextMatchInfoEl) nextMatchInfoEl.classList.add('hidden');
     if (nextMatchPlayersEl) nextMatchPlayersEl.textContent='';
     if (nextMatchTimeEl){ nextMatchTimeEl.textContent=''; nextMatchTimeEl.classList.add('hidden'); }
-    if (!state.isMatchRunning && !state.isMatchFinished){ statusMessage.textContent='Pilih mode skor dan tekan Mulai Pertandingan.'; statusMessage.className='text-center text-gray-500 mt-2 text-sm'; }
+    if (!state.isMatchRunning && !state.isMatchFinished){ statusMessage.textContent = __tsT('tennis.status.chooseMode','Pilih mode skor dan tekan Mulai Pertandingan.'); statusMessage.className='text-center text-gray-500 mt-2 text-sm'; }
     updateDisplay();
   }
 
@@ -1172,7 +1234,14 @@ function showConfirmationModal(actionType, opts){
     tsCtx.court = courtIdx; tsCtx.round = roundIdx; ensureOverlay(); resetMatch(true,true);
     // Use saved scoring mode if desired; default stays as current
     if (modeSelectorEl) modeSelectorEl.value = state.scoringMode;
-    try{ if (tsTitleEl) tsTitleEl.textContent = `Lapangan ${String((courtIdx||0)+1)} • Match ${String((roundIdx||0)+1)}`; }catch{}
+    try{
+      if (tsTitleEl){
+        const courtNo = String((courtIdx||0)+1);
+        const roundNo = String((roundIdx||0)+1);
+        tsTitleEl.textContent = __tsT('tennis.roundTitle','Lapangan {court} • Match {round}')
+          .replace('{court}', courtNo).replace('{round}', roundNo);
+      }
+    }catch{}
     try{ updateScheduledLabel(roundIdx); }catch{}
     try{
       if (matchWinnerNamesEl){ matchWinnerNamesEl.textContent=''; matchWinnerNamesEl.classList.add('hidden'); }
@@ -1197,8 +1266,8 @@ function showConfirmationModal(actionType, opts){
         state.gamesT1 = Number(r.scoreA || 0); state.gamesT2 = Number(r.scoreB || 0); state.pendingClearScore = false;
         // Hide start button and set timer text
         if (startMatchBtn) startMatchBtn.classList.add('hidden');
-        if (timerDisplayEl) timerDisplayEl.textContent = 'Permainan Selesai';
-        if (finishBtnEl) finishBtnEl.textContent = 'Simpan Perubahan';
+        if (timerDisplayEl) timerDisplayEl.textContent = __tsT('tennis.matchDone','Permainan Selesai');
+        if (finishBtnEl) finishBtnEl.textContent = __tsT('tennis.finishChanges','Simpan Perubahan');
         try{ if (statusMessage) statusMessage.classList.add('hidden'); }catch{}
         try{ if (forceResetBtnEl) forceResetBtnEl.classList.remove('hidden'); }catch{}
       } else {
@@ -1225,7 +1294,7 @@ function showConfirmationModal(actionType, opts){
           }
         }catch{}
         if (startMatchBtn) startMatchBtn.classList.remove('hidden');
-        if (finishBtnEl) finishBtnEl.textContent = 'Selesai & Lihat Hasil Pertandingan';
+        if (finishBtnEl) finishBtnEl.textContent = __tsT('tennis.finishMatch','Selesai & Lihat Hasil Pertandingan');
         try{ if (statusMessage) statusMessage.classList.remove('hidden'); }catch{}
         try{ if (forceResetBtnEl) forceResetBtnEl.classList.add('hidden'); }catch{}
       }

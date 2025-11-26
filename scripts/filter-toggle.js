@@ -1,6 +1,7 @@
 "use strict";
 // ===== Expand/Collapse "Filter / Jadwal" =====
 (function(){
+  const t = (k,f)=> (window.__i18n_get ? __i18n_get(k,f) : f);
   const KEY = 'ui.filter.expanded';
   const btn = document.getElementById('btnFilterToggle');
   const chevron = document.getElementById('filterChevron');
@@ -77,7 +78,7 @@ window.addEventListener('beforeunload', saveToLocalSilent);
 // });
 
 byId('btnApplyPlayerTemplate')?.addEventListener('click', () => {
-  if (confirm('Terapkan template pemain 10 orang? Daftar sekarang akan diganti.')) {
+  if (confirm(t('players.template.confirm','Terapkan template pemain 10 orang? Daftar sekarang akan diganti.'))) {
     applyDefaultPlayersTemplate();
   }
 });
@@ -141,11 +142,11 @@ function setEventModalTab(mode){
     if (tCreate) tCreate.classList.add('hidden');
     if (tSearch) tSearch.classList.add('hidden');
     if (fCreate) fCreate.classList.add('hidden');
-    if (titleEl) titleEl.textContent = 'Cari Event';
+    if (titleEl) titleEl.textContent = t('event.searchTitle','Cari Event');
   } else {
     if (tCreate) tCreate.classList.remove('hidden');
     if (tSearch) tSearch.classList.remove('hidden');
-    if (titleEl) titleEl.textContent = 'Buat/Cari Event';
+    if (titleEl) titleEl.textContent = t('event.createTitle','Buat/Cari Event');
   }
   // If editor link row exists from previous share, show it back in create/search context
   const ed = document.getElementById('eventEditorLinkOutput');
@@ -159,13 +160,13 @@ function setEventModalTab(mode){
         const wrap = document.createElement('div');
         wrap.innerHTML = `
           <div>
-            <label class="block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Lokasi (opsional)</label>
-            <input id="eventLocationInput" type="text" placeholder="Mis. Lapangan A, GBK"
+            <label class="block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">${t('event.locLabel','Lokasi (opsional)')}</label>
+            <input id="eventLocationInput" type="text" placeholder="${t('event.locPlaceholder','Mis. Lapangan A, GBK')}"
                   class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" />
           </div>
           <div>
-            <label class="block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">Link Maps (opsional)</label>
-            <input id="eventLocationUrlInput" type="url" placeholder="https://maps.app.goo.gl/..."
+            <label class="block text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-300">${t('event.locUrlLabel','Link Maps (opsional)')}</label>
+            <input id="eventLocationUrlInput" type="url" placeholder="${t('event.locUrlPlaceholder','https://maps.app.goo.gl/...')}"
                   class="mt-1 border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" />
           </div>`;
         const btn = byId('eventCreateBtn');
@@ -208,7 +209,7 @@ function openCreateEventModal(){
 // Helpers for Search Event modal
 async function getMyEventIds(){
   try{
-    showLoading('Memuat daftar event…');
+    showLoading((window.__i18n_get ? __i18n_get('event.loadingList','Memuat daftar event…') : 'Memuat daftar event…'));
     const { data: ud } = await sb.auth.getUser();
     const uid = ud?.user?.id || null;
     if (!uid) { hideLoading(); return []; }
@@ -277,7 +278,7 @@ async function loadSearchDates(){
   let ids = [];
   if (!allowAll){ ids = await getMyEventIds(); }
   try{
-    showLoading('Memuat tanggal…');
+    showLoading((window.__i18n_get ? __i18n_get('event.loadingDates','Memuat tanggal…') : 'Memuat tanggal…'));
     let rows;
     if (allowAll){
       const r = await sb.from('events')
@@ -436,7 +437,7 @@ async function loadSearchEventsForDate(dateStr){
   const ids = allowAll ? [] : await getMyEventIds();
   if ((!allowAll && !ids.length) || !dateStr){ evSel.innerHTML = '<option value="">— Tidak ada —</option>'; return; }
   try{
-    showLoading('Memuat event…');
+    showLoading((window.__i18n_get ? __i18n_get('event.loading','Memuat event…') : 'Memuat event…'));
     let evs;
     if (allowAll) {
       const r = await sb.from('events')
@@ -481,7 +482,7 @@ async function loadSearchEventsForDate(dateStr){
 
 async function switchToEvent(eventId, dateStr){
   try{
-    showLoading('Membuka event…');
+    showLoading((window.__i18n_get ? __i18n_get('event.opening','Membuka event…') : 'Membuka event…'));
     // Putuskan channel realtime sebelumnya bila ada
     try{ unsubscribeRealtimeForState?.(); }catch{}
     currentEventId = eventId;
@@ -553,11 +554,11 @@ function openSearchEventModal(){ setEventModalTab('search');
       byId('tabCreateEvent')?.classList.add('hidden');
       byId('tabSearchEvent')?.classList.add('hidden');
       byId('eventForm')?.classList.add('hidden');
-      const titleEl = m.querySelector('h3'); if (titleEl) titleEl.textContent = 'Cari Event';
+      const titleEl = m.querySelector('h3'); if (titleEl) titleEl.textContent = t('event.searchTitle','Cari Event');
     } else {
       byId('tabCreateEvent')?.classList.remove('hidden');
       byId('tabSearchEvent')?.classList.remove('hidden');
-      const titleEl = m.querySelector('h3'); if (titleEl) titleEl.textContent = 'Buat/Cari Event';
+      const titleEl = m.querySelector('h3'); if (titleEl) titleEl.textContent = t('event.createTitle','Buat/Cari Event');
     }
   }catch{}
   // load dates then events for initial selection
@@ -578,29 +579,29 @@ const EMAIL_REGEX = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 // Send invite link via mail client (mailto)
 async function sendInviteEmailLink(targetEmail, inviteLink, role, msgEl, btnEl){
   if (!targetEmail || !EMAIL_REGEX.test(targetEmail)){
-    if (msgEl) msgEl.textContent = 'Email tidak valid.';
+    if (msgEl) msgEl.textContent = t('auth.emailInvalid','Email tidak valid.');
     return false;
   }
   if (!inviteLink){
-    if (msgEl) msgEl.textContent = 'Buat link undangan dulu.';
+    if (msgEl) msgEl.textContent = t('invite.createFirst','Buat link undangan dulu.');
     return false;
   }
   const prev = btnEl?.textContent;
-  if (btnEl){ btnEl.disabled = true; btnEl.textContent = 'Sending...'; }
-  if (msgEl) msgEl.textContent = 'Membuka email client...';
+  if (btnEl){ btnEl.disabled = true; btnEl.textContent = t('invite.emailSending','Sending...'); }
+  if (msgEl) msgEl.textContent = t('invite.emailClientOpening','Membuka email client...');
   try{
     const subject = encodeURIComponent(`Undangan ${role} event`);
     const bodyText = encodeURIComponent(`Halo,\n\nBerikut link undangan sebagai ${role}:\n${inviteLink}\n\nTerima kasih.`);
     window.open(`mailto:${encodeURIComponent(targetEmail)}?subject=${subject}&body=${bodyText}`, '_blank');
-    if (msgEl) msgEl.textContent = 'Silakan kirim email undangan dari client Anda.';
+    if (msgEl) msgEl.textContent = t('invite.emailClientSend','Silakan kirim email undangan dari client Anda.');
     return true;
   }catch(err){
     console.error('sendInviteEmailLink fatal', err);
     const detail = err?.message || err?.error_description || '';
-    if (msgEl) msgEl.textContent = 'Gagal membuka email client' + (detail ? ': ' + detail : '');
+    if (msgEl) msgEl.textContent = t('invite.emailClientFailed','Gagal membuka email client') + (detail ? ': ' + detail : '');
     return false;
   }finally{
-    if (btnEl){ btnEl.disabled = false; btnEl.textContent = prev || 'Send To Email'; }
+    if (btnEl){ btnEl.disabled = false; btnEl.textContent = prev || t('invite.sendEmail','Send To Email'); }
   }
 }
 
@@ -611,7 +612,7 @@ function openShareEventModal(){
   // show modal
   m.classList.remove('hidden');
   // adjust header/title and hide Buat/Cari tabs for share-only view
-  const titleEl = m.querySelector('h3'); if (titleEl) titleEl.textContent = 'Share / Undang';
+  const titleEl = m.querySelector('h3'); if (titleEl) titleEl.textContent = t('header.share','Share / Undang');
   const tabs = byId('eventTabs'); if (tabs) tabs.classList.add('hidden');
   // show success panel, hide form
   byId('eventForm')?.classList.add('hidden');
@@ -621,7 +622,7 @@ function openShareEventModal(){
   (function tweakShareInfo(){
     const sb = byId('eventSuccess');
     const info = sb?.querySelector('.p-3');
-    if (info) info.textContent = 'Bagikan Link Event';
+    if (info) info.textContent = t('share.info','Bagikan Link Event');
   })();
   // ensure viewer link (public viewer, clean params)
   const d = byId('sessionDate')?.value || currentSessionDate || new Date().toISOString().slice(0,10);
@@ -642,17 +643,17 @@ function openShareEventModal(){
     const box = document.createElement('div');
     box.className = 'border-t dark:border-gray-700 pt-3 space-y-2';
     box.innerHTML = `
-      <div class="text-sm font-semibold">Invite Anggota</div>
-      <div class="text-xs text-gray-500 dark:text-gray-300">Masukkan email Supabase user (yang digunakan login), pilih role, lalu buat link undangan.</div>
+      <div class="text-sm font-semibold">${t('invite.title','Invite Anggota')}</div>
+      <div class="text-xs text-gray-500 dark:text-gray-300">${t('invite.desc','Masukkan email Supabase user (yang digunakan login), pilih role, lalu buat link undangan.')}</div>
       <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
         <input id="inviteEmail" type="email" placeholder="email@example.com" class="flex-1 border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100" />
         <select id="inviteRole" class="border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100">\n          <option value="editor">editor</option>\n          <option value="wasit">wasit</option>\n          <option value="admin">admin</option>\n        </select>
-        <button id="btnInviteMember" class="px-3 py-2 rounded-lg bg-emerald-600 text-white text-sm">Buat Link Undangan</button>
+        <button id="btnInviteMember" class="px-3 py-2 rounded-lg bg-emerald-600 text-white text-sm">${t('invite.button','Buat Link Undangan')}</button>
       </div>
       <div class="flex items-center gap-2 hidden" id="inviteLinkRow">
         <input id="inviteLinkOut" readonly class="flex-1 border rounded-lg px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100" />
-        <button id="btnCopyInvite" class="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm">Copy Link</button>
-        <button id="btnSendInviteEmail" class="px-3 py-2 rounded-lg bg-amber-600 text-white text-sm">Send To Email</button>
+        <button id="btnCopyInvite" class="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm">${t('invite.linkCopy','Copy Link')}</button>
+        <button id="btnSendInviteEmail" class="px-3 py-2 rounded-lg bg-amber-600 text-white text-sm">${t('invite.sendEmail','Send To Email')}</button>
       </div>
       <div id="inviteMsg" class="text-xs"></div>`;
     successBox.appendChild(box);
@@ -661,21 +662,21 @@ function openShareEventModal(){
       const email = (byId('inviteEmail').value||'').trim();
       const role = byId('inviteRole').value||'editor';
       const msg = byId('inviteMsg'); msg.textContent='';
-      if (!email || !EMAIL_REGEX.test(email)) { msg.textContent='Email tidak valid.'; return; }
-      if (!isCloudMode() || !currentEventId){ msg.textContent='Mode Cloud belum aktif. Buat event dulu.'; return; }
+      if (!email || !EMAIL_REGEX.test(email)) { msg.textContent=t('auth.emailInvalid','Email tidak valid.'); return; }
+      if (!isCloudMode() || !currentEventId){ msg.textContent=t('invite.cloudOff','Mode Cloud belum aktif. Buat event dulu.'); return; }
       try{
-        if (btn){ btn.disabled = true; btn.textContent = 'Membuat…'; }
+        if (btn){ btn.disabled = true; btn.textContent = t('invite.creating','Membuat…'); }
         const { data:ud } = await sb.auth.getUser();
-        if (!ud?.user){ msg.textContent='Silakan login terlebih dahulu.'; return; }
+        if (!ud?.user){ msg.textContent=t('invite.loginRequired','Silakan login terlebih dahulu.'); return; }
         const { data: token, error } = await sb.rpc('create_event_invite', { p_event_id: currentEventId, p_email: email, p_role: role });
         if (error) throw error;
         const link = buildInviteUrl(currentEventId, byId('sessionDate').value || '', token);
         const row = byId('inviteLinkRow'); const out = byId('inviteLinkOut'); const cp = byId('btnCopyInvite'); const send = byId('btnSendInviteEmail');
-        if (row && out){ row.classList.remove('hidden'); out.value = link; msg.textContent='Link undangan dibuat. Kirimkan ke email terkait.'; }
-        if (cp && out){ cp.onclick = async ()=>{ try{ await navigator.clipboard.writeText(out.value); cp.textContent='Copied!'; setTimeout(()=>cp.textContent='Copy Link',1200);}catch{} }; }
+        if (row && out){ row.classList.remove('hidden'); out.value = link; msg.textContent=t('invite.created','Link undangan dibuat. Kirimkan ke email terkait.'); }
+        if (cp && out){ cp.onclick = async ()=>{ try{ await navigator.clipboard.writeText(out.value); cp.textContent=t('invite.copySuccess','Copied!'); setTimeout(()=>cp.textContent=t('invite.linkCopy','Copy Link'),1200);}catch{} }; }
         if (send && out){ send.onclick = () => sendInviteEmailLink((byId('inviteEmail').value||'').trim(), out.value, byId('inviteRole')?.value || role, msg, send); }
-      }catch(e){ console.error(e); msg.textContent = 'Gagal membuat link undangan' + (e?.message? ': '+e.message : ''); }
-      finally { if (btn){ btn.disabled = false; btn.textContent = 'Buat Link Undangan'; } hideLoading(); }
+      }catch(e){ console.error(e); msg.textContent = t('invite.createFail','Gagal membuat link undangan') + (e?.message? ': '+e.message : ''); }
+      finally { if (btn){ btn.disabled = false; btn.textContent = t('invite.button','Buat Link Undangan'); } hideLoading(); }
     });
   })();
 }
@@ -724,10 +725,10 @@ function __resetStateForNewEvent(date, title){
 byId('eventCreateBtn')?.addEventListener('click', async () => {
   const btnCreate = byId('eventCreateBtn');
   const oldText = btnCreate?.textContent;
-  if (btnCreate) { btnCreate.disabled = true; btnCreate.textContent = 'Creating...'; }
+  if (btnCreate) { btnCreate.disabled = true; btnCreate.textContent = t('event.creating','Creating...'); }
   const name = (byId('eventNameInput').value || '').trim();
   const date = normalizeDateKey(byId('eventDateInput').value || '');
-  if (!name || !date) { alert('Nama event dan tanggal wajib diisi.'); return; }
+  if (!name || !date) { alert(t('event.required','Nama event dan tanggal wajib diisi.')); return; }
 
   try {
     // pastikan user login
@@ -736,7 +737,7 @@ byId('eventCreateBtn')?.addEventListener('click', async () => {
 
     const { id, created } = await createEventIfNotExists(name, date);
     if (!created) {
-      alert('Event dengan nama itu di tanggal tersebut sudah ada.\nSilakan pilih nama lain atau tanggal lain.');
+      alert(t('event.exists','Event dengan nama itu di tanggal tersebut sudah ada.\nSilakan pilih nama lain atau tanggal lain.'));
       return;
     }
 
@@ -809,7 +810,7 @@ byId('eventCreateBtn')?.addEventListener('click', async () => {
     (function tweakCreateInfo(){
       const sb = byId('eventSuccess');
       const info = sb?.querySelector('.p-3');
-      if (info) info.textContent = 'Event berhasil dibuat! Bagikan link berikut:';
+      if (info) info.textContent = t('share.createInfo','Event berhasil dibuat! Bagikan link berikut:');
     })();
     byId('eventLinkOutput').value = link;
     // Deprecated: score-viewer link row no longer used
@@ -843,13 +844,13 @@ byId('eventCreateBtn')?.addEventListener('click', async () => {
         const email = (byId('inviteEmail').value||'').trim();
         const role = byId('inviteRole').value||'editor';
         const msg = byId('inviteMsg'); msg.textContent='';
-        if (!email || !EMAIL_REGEX.test(email)) { msg.textContent='Email tidak valid.'; return; }
-        if (!isCloudMode() || !currentEventId){ msg.textContent='Mode Cloud belum aktif. Buat event dulu.'; return; }
+        if (!email || !EMAIL_REGEX.test(email)) { msg.textContent=t('auth.emailInvalid','Email tidak valid.'); return; }
+        if (!isCloudMode() || !currentEventId){ msg.textContent=t('invite.cloudOff','Mode Cloud belum aktif. Buat event dulu.'); return; }
         try{
           if (btn){ btn.disabled = true; btn.textContent = 'Membuat…'; }
           // Pastikan user login
           const { data:ud } = await sb.auth.getUser();
-          if (!ud?.user){ msg.textContent='Silakan login terlebih dahulu.'; return; }
+          if (!ud?.user){ msg.textContent=t('invite.loginRequired','Silakan login terlebih dahulu.'); return; }
 
           // Panggil RPC SECURITY DEFINER agar lolos RLS dengan validasi owner/editor di sisi DB
           const { data: token, error } = await sb.rpc('create_event_invite', {
@@ -861,22 +862,22 @@ byId('eventCreateBtn')?.addEventListener('click', async () => {
 
           const link = buildInviteUrl(currentEventId, byId('sessionDate').value || '', token);
           const row = byId('inviteLinkRow'); const out = byId('inviteLinkOut'); const cp = byId('btnCopyInvite'); const send = byId('btnSendInviteEmail');
-          if (row && out){ row.classList.remove('hidden'); out.value = link; msg.textContent='Link undangan dibuat. Kirimkan ke email terkait.'; }
-          if (cp && out){
-            cp.onclick = async ()=>{ try{ await navigator.clipboard.writeText(out.value); cp.textContent='Copied!'; setTimeout(()=>cp.textContent='Copy Link',1200);}catch{} };
-          }
-          if (send && out){ send.onclick = () => sendInviteEmailLink((byId('inviteEmail').value||'').trim(), out.value, byId('inviteRole')?.value || role, msg, send); }
-        }catch(e){ console.error(e); msg.textContent = 'Gagal membuat link undangan' + (e?.message? ': '+e.message : ''); }
-        finally { if (btn){ btn.disabled = false; btn.textContent = 'Buat Link Undangan'; } }
+        if (row && out){ row.classList.remove('hidden'); out.value = link; msg.textContent=t('invite.created','Link undangan dibuat. Kirimkan ke email terkait.'); }
+        if (cp && out){
+          cp.onclick = async ()=>{ try{ await navigator.clipboard.writeText(out.value); cp.textContent=t('invite.copySuccess','Copied!'); setTimeout(()=>cp.textContent=t('invite.linkCopy','Copy Link'),1200);}catch{} };
+        }
+        if (send && out){ send.onclick = () => sendInviteEmailLink((byId('inviteEmail').value||'').trim(), out.value, byId('inviteRole')?.value || role, msg, send); }
+      }catch(e){ console.error(e); msg.textContent = t('invite.createFail','Gagal membuat link undangan') + (e?.message? ': '+e.message : ''); }
+      finally { if (btn){ btn.disabled = false; btn.textContent = t('invite.button','Buat Link Undangan'); } }
       });
   })();
 
 
-  } catch (err) {
+    } catch (err) {
     console.error(err);
-    alert('Gagal membuat event. Coba lagi.');
+    alert(t('event.failed','Gagal membuat event. Coba lagi.'));
   } finally {
-    if (btnCreate) { btnCreate.disabled = false; btnCreate.textContent = oldText || 'Create & Buat Link'; }
+    if (btnCreate) { btnCreate.disabled = false; btnCreate.textContent = oldText || t('event.create','Create & Buat Link'); }
   }
   try{ updateAdminButtonsVisibility?.(); }catch{}
 });
@@ -887,10 +888,10 @@ byId('eventCopyBtn')?.addEventListener('click', async () => {
   const link = byId('eventLinkOutput').value;
   try {
     await navigator.clipboard.writeText(link);
-    byId('eventCopyBtn').textContent = 'Copied!';
-    setTimeout(()=> byId('eventCopyBtn').textContent = 'Copy', 2000);
+    byId('eventCopyBtn').textContent = t('invite.copySuccess','Copied!');
+    setTimeout(()=> byId('eventCopyBtn').textContent = t('invite.copyLabel','Copy'), 2000);
   } catch {
-    alert('Gagal menyalin link, salin manual: ' + link);
+    alert(t('invite.copyFail','Gagal menyalin link, salin manual:') + ' ' + link);
   }
 });
 
@@ -909,7 +910,7 @@ byId('searchDateSelect')?.addEventListener('change', async ()=>{
 byId('openEventBtn')?.addEventListener('click', async ()=>{
   const d = getSearchDateValue() || '';
   const ev = byId('searchEventSelect')?.value || '';
-  if (!d || !ev) { alert('Pilih tanggal dan event.'); return; }
+  if (!d || !ev) { alert(t('event.required','Nama event dan tanggal wajib diisi.')); return; }
   byId('eventModal')?.classList.add('hidden');
   await switchToEvent(ev, d);
 });
@@ -938,7 +939,7 @@ function ensureDeleteEventButton(){
   const openBtn = byId('openEventBtn');
   const del = document.createElement('button');
   del.id = 'deleteEventBtn';
-  del.textContent = 'Hapus Event';
+  del.textContent = t('event.delete','Hapus Event');
   del.className = 'mt-2 w-full px-3 py-2 rounded-lg bg-red-600 text-white disabled:opacity-50';
   del.disabled = true;
   if (openBtn && openBtn.parentElement){
@@ -953,24 +954,28 @@ async function onDeleteSelectedEvent(){
   const d = getSearchDateValue() || '';
   const ev = byId('searchEventSelect')?.value || '';
   if (!d || !ev) return;
-  if (!confirm('Hapus event ini secara permanen? Tindakan ini tidak bisa dibatalkan.')) return;
+  if (!confirm(t('event.deleteConfirm','Hapus event ini secara permanen? Tindakan ini tidak bisa dibatalkan.'))) return;
   try{
-    showLoading('Menghapus event…');
+    showLoading(t('event.deleting','Menghapus event…'));
     const { data: ud } = await sb.auth.getUser();
-    if (!ud?.user){ alert('Silakan login terlebih dahulu.'); return; }
+    if (!ud?.user){ alert(t('invite.loginRequired','Silakan login terlebih dahulu.')); return; }
     const { data, error } = await sb.rpc('delete_event', { p_event_id: ev });
     if (error) throw error;
     const status = (data && data.status) || '';
     if (status !== 'deleted'){
-      const msg = status==='forbidden' ? 'Anda bukan owner event ini.' : status==='not_found' ? 'Event tidak ditemukan.' : 'Gagal menghapus event.';
+      const msg = status==='forbidden'
+        ? t('event.deleteForbidden','Anda bukan owner event ini.')
+        : status==='not_found'
+          ? t('event.notFound','Event tidak ditemukan.')
+          : t('event.deleteFailed','Gagal menghapus event.');
       showToast?.(msg, 'error');
       return;
     }
-    showToast?.('Event dihapus.', 'success');
+    showToast?.(t('event.deleted','Event dihapus.'), 'success');
     // Reload penuh agar UI bersih dari sisa state
     try{ leaveEventMode?.(true); }catch{}
     window.location.reload();
-  }catch(e){ console.error(e); showToast?.('Gagal menghapus event: ' + (e?.message||''), 'error'); }
+  }catch(e){ console.error(e); showToast?.(t('event.deleteError','Gagal menghapus event: {msg}').replace('{msg}', (e?.message||'')), 'error'); }
   finally { hideLoading(); }
 }
 
@@ -1027,7 +1032,7 @@ function ensureViewerSearchButton(){
     const b = document.createElement('button');
     b.id = 'btnViewerSearchEvent';
     b.className = 'px-3 py-2 rounded-xl bg-indigo-600 text-white font-semibold shadow hover:opacity-90 hidden';
-    b.textContent = 'Cari Event';
+    b.textContent = t('event.searchTitle','Cari Event');
     b.addEventListener('click', ()=>{ openSearchEventModal(); });
     bar.appendChild(b);
   }

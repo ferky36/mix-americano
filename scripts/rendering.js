@@ -1,4 +1,5 @@
 "use strict";
+const __rT = (k, f)=> (window.__i18n_get ? __i18n_get(k, f) : f);
 // ===============  RENDER + VALIDATION + STANDINGS ================ //
 function renderAll(){
   ensureRoundsLengthForAllCourts();
@@ -37,15 +38,13 @@ function renderFairnessInfo(){
   }).join('');
 
   box.innerHTML = `
-    <div class="font-semibold mb-1">Fairness Info (semua lapangan): min=${min}, max=${max}, selisih=${spread}</div>
+    <div class="font-semibold mb-1">${__rT('render.fairness.header','Fairness Info (semua lapangan): min={min}, max={max}, selisih={spread}').replace('{min}', min).replace('{max}', max).replace('{spread}', spread)}</div>
     <div class="leading-6">${rows}</div>
     <div class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
-      Tips: jika ada ⬆️ dan ⬇️ berjauhan, klik "Terapkan" lagi untuk mengacak ulang; 
-      sistem mengutamakan pemain yang masih kurang main.
+      ${__rT('render.fairness.tips','Tips: jika ada panah naik/turun berjauhan, klik "Terapkan" lagi untuk mengacak ulang; sistem mengutamakan pemain yang masih kurang main.')}
     </div>
   `;
 }
-
 
 // Override fairness renderer with a clean version (icons/text)
 try {
@@ -68,13 +67,13 @@ try {
     const spread = max-min;
     const rows = list.map(p=>{
       const n = cnt[p]||0;
-      const mark = (n===min ? '↓' : (n===max ? '↑' : '•'));
+      const mark = (n===min ? '?' : (n===max ? '?' : '?'));
       return `<span class="inline-block mr-3">${mark} <b>${escapeHtml(p)}</b>: ${n}</span>`;
     }).join('');
     box.innerHTML = `
-      <div class="font-semibold mb-1">Fairness Info (semua lapangan): min=${min}, max=${max}, selisih=${spread}</div>
+      <div class="font-semibold mb-1">${__rT('render.fairness.header','Fairness Info (semua lapangan): min={min}, max={max}, selisih={spread}').replace('{min}', min).replace('{max}', max).replace('{spread}', spread)}</div>
       <div class="leading-6">${rows}</div>
-      <div class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">Tips: jika ada ↑ dan ↓ berjauhan, klik "Terapkan" lagi untuk mengacak ulang; sistem mengutamakan pemain yang masih kurang main.</div>
+      <div class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">${__rT('render.fairness.tips','Tips: jika ada panah naik/turun berjauhan, klik "Terapkan" lagi untuk mengacak ulang; sistem mengutamakan pemain yang masih kurang main.')}</div>
     `;
   };
 } catch {}
@@ -82,7 +81,7 @@ try {
 function clearScoresActive(){
   const arr = roundsByCourt[activeCourt] || [];
   if (arr.length && arr.some(r => r && (r.scoreA || r.scoreB))) {
-    if (!confirm('Hapus skor di lapangan aktif?')) return;
+    if (!confirm(__rT('render.confirm.clearActive','Hapus skor di lapangan aktif?'))) return;
   }
   arr.forEach(r => {
     if (r) {
@@ -100,7 +99,7 @@ function clearScoresActive(){
 function clearScoresAll(){
   const hasAny = roundsByCourt.some(c => (c||[]).some(r => r && (r.scoreA || r.scoreB)));
   if (hasAny) {
-    if (!confirm('Hapus skor di SEMUA lapangan?')) return;
+    if (!confirm(__rT('render.confirm.clearAll','Hapus skor di SEMUA lapangan?'))) return;
   }
   roundsByCourt.forEach(courtArr => {
     courtArr.forEach(r => { if (r) { r.scoreA = ''; r.scoreB = ''; } });
@@ -112,7 +111,12 @@ function clearScoresAll(){
 function renderCourtsToolbar(){
   const bar = byId('courtsToolbar');
   const addBtn = byId('btnAddCourt');
-  if (addBtn) addBtn.disabled = isViewer();
+  if (addBtn){
+    addBtn.disabled = isViewer();
+    try{
+      addBtn.textContent = (window.__i18n_get ? __i18n_get('controls.addCourt','＋ Tambah Lapangan') : '＋ Tambah Lapangan');
+    }catch{}
+  }
 
   // simpan posisi scroll sebelum kita rebuild
   const prevScroll = bar.scrollLeft;
@@ -127,7 +131,7 @@ function renderCourtsToolbar(){
     const btn = document.createElement('button');
     btn.className = 'court-tab court-holder text-sm border-b-2 px-3 py-1.5 rounded-t-lg ' +
                     (idx===activeCourt ? 'active' : 'text-gray-500 border-transparent');
-    btn.textContent = 'Lapangan ' + (idx+1);
+    btn.textContent = (window.__i18n_get ? __i18n_get('render.court','Lapangan') : 'Lapangan') + ' ' + (idx+1);
     btn.addEventListener('click', (e)=>{
       e.preventDefault();
       // simpan posisi scroll saat ini agar tidak geser ketika re-render
@@ -142,14 +146,15 @@ function renderCourtsToolbar(){
     if (idx > 0 && !isViewer()) {
       const del = document.createElement('button');
       del.className = 'court-close text-xs px-1';
-      del.title = 'Hapus Lapangan';
+      del.title = __rT('render.court.deleteTitle','Hapus Lapangan');
       // Clean close icon
       try { del.textContent = '✕'; } catch {}
       del.textContent = '🗑️';
       del.addEventListener('click', (e)=>{
         e.stopPropagation();
         const keep = byId('courtsToolbar').scrollLeft;
-        if (!confirm('Hapus Lapangan '+(idx+1)+'? Data ronde di lapangan ini akan hilang.')) return;
+        const msg = __rT('render.court.deleteConfirm','Hapus Lapangan {num}? Data ronde di lapangan ini akan hilang.').replace('{num}', (idx+1));
+        if (!confirm(msg)) return;
         roundsByCourt.splice(idx,1);
         if (activeCourt >= roundsByCourt.length) activeCourt = roundsByCourt.length-1;
         markDirty();
@@ -190,7 +195,8 @@ function validateAll(){
     const filtered = names.filter(Boolean);
     const set = new Set(filtered);
     if(set.size !== filtered.length){
-      problems.push('Bentrok jadwal: Match '+(i+1)+' ada pemain di dua lapangan.');
+      const msg = __rT('render.error.doubleBooking','Bentrok jadwal: Match {match} ada pemain di dua lapangan.').replace('{match}', (i+1));
+      problems.push(msg);
     }
   }
 
@@ -205,22 +211,46 @@ function validateAll(){
       if(!(r&&r.a1&&r.a2&&r.b1&&r.b2)) continue;
       const key = matchKey(r);
       if(seen.has(key)){
-        problems.push('Duplikat lawan (Lap '+(ci+1)+'): '+key+' muncul lagi di Match '+(i+1)+' (sebelumnya '+seen.get(key)+').');
+        const msg = __rT('render.error.duplicateOpponents','Duplikat lawan (Lap {court}): {pair} muncul lagi di Match {match} (sebelumnya {prev}).')
+          .replace('{court}', (ci+1))
+          .replace('{pair}', key)
+          .replace('{match}', (i+1))
+          .replace('{prev}', seen.get(key));
+        problems.push(msg);
       } else {
         seen.set(key, 'Match '+(i+1));
       }
     }
   });
 
+  // Fairness check: flag if spread melebihi threshold
+  try{
+    if (typeof countAppearAll === 'function'){
+      const cntAll = countAppearAll(-1) || {};
+      const vals = Object.values(cntAll).filter(v=>typeof v==='number');
+      if (vals.length){
+        const min = Math.min(...vals);
+        const max = Math.max(...vals);
+        const spread = max - min;
+        const SPREAD_TH = (typeof window!=='undefined' && typeof window.FAIRNESS_SPREAD_THRESHOLD!=='undefined')
+          ? Number(window.FAIRNESS_SPREAD_THRESHOLD) : 1;
+        if (spread > SPREAD_TH){
+          const msg = __rT('render.fairness.problem','Fairness belum merata, selisih {spread}.').replace('{spread}', spread);
+          problems.push(msg);
+        }
+      }
+    }
+  }catch{}
+
   const box = byId('errors');
   // In viewer mode, hide validation details entirely
   try { if (typeof isViewer==='function' && isViewer()) { box.innerHTML=''; return true; } } catch {}
   box.innerHTML = problems.length
-    ? `<div class="p-3 rounded-xl bg-red-50 text-red-700 border border-red-200 text-sm">
-         <div class="font-semibold mb-1">Validasi:</div>
+    ? `<div class="p-3 rounded-xl bg-red-50 text-red-700 border border-red-200 text-sm" data-i18n-errors="has-problem">
+         <div class="font-semibold mb-1" data-i18n="render.validation.title">${__rT('render.validation.title','Validasi:')}</div>
          <ul class="list-disc pl-5 space-y-1">${problems.map(p=>`<li>${escapeHtml(p)}</li>`).join('')}</ul>
        </div>`
-    : `<div class="p-3 rounded-xl bg-green-50 text-green-700 border border-green-200 text-sm">Tidak ada masalah penjadwalan.</div>`;
+    : `<div class="p-3 rounded-xl bg-green-50 text-green-700 border border-green-200 text-sm" data-i18n-errors="ok">${__rT('render.validation.ok','Tidak ada masalah penjadwalan.')}</div>`;
   try { if (typeof renderFairnessImbalanceAlert==='function') renderFairnessImbalanceAlert(); } catch {}
   return problems.length===0;
 }
@@ -354,13 +384,16 @@ function runReport(){
     return sum + r1 + r2;
   },0);
   const uniquePlayers = new Set(arr.map(x=>x.player)).size;
-  byId('reportSummary').textContent =
-    `Rentang: ${from} → ${to} • Tanggal: ${totalDates} • Game: ${totalGames} • Pemain: ${uniquePlayers}`;
-
-  // Normalize report summary text (clean separators)
-  try {
-    byId('reportSummary').textContent = `Rentang: ${from} - ${to} | Tanggal: ${totalDates} | Game: ${totalGames} | Pemain: ${uniquePlayers}`;
-  } catch {}
+  const rs = byId('reportSummary');
+  if (rs){
+    rs.textContent = (window.__i18n_get ? __i18n_get('render.reportSummary','Rentang: {from} - {to} | Tanggal: {dates} | Game: {games} | Pemain: {players}')
+      .replace('{from}', from)
+      .replace('{to}', to)
+      .replace('{dates}', totalDates)
+      .replace('{games}', totalGames)
+      .replace('{players}', uniquePlayers)
+    : `Rentang: ${from} - ${to} | Tanggal: ${totalDates} | Game: ${totalGames} | Pemain: ${uniquePlayers}`);
+  }
 
   // table
   const tbody = byId('reportTable').querySelector('tbody');
@@ -388,13 +421,26 @@ function runReport(){
     const from = byId('repFrom').value || '0000-01-01';
     const to   = byId('repTo').value   || '9999-12-31';
     const court= byId('repCourt').value; // 'both' | '1' | '2'
-    const title = `Report ${from} to ${to} (Lap: ${court})`;
+    const title = __rT('report.exportTitle','Report {from} to {to} (Lap: {court})')
+      .replace('{from}', from)
+      .replace('{to}', to)
+      .replace('{court}', court);
 
     // Header + rows
     const wsData = [
       [title],
       [],
-      ['Rank','Pemain','Main','Total','Selisih','Menang','Kalah','Seri','WinRate']
+      [
+        __rT('standings.rank','Rank'),
+        __rT('standings.player','Pemain'),
+        __rT('report.main','Main'),
+        __rT('standings.total','Total'),
+        __rT('standings.diff','Selisih'),
+        __rT('standings.w','W'),
+        __rT('standings.l','L'),
+        __rT('standings.d','D'),
+        __rT('standings.winrate','WinRate')
+      ]
     ];
 
     arr.forEach(s=>{
@@ -466,13 +512,14 @@ try {
     const spread = max - min;
     const rows = list.map(p=>{
       const n = cnt[p]||0;
-      const mark = (n===min ? '⬇' : (n===max ? '⬆' : '•'));
-      return `<span class="inline-block mr-3">${mark} <b>${escapeHtml(p)}</b>: ${n}</span>`;
+      const mark = (n===min ? '?' : (n===max ? '?' : '?'));
+      const safe = (typeof escapeHtml==='function') ? escapeHtml(p) : String(p);
+      return `<span class="inline-block mr-3">${mark} <b>${safe}</b>: ${n}</span>`;
     }).join('');
     box.innerHTML = `
-      <div class="font-semibold mb-1">Fairness Info (semua lapangan): min=${min}, max=${max}, selisih=${spread}</div>
+      <div class="font-semibold mb-1">${__rT('render.fairness.header','Fairness Info (semua lapangan): min={min}, max={max}, selisih={spread}').replace('{min}', min).replace('{max}', max).replace('{spread}', spread)}</div>
       <div class="leading-6">${rows}</div>
-      <div class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">Tips: jika ada ⬆ dan ⬇ berjauhan, klik \"Terapkan\" lagi untuk mengacak ulang; sistem mengutamakan pemain yang masih kurang main.</div>
+      <div class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">${__rT('render.fairness.tips','Tips: jika ada panah naik/turun berjauhan, klik "Terapkan" lagi untuk mengacak ulang; sistem mengutamakan pemain yang masih kurang main.')}</div>
     `;
   };
 } catch {}

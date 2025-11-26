@@ -1,4 +1,5 @@
 "use strict";
+const __pubT = (k, f)=> (window.__i18n_get ? __i18n_get(k, f) : f);
 // ===== Event Location (simple) =====
 function ensureEventLocationHeader(){
   try{
@@ -22,7 +23,7 @@ function renderEventLocation(text, url){
       } else if (t){
         el.innerHTML = `<div class="event-loc">${icon}<span>${escapeHtml(t)}</span></div>`;
       } else {
-        el.innerHTML = `<div class="event-loc">${icon}<a href="${u}" target="_blank" rel="noopener noreferrer">Lihat lokasi</a></div>`;
+        el.innerHTML = `<div class="event-loc">${icon}<a href="${u}" target="_blank" rel="noopener noreferrer">${__pubT('event.viewLocation','Lihat lokasi')}</a></div>`;
       }
     }
   }
@@ -37,7 +38,7 @@ function renderEventLocation(text, url){
       chip.classList.toggle('hidden', !has);
       if (u && link){
         link.href = u;
-        link.textContent = t || 'Lihat lokasi';
+        link.textContent = t || __pubT('event.viewLocation','Lihat lokasi');
         link.classList.remove('hidden');
         if (txt) txt.textContent = '';
       } else {
@@ -57,7 +58,7 @@ function renderHeaderChips(){
     // Date chip: lengkap + jam, contoh: "Jum, 07 Okt 2025 19.00"
     const rawDate = byId('sessionDate')?.value || '';
     const rawTime = byId('startTime')?.value || '';
-    let label = '—';
+    let label = __pubT('render.chip.noDate','-');
     if (rawDate){
       let d = new Date(rawDate + (rawTime ? 'T' + rawTime : 'T00:00'));
       if (!isNaN(d)){
@@ -71,7 +72,7 @@ function renderHeaderChips(){
   try{
     // Players count chip
     const n = Array.isArray(players) ? players.length : 0;
-    const cc = byId('chipCountText'); if (cc) { const m = (Number.isInteger(currentMaxPlayers) && currentMaxPlayers > 0) ? currentMaxPlayers : null; cc.textContent = m ? `${n}/${m} pemain` : `${n} pemain`; }
+    const cc = byId('chipCountText'); if (cc) { const m = (Number.isInteger(currentMaxPlayers) && currentMaxPlayers > 0) ? currentMaxPlayers : null; cc.textContent = m ? __pubT('render.chip.playersWithMax','{count}/{max} pemain').replace('{count}', n).replace('{max}', m) : __pubT('render.chip.players','{count} pemain').replace('{count}', n); }
   }catch{}
 }
 
@@ -84,26 +85,35 @@ function renderRoleChip(){
     const viewer = (typeof isViewer==='function') ? isViewer() : true;
     const isAdmin = !!window._isCashAdmin;
     // Decide label priority
-    let label = 'Viewer';
-    if (owner) label = 'Owner';
-    else if (role==='editor') label = 'Editor';
-    else if (role==='wasit') label = 'Wasit';
-    else if (isAdmin) label = 'Admin';
-    else label = viewer ? 'Viewer' : 'Editor';
+    let labelKey = 'viewer';
+    if (owner) labelKey = 'owner';
+    else if (role==='editor') labelKey = 'editor';
+    else if (role==='wasit') labelKey = 'wasit';
+    else if (isAdmin) labelKey = 'admin';
+    else labelKey = viewer ? 'viewer' : 'editor';
 
+    const labelTextMap = {
+      owner: __pubT('role.owner','Owner'),
+      admin: __pubT('role.admin','Admin'),
+      editor: __pubT('role.editor','Editor'),
+      wasit: __pubT('role.referee','Wasit'),
+      viewer: __pubT('role.viewer','Viewer')
+    };
+
+    const label = labelTextMap[labelKey] || labelTextMap.viewer;
     txt.textContent = label;
     chip.classList.remove('hidden');
     // color cue: owner/admin -> green; editor -> indigo; wasit -> amber; viewer -> gray
     const map = {
-      'Owner':   'bg-emerald-100/60 text-emerald-900 dark:bg-emerald-900/30 dark:text-emerald-200',
-      'Admin':   'bg-emerald-100/60 text-emerald-900 dark:bg-emerald-900/30 dark:text-emerald-200',
-      'Editor':  'bg-indigo-100/60 text-indigo-900 dark:bg-indigo-900/30 dark:text-indigo-200',
-      'Wasit':   'bg-amber-100/60 text-amber-900 dark:bg-amber-900/30 dark:text-amber-200',
-      'Viewer':  'bg-gray-100/60 text-gray-900 dark:bg-gray-800/60 dark:text-gray-200'
+      owner:   'bg-emerald-100/60 text-emerald-900 dark:bg-emerald-900/30 dark:text-emerald-200',
+      admin:   'bg-emerald-100/60 text-emerald-900 dark:bg-emerald-900/30 dark:text-emerald-200',
+      editor:  'bg-indigo-100/60 text-indigo-900 dark:bg-indigo-900/30 dark:text-indigo-200',
+      wasit:   'bg-amber-100/60 text-amber-900 dark:bg-amber-900/30 dark:text-amber-200',
+      viewer:  'bg-gray-100/60 text-gray-900 dark:bg-gray-800/60 dark:text-gray-200'
     };
     // base chip already styled; add hint color by toggling inline class
     chip.dataset.role = label;
-    chip.className = 'chip ' + (map[label]||'');
+    chip.className = 'chip ' + (map[labelKey]||'');
   }catch{}
 }
 
@@ -131,7 +141,7 @@ async function fetchEventMetaFromDB(eventId){
       }catch{}
       return cached;
     }
-    showLoading('Memuat info event…');
+    showLoading(__pubT('loading.eventInfo','Memuat info event...'));
     const { data, error } = await sb
       .from('events')
       .select('title, location_text, location_url, htm, max_players, join_open_at, owner_id, event_date')
@@ -227,7 +237,7 @@ function leaveEventMode(clearLS = true) {
   renderPlayersList?.();
   renderAll?.();
   validateNames?.();
-  setAppTitle('Mix Americano');   // judul default
+  setAppTitle(__pubT('app.name','Mix Americano'));   // judul default
   startAutoSave();
   // default back to editor when leaving cloud
   setAccessRole('editor');
@@ -241,7 +251,7 @@ function leaveEventMode(clearLS = true) {
 function setAppTitle(title) {
   const h = byId('appTitle');
   if (h && title) h.textContent = title;
-  if (title) document.title = title + ' – Mix Americano';
+  if (title) document.title = title + ' – ' + __pubT('app.name','Mix Americano');
   try{ ensureTitleEditor(); }catch{}
 }
 
@@ -251,7 +261,7 @@ try {
     const __origSetTitle = setAppTitle;
     setAppTitle = function(title){
       __origSetTitle(title);
-      if (title) document.title = title + ' – Mix Americano';
+      if (title) document.title = title + ' – ' + __pubT('app.name','Mix Americano');
     };
   }
 } catch {}
