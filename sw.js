@@ -1,5 +1,5 @@
 /* Service Worker: layered caching strategy for mix-americano */
-const APP_VERSION = '2025-10-12';
+const APP_VERSION = '2025-11-27';
 const STATIC_CACHE = 'mixam-static-' + APP_VERSION;
 const HTML_CACHE   = 'mixam-html-'   + APP_VERSION;
 const CORE_FALLBACK = ['index.html']; // minimal app shell for offline navigations
@@ -62,6 +62,26 @@ self.addEventListener('fetch', (event)=>{
         const match = await hc.match(req, { ignoreSearch:true }) || await hc.match('index.html');
         if (match) return match;
         return new Response('<!doctype html><title>Offline</title><h1>Offline</h1>', { status: 503, headers:{'Content-Type':'text/html'} });
+      }
+    })());
+    return;
+  }
+
+  // lang.json should always be fresh: network-first with cached fallback for offline
+  if (url.origin === self.location.origin && /\/lang\.json$/i.test(url.pathname)){
+    event.respondWith((async()=>{
+      let cache;
+      try{ cache = await caches.open(STATIC_CACHE); }catch{}
+      try{
+        const res = await fetch(req, { cache:'no-cache' });
+        if (res && res.ok && cache){ try{ await cache.put(req, res.clone()); }catch{} }
+        return res;
+      }catch{
+        if (cache){
+          const cached = await cache.match(req, { ignoreSearch:true });
+          if (cached) return cached;
+        }
+        return new Response('{}', { status: 503, headers:{'Content-Type':'application/json'} });
       }
     })());
     return;
