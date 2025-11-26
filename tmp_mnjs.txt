@@ -1,267 +1,150 @@
 "use strict";
 
-// Mobile-only bottom navigation that splits existing page sections
-// Keeps existing logic and CSS intact; only toggles visibility.
+// Match Recap: builds a quick summary from current UI/locals (no Supabase fetch)
 (function(){
-  const isMobile = () => window.matchMedia && window.matchMedia("(max-width: 640px)").matches;
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-  else init();
-
   function byId(id){ return document.getElementById(id); }
 
-  function init(){
-    if (!isMobile()) return; // only attach on small screens
+  function ensureRecapButton(){
+    const standings = byId('standings');
+    if (!standings) return;
+    const hostSection = standings.closest('section') || standings.parentElement;
+    if (!hostSection) return;
 
-    // Avoid double attach
-    if (byId('mobileTabbar')) return;
-
-    // Sections (do not change markup, just reference)
-    const main = document.querySelector('main');
-    if (!main) return;
-    const mainSections = [...main.querySelectorAll(':scope > section')];
-    // Expecting: [0]=controls, [1]=courts, [2]=standings (but we will re-host them)
-    const secControls = mainSections[0] || null;
-    const secCourts   = mainSections[1] || null;
-    const secTable    = mainSections.find(s=> s.querySelector('#standings')) || mainSections[2] || null;
-
-    // Players panel (lives in header filter)
-    const playersPanel = byId('playersPanel');
-    const collapseBtn  = byId('btnCollapsePlayers');
-
-    // Add bottom padding so content not hidden by tabbar
-    document.body.style.paddingBottom = '84px';
-
-    // Create inline hosts for tab sections with tidy IDs
-    const hostJadwal = document.createElement('section');
-    hostJadwal.id = 'section-jadwal';
-    hostJadwal.className = 'space-y-4';
-
-    const hostPlayers = document.createElement('section');
-    hostPlayers.id = 'section-pemain';
-    hostPlayers.className = 'bg-white dark:bg-gray-800 p-4 rounded-2xl shadow hidden';
-    const hostRecap = document.createElement('section');
-    hostRecap.id = 'section-recap';
-    hostRecap.className = 'bg-white dark:bg-gray-800 p-4 rounded-2xl shadow hidden';
-    const hostInsight = document.createElement('section');
-    hostInsight.id = 'section-insight';
-    hostInsight.className = 'bg-white dark:bg-gray-800 p-4 rounded-2xl shadow hidden';
-    // Build new structure order in main: Jadwal, Klasemen, Pemain, Recap, Insight
-    // 1) Jadwal wrapper placed where controls section sits
-    if (secControls){ secControls.before(hostJadwal); hostJadwal.appendChild(secControls); }
-    if (secCourts){ hostJadwal.appendChild(secCourts); }
-    // 2) Klasemen wrapper
-    const hostKlasemen = document.createElement('section');
-    hostKlasemen.id = 'section-klasemen';
-    if (secTable){ secTable.before(hostKlasemen); hostKlasemen.appendChild(secTable); }
-    // 3) Pemain, Recap, Insight hosts appended at end (players near top could also be moved after header)
-    main.appendChild(hostPlayers);
-    main.appendChild(hostRecap);
-    main.appendChild(hostInsight);
-
-    // Move the players list container into the Jadwal host (combined view)
-    const listContainer = byId('playerListContainer');
-    if (listContainer){
-      const ph = document.createComment('player-list-placeholder');
-      listContainer.after(ph);
-      hostJadwal.appendChild(listContainer);
-      // If composition info box already exists, move it right after container
-      const comp = document.getElementById('playerCompInfo');
-      if (comp) hostJadwal.appendChild(comp);
-    }
-    // Optional: also show warnings/info if exist
-    const warn = byId('playersWarnings'); if (warn) hostJadwal.appendChild(warn);
-
-    // Create tabbar
-    const bar = document.createElement('nav');
-    bar.id = 'mobileTabbar';
-    bar.setAttribute('role','tablist');
-    bar.className = [
-      'fixed','left-0','right-0','bottom-0','z-40',
-      'bg-white/90','dark:bg-gray-800/90','backdrop-blur',
-      'border-t','border-gray-200','dark:border-gray-700',
-      'shadow-[0_-6px_20px_rgba(0,0,0,0.10)]'
-    ].join(' ');
+    if (byId('btnMatchRecap')) return; // already inserted
 
     const wrap = document.createElement('div');
-    wrap.className = 'mx-auto max-w-7xl px-2';
-    const ul = document.createElement('ul');
-    ul.className = 'flex items-end justify-between gap-1 py-2';
-    wrap.appendChild(ul); bar.appendChild(wrap);
+    wrap.className = 'mt-4 flex items-center justify-end';
 
-    const tabs = [
-      // Combine Jadwal + Pemain in one tab
-      { key:'jadwal',  label:'Jadwal & Pemain',  icon: calIcon() },
-      { key:'klasemen',label:'Klasemen',         icon: upIcon() },
-      { key:'recap',   label:'Recap',            icon: clockIcon() },
-      { key:'insight', label:'Insight',          icon: screenIcon() },
-    ];
+    const btn = document.createElement('button');
+    btn.id = 'btnMatchRecap';
+    btn.className = 'recap-btn';
+    btn.textContent = 'Match Recap';
+    btn.addEventListener('click', openRecapModal);
+    wrap.appendChild(btn);
 
-    tabs.forEach(t => ul.appendChild(tabItem(t.key, t.label, t.icon)));
-    document.body.appendChild(bar);
-
-    // Hide Match Recap button on mobile (use the tab instead), keep in DOM for builder reuse
-    try{ const rbtn = document.getElementById('btnMatchRecap'); if (rbtn){ const host = rbtn.closest('div')||rbtn; host.style.display='none'; } }catch{}
-
-    // Initial state
-    // Default tab: Jadwal & Pemain (combined)
-    select('jadwal');
-
-    function tabItem(key, label, iconSvg){
-      const li = document.createElement('li');
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.id = `tab-${key}`;
-      btn.className = [
-        'flex','flex-col','items-center','justify-center','px-3','py-2','rounded-xl','min-w-[60px]',
-        'text-[11px]','font-medium','text-gray-600','dark:text-gray-200','hover:bg-gray-100','dark:hover:bg-gray-700'
-      ].join(' ');
-      btn.innerHTML = `
-        <span class="w-6 h-6 grid place-items-center">${iconSvg}</span>
-        <span class="mt-0.5">${escapeHtml(label)}</span>`;
-      btn.addEventListener('click', () => select(key));
-      li.appendChild(btn);
-      return li;
-    }
-
-    function select(key){
-      // Active style
-      const all = bar.querySelectorAll('button[id^="tab-"]');
-      all.forEach(b => b.classList.remove('bg-gray-900','text-white'));
-      const active = byId(`tab-${key}`);
-      if (active) active.classList.add('bg-gray-900','text-white');
-
-      // Hide/show groups without altering logic
-      // Default: show jadwal (controls + courts), hide standings, collapse players panel
-      toggle(hostJadwal,  key==='jadwal');
-      toggle(hostKlasemen,key==='klasemen');
-      toggle(hostRecap,   key==='recap');
-      toggle(hostInsight, key==='insight');
-
-      if (key==='klasemen') enhanceStandingsMobile();
-
-      // Ensure scroll to top of jadwal host on open
-      if (key==='jadwal') hostJadwal?.scrollIntoView({behavior:'smooth', block:'start'});
-
-      // Recap/Insight: leverage existing modal button (no logic changes)
-      if (key==='recap') buildRecapInline(hostRecap);
-      if (key==='insight') buildInsightInline(hostInsight);
-    }
-
-    function toggle(el, show){ if (!el) return; el.classList.toggle('hidden', !show); }
+    hostSection.appendChild(wrap);
   }
 
-  function escapeHtml(s){
-    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+  async function openRecapModal(){
+    // Ensure insight templates are loaded before first render
+    try { await loadInsightTemplates?.(); } catch {}
+
+    const modal = buildModalShell();
+    document.body.appendChild(modal.backdrop);
+    modal.backdrop.offsetHeight; // force reflow for animation
+    modal.backdrop.classList.add('open');
+
+    const content = buildRecapContent();
+    modal.content.innerHTML = '';
+    modal.content.appendChild(content);
   }
 
-  // Simple inline icons (tailwind-friendly, no extra CSS required)
-  function calIcon(){
-    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
+  function closeRecapModal(){
+    const el = byId('matchRecapOverlay');
+    if (!el) return;
+    el.classList.remove('open');
+    setTimeout(()=> el.remove(), 150);
   }
-  function peopleIcon(){
-    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
-  }
-  function upIcon(){
-    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg>';
-  }
-  function clockIcon(){
-    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>';
-  }
-  function screenIcon(){
-    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M12 20v-2"/></svg>';
-  }
-})();
 
-// Helpers to build inline Recap/Insight using existing match-recap modal builder
-async function buildRecapInline(host){
-  if (!host) return;
-  host.innerHTML = '<div class="text-sm text-gray-600 dark:text-gray-300">Memuat recap…</div>';
-  const root = await getRecapRootFromModal();
-  if (!root){
-    host.innerHTML = '<div class="text-sm text-red-600">Gagal membuat recap.</div>';
-    return;
-  }
-  host.innerHTML = '';
-  host.appendChild(root);
-}
+  function buildModalShell(){
+    const t = (k,f)=> (window.__i18n_get ? window.__i18n_get(k,f) : f);
+    const overlay = document.createElement('div');
+    overlay.id = 'matchRecapOverlay';
+    overlay.className = 'recap-overlay';
 
-async function buildInsightInline(host){
-  if (!host) return;
-  host.innerHTML = '<div class="text-sm text-gray-600 dark:text-gray-300">Memuat insight…</div>';
-  const root = await getRecapRootFromModal();
-  if (!root){ host.innerHTML = '<div class="text-sm text-red-600">Gagal membuat insight.</div>'; return; }
-  // Pick only the insight section
-  const title = [...root.querySelectorAll('.recap-section-title')]
-                  .find(el => /Catatan\s*&\s*Insight/i.test(el.textContent||''));
-  const insight = root.querySelector('.recap-insight-box');
-  const wrap = document.createElement('div');
-  if (title) wrap.appendChild(title.cloneNode(true));
-  if (insight) wrap.appendChild(insight.cloneNode(true));
-  host.innerHTML = '';
-  host.appendChild(wrap);
-}
+    const panel = document.createElement('div');
+    panel.className = 'recap-panel';
 
-async function getRecapRootFromModal(){
-  // Ensure recap button exists; the script inserts it after DOM ready inside standings section
-  const ensureButton = () => !!document.getElementById('btnMatchRecap');
-  if (!ensureButton()){
-    // Small wait if match-recap.js has not inserted yet
-    await waitMs(80);
-  }
-  const btn = document.getElementById('btnMatchRecap');
-  if (!btn) return null;
-  // Close any previous overlay to ensure fresh data
-  document.getElementById('matchRecapOverlay')?.remove();
-  btn.click();
-  const overlay = await waitFor(()=> document.getElementById('matchRecapOverlay'), 800);
-  if (!overlay) return null;
-  const body = overlay.querySelector('.recap-body');
-  const first = body && body.firstElementChild ? body.firstElementChild : null;
-  if (!first){ overlay.remove(); return null; }
-  const clone = first.cloneNode(true);
-  overlay.remove();
-  return clone;
-}
+    const header = document.createElement('div');
+    header.className = 'recap-header';
+    const title = document.createElement('div');
+    title.className = 'recap-title';
+    title.innerHTML = `<div class="text-xs uppercase tracking-wide text-indigo-100 mb-1">${t('recap.subtitle','Rangkuman')}</div><div class="text-lg font-bold text-white">${t('recap.title','Match Recap')}</div>`;
+    const actions = document.createElement('div');
+    actions.className = 'recap-actions';
+    const saveBtn = document.createElement('button');
+    saveBtn.className = 'recap-action';
+    saveBtn.innerHTML = '<span>💾</span><span>Simpan gambar</span>';
+    saveBtn.addEventListener('click', ()=> saveRecapAsImage());
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'recap-action';
+    copyBtn.innerHTML = '<span>📋</span><span>Salin teks</span>';
+    copyBtn.addEventListener('click', copyRecapText);
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'recap-action';
+    closeBtn.innerHTML = '<span>✕</span><span>Tutup</span>';
+    closeBtn.addEventListener('click', closeRecapModal);
+    actions.appendChild(saveBtn);
+    actions.appendChild(copyBtn);
+    actions.appendChild(closeBtn);
+    header.appendChild(title);
+    header.appendChild(actions);
 
-function waitMs(ms){ return new Promise(r=> setTimeout(r, ms)); }
-async function waitFor(fn, timeout=1000, step=50){
-  const start = Date.now();
-  while (Date.now()-start < timeout){
-    try { const v = fn(); if (v) return v; } catch {}
-    await waitMs(step);
-  }
-  return null;
-}
+    const body = document.createElement('div');
+    body.className = 'recap-body';
 
-// Apply recap-like coloring to standings table on mobile
-function enhanceStandingsMobile(){
-  const table = document.getElementById('standings');
-  if (!table) return;
-  // Wrap with recap-standings container once
-  let wrap = table.closest('.recap-standings');
-  if (!wrap){
-    wrap = document.createElement('div');
-    wrap.className = 'recap-standings';
-    if (table.parentElement) {
-      table.parentElement.insertBefore(wrap, table);
-      wrap.appendChild(table);
-    }
+    panel.appendChild(header);
+    panel.appendChild(body);
+    overlay.appendChild(panel);
+
+    overlay.addEventListener('click', (e)=>{ if (e.target === overlay) closeRecapModal(); });
+
+    return { backdrop: overlay, content: body };
   }
-  // Color cells for diff and winrate
-  try{
-    const rows = table.querySelectorAll('tbody tr');
-    rows.forEach(tr => {
-      const tds = tr.children; if (!tds || tds.length < 8) return;
-      // Diff at index 3
-      const diffTd = tds[3];
-      const diffVal = Number(String(diffTd.textContent||'').replace(/[^\-\d]/g,''));
-      diffTd.classList.remove('diff-pos','diff-neg');
-      if (isFinite(diffVal)) diffTd.classList.add(diffVal>=0 ? 'diff-pos' : 'diff-neg');
-      // WinRate at index 7 (value like 75%)
-      const wrTd = tds[7];
-      const wrVal = Number(String(wrTd.textContent||'').replace(/[^\d]/g,''));
-      wrTd.classList.remove('wr-high','wr-low');
-      if (isFinite(wrVal)) wrTd.classList.add(wrVal>=60 ? 'wr-high' : 'wr-low');
+
+  function textFrom(el){ return (el?.textContent || '').trim(); }
+
+  function buildRecapContent(){
+    const root = document.createElement('div');
+
+    // Collect data
+    const matches = collectMatches().map(m=>{
+      const saN = Number(m.sa||0), sbN = Number(m.sb||0);
+      const margin = Math.abs(saN - sbN);
+      const winner = saN===sbN ? 'D' : (saN>sbN?'A':'B');
+      return {...m, saN, sbN, margin, winner};
     });
-  }catch{}
-}
+
+    // Standings snapshot (from DOM table)
+    const standingsEl = byId('standings');
+    const standingRows = [...(standingsEl?.querySelectorAll('tbody tr') || [])];
+    const standings = standingRows.map(tr => {
+      const t = [...tr.children].map(td => textFrom(td));
+      const rank = Number(t[0]||0);
+      const player = t[1]||'';
+      const pf = Number(t[2]||0);
+      const diff = Number(t[3]||0);
+      const w = Number(t[4]||0), l = Number(t[5]||0), d = Number(t[6]||0);
+      const gp = w+l+d;
+      const pa = pf - diff;
+      return {rank, player, gp, w, l, pf, pa, diff};
+    }).filter(x=>x.player);
+
+    // Header title
+    const courtNo = (typeof activeCourt !== 'undefined') ? (Number(activeCourt)+1) : (Number(window.activeCourt||0)+1);
+    const headerTitle = `${textFrom(byId('appTitle')) || 'Match Recap'} — Court ${courtNo}`;
+    const hdr = document.createElement('div');
+    hdr.className = 'recap-titlebar';
+    hdr.textContent = headerTitle;
+    root.appendChild(hdr);
+
+    // Stat cards
+    const totalMatch = matches.length;
+    const totalPoint = matches.reduce((s,m)=>s+m.saN+m.sbN,0);
+    const avgMargin = totalMatch ? (matches.reduce((s,m)=>s+m.margin,0)/totalMatch) : 0;
+    const tight = matches.length ? matches.slice().sort((a,b)=>a.margin-b.margin || a.round-b.round)[0] : null;
+    const cards = document.createElement('div');
+    cards.className = 'recap-cards';
+    const tightLabel = tight ? `Match ${tight.round} (${tight.teamA} vs ${tight.teamB || '-'})` : 'Belum ada';
+    cards.innerHTML = `
+      ${cardMetric(totalMatch, 'Total Match', 'Berapa banyak laga sudah dimainkan.')}
+      ${cardMetric(totalPoint, 'Total Poin', 'Akumulasi poin semua match (A+B).')}
+      ${cardMetric(avgMargin.toFixed(1), 'Rata Selisih', 'Rata-rata margin skor per match.')}
+      ${tight ? cardMetric(`${tight.saN}–${tight.sbN}`, `Paling Ketat`, `Terketat: ${tightLabel}`) : cardMetric('-', 'Paling Ketat', 'Menunggu skor terisi.')}
+    `;
+    root.appendChild(cards);
+
+    // Two-column layout
+    const grid = document.createElement('div');
+    grid.className = 'recap-grid';
+
