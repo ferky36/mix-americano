@@ -1223,6 +1223,22 @@
     "id": "Tidak ada pemain di waiting list.",
     "en": "No players in waiting list."
   },
+  "rename.mixedMissing": {
+    "id": "Mode Mixed: Lengkapi <b>Gender</b> untuk: {names}.",
+    "en": "Mixed mode: Fill in <b>Gender</b> for: {names}."
+  },
+  "rename.levelMissing": {
+    "id": "Mode Level: Lengkapi <b>Level</b> (beg/pro) untuk: {names}.",
+    "en": "Level mode: Fill in <b>Level</b> (beg/pro) for: {names}."
+  },
+  "rename.hintMeta": {
+    "id": "Atur di list pemain (dropdown kecil di tiap nama).",
+    "en": "Set it in the players list (small dropdown on each name)."
+  },
+  "rename.similar": {
+    "id": "Mirip (cek typo): {pairs}",
+    "en": "Similar (check typos): {pairs}"
+  },
   "join.alreadyRegistered": {
     "id": "Anda sudah terdaftar sebagai",
     "en": "You are already registered as"
