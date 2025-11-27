@@ -1,4 +1,4 @@
-"use strict";
+﻿"use strict";
 
 // Match Recap: builds a quick summary from current UI/locals (no Supabase fetch)
 (function(){
@@ -363,7 +363,7 @@
   }
 
   function buildPairingCard(standings){
-    const card = createInsightCard(t('recap.pair','Pasangan'), '🤝');
+    const card = createInsightCard(t('recap.pair.recommend','Rekomendasi Pasangan'), '🤝');
     const wrap = document.createElement('div');
     wrap.className = 'insight-pairing-wrap';
     const lows = standings.filter(s=>s.diff<0).sort((a,b)=>a.diff-b.diff).slice(0,2);
@@ -393,7 +393,7 @@
   }
 
   function buildPairPerformanceCard(matches){
-    const card = createInsightCard(t('recap.pair','Pasangan'), '🔀');
+    const card = createInsightCard(t('recap.pair.performance','Performa Pasangan'), '🔀');
     const list = document.createElement('div');
     list.className = 'pair-perf-list';
     const agg = aggregatePairs(matches);
