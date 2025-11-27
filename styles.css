@@ -11,6 +11,11 @@ body { font-size: clamp(14px, calc(14px * var(--ui-zoom) / 100), 20px); font-fam
   box-shadow:0 4px 10px rgba(0,0,0,.12);
 }
 .lang-toggle .flag{display:inline-flex; align-items:center; justify-content:center; line-height:1; font-size:1rem;}
+.lang-toggle .flag{
+  width:20px; height:14px; padding:0;
+  display:inline-flex; align-items:center; justify-content:center;
+}
+.lang-toggle .flag-svg{ width:100%; height:100%; display:block; }
 .dark .lang-toggle{background:rgba(255,255,255,.12); border-color:rgba(255,255,255,.24); color:#fff;}
 .lang-toggle .en-flag{opacity:.6; filter: grayscale(1);}
 .lang-toggle.lang-en .en-flag{opacity:1; filter: grayscale(0);}
