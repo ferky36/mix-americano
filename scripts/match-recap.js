@@ -490,7 +490,7 @@
   }
 
   function buildInsightCard(matches, avgMargin, standings){
-    const card = createInsightCard(t('recap.insight','Insight & Konsistensi'), '📈');
+    const card = createInsightCard(t('recap.insight','Insight'), '📈');
     const container = document.createElement('div');
     container.className = 'insight-progress';
     const cand = pickConsistencyCandidate(standings);

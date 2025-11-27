@@ -435,7 +435,7 @@
     "recap.saveImage": { "id": "Simpan gambar", "en": "Save image" },
     "recap.copyText": { "id": "Salin teks", "en": "Copy text" },
     "recap.close": { "id": "Tutup", "en": "Close" },
-    "recap.insight": { "id": "Insight & Konsistensi", "en": "Insight & Consistency" },
+    "recap.insight": { "id": "Insight", "en": "Insight" },
     "render.fairness.header": { "id": "Fairness Info (semua lapangan): min={min}, max={max}, selisih={spread}", "en": "Fairness Info (all courts): min={min}, max={max}, spread={spread}" },
     "render.fairness.tips": { "id": "Tips: jika ada panah naik/turun berjauhan, klik \"Terapkan\" lagi untuk mengacak ulang; sistem mengutamakan pemain yang masih kurang main.", "en": "Tips: if up/down arrows are far apart, click \"Apply\" again to reshuffle; the system prioritizes players with fewer games." },
     "render.fairness.activeFilter": { "id": "Filter aktif:", "en": "Active filter:" },
