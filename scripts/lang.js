@@ -761,11 +761,11 @@
   async function init(){
     try{ currentLang = localStorage.getItem('app.lang') || 'id'; }catch{}
     await loadTranslations();
-    applyTranslations();
     try{
       window.__i18n_apply = applyTranslations;
       window.__i18n_get = (key, fallback)=> translations?.[key]?.[currentLang] ?? fallback ?? key;
     }catch{}
+    applyTranslations();
     const toggle = document.getElementById('langToggle');
     if (toggle){
       toggle.addEventListener('click', ()=>{
