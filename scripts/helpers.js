@@ -1,4 +1,4 @@
-"use strict";
+﻿"use strict";
 const __hT = (k, f)=> (window.__i18n_get ? __i18n_get(k, f) : f);
 // ================== Helpers ================== //
 // bisa disesuaikan urutannya
@@ -290,12 +290,24 @@ function __applyFairnessFilter(){
     try{ const el = byId('btnSave'); if (el) el.textContent = (window.__i18n_get ? __i18n_get('header.save','Save') : 'Save'); }catch{}
     try{ const el = byId('btnMakeEventLink'); if (el) el.textContent = (window.__i18n_get ? __i18n_get('event.createTitle','Buat/Cari Event') : 'Buat/Cari Event'); }catch{}
     try{ const el = byId('btnReport'); if (el) el.textContent = (window.__i18n_get ? __i18n_get('header.report','Report') : 'Report'); }catch{}
-    try{ const el = byId('btnAddCourt'); if (el) el.textContent = (window.__i18n_get ? __i18n_get('controls.addCourt','＋ Tambah Lapangan') : '＋ Tambah Lapangan'); }catch{}
-    try{ const el = byId('btnResetActive'); if (el) el.textContent = (window.__i18n_get ? __i18n_get('controls.resetActive','Reset Lapangan Aktif') : 'Reset Lapangan Aktif'); }catch{}
-    try{ const el = byId('btnClearScoresActive'); if (el) el.textContent = (window.__i18n_get ? __i18n_get('controls.clearActive','Clear Skor (Lapangan Aktif)') : 'Clear Skor (Lapangan Aktif)'); }catch{}
-    try{ const el = byId('btnClearScoresAll'); if (el) el.textContent = (window.__i18n_get ? __i18n_get('controls.clearAll','Clear Skor (Semua Lapangan)') : 'Clear Skor (Semua Lapangan)'); }catch{}
+    try{ const el = byId('btnAddCourt'); if (el) el.textContent = (window.__i18n_get ? __i18n_get('controls.addCourt','+ Tambah Lapangan') : '+ Tambah Lapangan'); }catch{}
+    try{
+      const btn = byId('btnResetActive');
+      const span = btn?.querySelector('[data-i18n="controls.resetActive"]');
+      if (span && window.__i18n_get) span.textContent = __i18n_get('controls.resetActive','Reset Lapangan Aktif');
+    }catch{}
+    try{
+      const btn = byId('btnClearScoresActive');
+      const span = btn?.querySelector('[data-i18n="controls.clearActive"]');
+      if (span && window.__i18n_get) span.textContent = __i18n_get('controls.clearActive','Clear Skor (Lapangan Aktif)');
+    }catch{}
+    try{
+      const btn = byId('btnClearScoresAll');
+      const span = btn?.querySelector('[data-i18n="controls.clearAll"]');
+      if (span && window.__i18n_get) span.textContent = __i18n_get('controls.clearAll','Clear Skor (Semua Lapangan)');
+    }catch{}
     try{ const el = byId('btnLeaveEvent'); if (el) el.textContent = (window.__i18n_get ? __i18n_get('header.leave','Keluar Event') : 'Keluar Event'); }catch{}
-    try{ const el = byId('filterChevron'); if (el){ const open = !!byId('filterPanel')?.classList.contains('open'); el.textContent = open ? '▾' : '▸'; } }catch{}
+    try{ const el = byId('filterChevron'); if (el){ const open = !!byId('filterPanel')?.classList.contains('open'); el.textContent = open ? 'v' : '^'; } }catch{}
   }
   // // Small badge for Wasit (score-only) in header chips
   // try {
