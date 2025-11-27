@@ -145,9 +145,14 @@
           }catch{}
           try{
             const rawJo = meta.join_open_at || '';
-            const match = String(rawJo).match(/(\d{4}-\d{2}-\d{2})[T\s](\d{2}):(\d{2})/);
-            const isoDate = match ? match[1] : '';
-            const isoTime = match ? `${match[2]}:${match[3]}` : '';
+            // Tampilkan ke user sebagai waktu lokal yang mereka input (hindari jam bergeser +7)
+            const dt = rawJo ? new Date(rawJo) : null;
+            const isoDate = dt
+              ? (typeof toLocalDateValue === 'function' ? toLocalDateValue(dt) : String(rawJo).slice(0,10))
+              : '';
+            const isoTime = dt
+              ? (typeof toLocalTimeValue === 'function' ? toLocalTimeValue(dt) : (String(rawJo).match(/T(\d{2}:\d{2})/)?.[1]||''))
+              : '';
             const d = byId('spJoinDate');
             const t = byId('spJoinTime');
             const mainD = byId('joinOpenDateInput');
@@ -156,9 +161,8 @@
             if (t) t.value = isoTime;
             if (mainD) mainD.value = isoDate;
             if (mainT) mainT.value = isoTime;
-            window.joinOpenAt = (isoDate && isoTime && typeof combineDateTimeToISO==='function')
-              ? combineDateTimeToISO(isoDate, isoTime)
-              : null;
+            // Simpan state dengan nilai UTC apa adanya agar gating tetap benar
+            window.joinOpenAt = rawJo || null;
           }catch{}
           try{
             const sd = byId('sessionDate');

@@ -21,8 +21,13 @@ function combineDateTimeToISO(dateStr, timeStr) {
     if (![hh,mm].every(Number.isFinite)) return null;
     const hhStr = String(hh).padStart(2,'0');
     const mmStr = String(mm).padStart(2,'0');
-    // Simpan sebagai waktu lokal (naive) tanpa konversi offset agar tidak bergeser saat tampil/simpan
-    return `${dateStr}T${hhStr}:${mmStr}:00`;
+    // Simpan dengan offset lokal (mis. +07:00) agar DB timestamptz tahu zona, tapi epoch tetap UTC
+    const localDate = new Date(`${dateStr}T${hhStr}:${mmStr}:00`);
+    const offsetMinutes = localDate.getTimezoneOffset(); // negatif untuk GMT+
+    const sign = offsetMinutes <= 0 ? '+' : '-';
+    const offH = String(Math.floor(Math.abs(offsetMinutes) / 60)).padStart(2,'0');
+    const offM = String(Math.abs(offsetMinutes) % 60).padStart(2,'0');
+    return `${dateStr}T${hhStr}:${mmStr}:00${sign}${offH}:${offM}`;
   } catch { return null; }
 }
 function isJoinOpen() {
