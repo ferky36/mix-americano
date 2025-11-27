@@ -1,4 +1,4 @@
-"use strict";
+﻿"use strict";
 
 (function(){
   const builtinTranslations = {
@@ -82,6 +82,9 @@
     "standings.d": { "id": "D", "en": "D" },
     "standings.winrate": { "id": "WinRate", "en": "WinRate" },
     "standings.rules.title": { "id": "📊 Aturan Ranking", "en": "📊 Ranking Rules" },
+    "standings.rules.headingTotal": { "id": "Total", "en": "Total" },
+    "standings.rules.headingDiff": { "id": "Selisih", "en": "Difference" },
+    "standings.rules.headingWins": { "id": "Menang", "en": "Wins" },
     "standings.rules.total": { "id": "— pemain dengan poin total lebih tinggi berada di peringkat lebih atas.", "en": "— players with higher total points rank above others." },
     "standings.rules.diff": { "id": "— jika Total sama, peringkat ditentukan oleh selisih skor (point for – point against). Lebih besar → lebih tinggi.", "en": "— if Total ties, rank by score difference (points for – points against). Larger → higher." },
     "standings.rules.wins": { "id": "— jika Total & Selisih sama, dilihat jumlah kemenangan (W). Lebih banyak → lebih tinggi.", "en": "— if Total & Difference tie, rank by wins (W). More wins → higher." },
