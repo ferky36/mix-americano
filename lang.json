@@ -1,4 +1,4 @@
-{
+﻿{
   "header.menu": {
     "id": "Menu",
     "en": "Menu"
@@ -310,6 +310,18 @@
   "standings.rules.title": {
     "id": "📊 Aturan Ranking",
     "en": "📊 Ranking Rules"
+  },
+  "standings.rules.headingTotal": {
+    "id": "Total",
+    "en": "Total"
+  },
+  "standings.rules.headingDiff": {
+    "id": "Selisih",
+    "en": "Difference"
+  },
+  "standings.rules.headingWins": {
+    "id": "Menang",
+    "en": "Wins"
   },
   "standings.rules.total": {
     "id": "— pemain dengan poin total lebih tinggi berada di peringkat lebih atas.",
