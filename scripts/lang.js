@@ -235,6 +235,8 @@
     "recap.html2canvasFail": { "id": "Gagal memuat html2canvas", "en": "Failed to load html2canvas" },
     "recap.winrate": { "id": "WinRate {value}", "en": "WinRate {value}" },
     "recap.pair": { "id": "Pasangan", "en": "Pair" },
+    "recap.pair.recommend": { "id": "Rekomendasi Pasangan", "en": "Recommended Pairing" },
+    "recap.pair.performance": { "id": "Performa Pasangan", "en": "Pairing Performance" },
     "recap.empty": { "id": "Belum ada data.", "en": "No data yet." },
     "recap.section.notes": { "id": "Catatan & Insight", "en": "Notes & Insights" },
     "recap.support.title": { "id": "Butuh Penyangga", "en": "Needs Support" },

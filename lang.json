@@ -1299,6 +1299,14 @@
     "id": "Pasangan",
     "en": "Pair"
   },
+  "recap.pair.recommend": {
+      "id": "Rekomendasi Pasangan",
+      "en": "Recommended Pairing"
+    },
+  "recap.pair.performance": {
+      "id": "Performa Pasangan",
+      "en": "Pairing Performance"
+    },
   "recap.empty": {
     "id": "Belum ada data.",
     "en": "No data yet."
