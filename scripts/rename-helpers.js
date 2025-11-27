@@ -59,18 +59,18 @@ function computeRenamePairs(oldActive, newActive){
   return pairs;
 }
 
-// Pastikan event masih ada. Jika sudah dihapus/tidak ada, reset ke mode lokal dan buka modal Cari Event.
-async function ensureEventExistsOrReset(){
-  try{
-    if (!isCloudMode() || !currentEventId) return true;
-    const { data, error } = await sb.from('events').select('id').eq('id', currentEventId).maybeSingle();
-    if (error || !data?.id){
-      showToast?.(__renameT('rename.eventMissing','Event tidak ditemukan atau sudah dihapus.'), 'warn');
-      try{ leaveEventMode?.(true); }catch{}
-      try{ openSearchEventModal?.(); }catch{}
-      return false;
-    }
-    return true;
+  // Pastikan event masih ada. Jika sudah dihapus/tidak ada, reset ke mode lokal dan buka modal Cari Event.
+  async function ensureEventExistsOrReset(){
+    try{
+      if (!isCloudMode() || !currentEventId) return true;
+      const { data, error } = await sb.from('events').select('id').eq('id', currentEventId).maybeSingle();
+      if (error || !data?.id){
+        showToast?.(__renameT('rename.eventMissing','Event tidak ditemukan atau sudah dihapus.'), 'warn');
+        try{ leaveEventMode?.(true); }catch{}
+        try{ openSearchEventModal?.(); }catch{}
+        return false;
+      }
+      return true;
   }catch(e){ console.warn('ensureEventExistsOrReset failed', e); return true; }
 }
 
@@ -235,8 +235,9 @@ function validateNames(){
   }
   if (sugg.length){
     items.push(
-      "<div class='text-blue-600'>Mirip (cek typo): " +
-      sugg.map(([a,b])=> a + " ~ " + b).join(', ') +
+      "<div class='text-blue-600'>" +
+      __renameT('rename.similar','Mirip (cek typo): {pairs}')
+        .replace('{pairs}', sugg.map(([a,b])=> a + " ~ " + b).join(', ')) +
       "</div>"
     );
   }
@@ -258,20 +259,28 @@ function validateNames(){
 
     if (pm === 'mixed' && missingGender.length){
       items.push(
-        "<div class='text-rose-600'>Mode Mixed: " +
-        "Lengkapi <b>Gender</b> untuk: " + missingGender.join(', ') + ".</div>"
+        "<div class='text-rose-600'>" +
+        __renameT('rename.mixedMissing','Mode Mixed: Lengkapi <b>Gender</b> untuk: {names}.')
+          .replace('{names}', missingGender.join(', ')) +
+        "</div>"
       );
     }
     if ((pm === 'lvl_bal' || pm === 'lvl_same') && missingLevel.length){
       items.push(
-        "<div class='text-rose-600'>Mode Level: " +
-        "Lengkapi <b>Level</b> (beg/pro) untuk: " + missingLevel.join(', ') + ".</div>"
+        "<div class='text-rose-600'>" +
+        __renameT('rename.levelMissing','Mode Level: Lengkapi <b>Level</b> (beg/pro) untuk: {names}.')
+          .replace('{names}', missingLevel.join(', ')) +
+        "</div>"
       );
     }
 
     // Hint kecil untuk mengarahkan user
     if ((pm==='mixed' && missingGender.length) || ((pm==='lvl_bal'||pm==='lvl_same') && missingLevel.length)){
-      items.push("<div class='text-xs text-gray-500 mt-1'>Atur di list pemain (dropdown kecil di tiap nama).</div>");
+      items.push(
+        "<div class='text-xs text-gray-500 mt-1'>" +
+        __renameT('rename.hintMeta','Atur di list pemain (dropdown kecil di tiap nama).') +
+        "</div>"
+      );
     }
   }
 
