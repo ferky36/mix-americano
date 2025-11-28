@@ -103,7 +103,7 @@
         case 'jadwal': return t('mobile.tab.schedule','Jadwal & Pemain');
         case 'klasemen': return t('mobile.tab.standings','Klasemen');
         case 'recap': return t('recap.button','Recap');
-        case 'insight': return t('recap.insight','Insight');
+        case 'insight': return t('analysis.title','Ulasan');
         case 'kas': return t('cash.title','Cashflow');
         default: return key;
       }

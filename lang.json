@@ -60,7 +60,7 @@
     "en": "Break per Match (minutes)"
   },
   "settings.rounds": {
-    "id": "Match / Lapangan",
+    "id": "Pertandingan / Lapangan",
     "en": "Match / Court"
   },
   "settings.maxPlayers": {
@@ -132,7 +132,7 @@
     "en": "Show break rows"
   },
   "filter.rounds": {
-    "id": "Match/Lapangan",
+    "id": "Pertandingan/Lapangan",
     "en": "Matches/Court"
   },
   "players.collapse": {
@@ -1148,7 +1148,7 @@
     "en": "Score is still 0-0. It will not be saved."
   },
   "score.matchNotFound": {
-    "id": "Match tidak ditemukan.",
+    "id": "Pertandingan tidak ditemukan.",
     "en": "Match not found."
   },
   "score.saveFail": {
@@ -1280,12 +1280,12 @@
     "en": "Range: {from} - {to} | Dates: {dates} | Games: {games} | Players: {players}"
   },
   "recap.button": {
-    "id": "Match Recap",
+    "id": "Rekap pertandingan",
     "en": "Match Recap"
   },
-  "recap.title": {
-    "id": "Padel Match Recap",
-    "en": "Padel Match Recap"
+  "analysis.title": {
+    "id": "Analysis",
+    "en": "Ulasan"
   },
   "recap.subtitle": {
     "id": "Analisis Performa & Strategi Pemain",
@@ -1335,6 +1335,14 @@
       "id": "Performa Pasangan",
       "en": "Pairing Performance"
     },
+  "recap.pair.best": {
+    "id": "Pasangan Terbaik",
+    "en": "Best Pair"
+  },
+  "recap.pair.bad": {
+    "id": "Pasangan Terburuk",
+    "en": "Bad Pair"
+  },
   "recap.empty": {
     "id": "Belum ada data.",
     "en": "No data yet."
@@ -1343,10 +1351,10 @@
 "recap.support.title": { "id": "Butuh Penyangga", "en": "Needs Support" },
 "recap.support.safe": { "id": "Semua pemain aman, tidak ada selisih negatif.", "en": "All players are safe, no negative differential." },
 "recap.pair.roundLabel.count": { "id": "{count} match", "en": "{count} matches" },
-"recap.pair.roundLabel.single": { "id": "Match", "en": "Match" },
-"recap.pair.roundLabel.one": { "id": "Match ke {round}", "en": "Match #{round}" },
-"recap.pair.roundLabel.some": { "id": "Match ke {rounds}", "en": "Matches {rounds}" },
-"recap.pair.roundLabel.more": { "id": "Match ke {rounds} +{extra} lagi", "en": "Matches {rounds} +{extra} more" },
+"recap.pair.roundLabel.single": { "id": "Pertandingan", "en": "Match" },
+"recap.pair.roundLabel.one": { "id": "Pertandingan ke {round}", "en": "Match #{round}" },
+"recap.pair.roundLabel.some": { "id": "Pertandingan ke {rounds}", "en": "Matches {rounds}" },
+"recap.pair.roundLabel.more": { "id": "Pertandingan ke {rounds} +{extra} lagi", "en": "Matches {rounds} +{extra} more" },
 "recap.needsImprove": { "id": "<strong>Butuh perbaikan:</strong> {list} - coba pairing dengan pemain +/- positif.", "en": "<strong>Needs improvement:</strong> {list} - try pairing with players who have positive diff." },
 "recap.consistency.watch": { "id": "<strong>Consistency watch:</strong> {name} {wr}% namun Total tinggi ({total}) -> kontribusi poin bagus meski hasil belum stabil.", "en": "<strong>Consistency watch:</strong> {name} {wr}% but Total is high ({total}) -> strong contribution though results unstable." },
 "recap.rotation.title": { "id": "Rotasi & keseimbangan", "en": "Rotation & balance" },
@@ -1362,11 +1370,11 @@
 "recap.fallback.rotation": { "id": "<strong>Rotasi & keseimbangan:</strong> sebaran main {spread}.", "en": "<strong>Rotation & balance:</strong> play distribution {spread}." },
 "recap.fallback.rotationEven": { "id": "merata", "en": "even" },
 "recap.fallback.rotationGap": { "id": "selisih {spread}", "en": "gap {spread}" },
-"recap.copyHeader": { "id": "Match Recap - {title}", "en": "Match Recap - {title}" },
-"recap.copyMatches": { "id": "Matches ({count})", "en": "Matches ({count})" },
-"recap.copyStandings": { "id": "Standings", "en": "Standings" },
-"recap.courtLabel": { "id": "Lap {court}", "en": "Court {court}" },
-"recap.matchLabel": { "id": "Match {round}", "en": "Match {round}" },
+"recap.copyHeader": { "id": "Rekap Pertandingan - {title}", "en": "Match Recap - {title}" },
+"recap.copyMatches": { "id": "Pertandingan ({count})", "en": "Matches ({count})" },
+"recap.copyStandings": { "id": "Klasemen", "en": "Standings" },
+"recap.courtLabel": { "id": "Lapangan {court}", "en": "Court {court}" },
+"recap.matchLabel": { "id": "Pertandingan {round}", "en": "Match {round}" },
   "recap.summary": {
     "id": "Rangkuman",
     "en": "Summary"
@@ -1500,7 +1508,7 @@
   "mobile.chips.toggle": { "id": "Tampilkan/sembunyikan info header", "en": "Show/hide header info" },
   "mobile.recap.fail": { "id": "Gagal membuat recap.", "en": "Failed to build recap." },
   "mobile.insight.fail": { "id": "Gagal membuat insight.", "en": "Failed to build insight." },
-  "mobile.recap.title": { "id": "Match Recap — {event}", "en": "Match Recap — {event}" },
+  "mobile.recap.title": { "id": "Rekap pertandingan — {event}", "en": "Match Recap — {event}" },
   "mobile.recap.search": { "id": "Cari pemain / skor...", "en": "Search players / scores..." },
   "mobile.recap.allCourts": { "id": "Semua Lapangan", "en": "All Courts" },
   "mobile.recap.result.all": { "id": "Semua Hasil", "en": "All Results" },
@@ -1508,7 +1516,7 @@
   "mobile.recap.result.lose": { "id": "Kalah", "en": "Lose" },
   "mobile.recap.result.draw": { "id": "Seri", "en": "Draw" },
   "mobile.recap.section": { "id": "Rekap Pertandingan", "en": "Match Recap" },
-  "mobile.recap.match": { "id": "Match #{round}", "en": "Match #{round}" },
+  "mobile.recap.match": { "id": "Pertandingan #{round}", "en": "Match #{round}" },
 
   "join.leaveConfirm": { "id": "Keluar dari event (hapus nama Anda dari daftar pemain)?", "en": "Leave the event (remove your name from the players list)?" },
   "join.close": { "id": "Tutup", "en": "Close" },
@@ -1533,9 +1541,8 @@
   "join.editPlayerTitle": { "id": "Ubah nama pemain", "en": "Edit player name" },
   "join.notOpenAt": { "id": "Belum bisa join. Pendaftaran dibuka pada {date} {time}.", "en": "Cannot join yet. Registration opens at {date} {time}." },
   "join.notOpen": { "id": "Belum bisa join. Pendaftaran belum dibuka.", "en": "Cannot join yet. Registration is not open." },
-
-  "recap.header": { "id": "Match Recap — Court {court}", "en": "Match Recap — Court {court}" },
-  "recap.tightLabel": { "id": "Match {round} ({teamA} vs {teamB})", "en": "Match {round} ({teamA} vs {teamB})" },
+  "recap.header": { "id": "Rekap Pertandingan - Lapangan {court}", "en": "Match Recap — Court {court}" },
+  "recap.tightLabel": { "id": "Pertandingan {round} ({teamA} vs {teamB})", "en": "Match {round} ({teamA} vs {teamB})" },
   "recap.metric.totalMatch": { "id": "Total Match", "en": "Total Matches" },
   "recap.metric.totalMatchHint": { "id": "Berapa banyak laga sudah dimainkan.", "en": "How many matches have been played." },
   "recap.metric.totalPoint": { "id": "Total Poin", "en": "Total Points" },
@@ -1557,16 +1564,16 @@
   "recap.rule.diff": { "id": "Selisih — jika Total sama, peringkat ditentukan oleh selisih skor (point for – point against).", "en": "Difference — if Total is tied, ranking is decided by score differential (points for – points against)." },
   "recap.rule.win": { "id": "Menang — jika Total & Selisih sama, dilihat jumlah kemenangan (W).", "en": "Wins — if Total & Differential are tied, compare number of wins (W)." },
   "recap.rule.alphabet": { "id": "Jika semua sama — diurutkan alfabetis nama pemain.", "en": "If still tied — sort by player name alphabetically." },
-  "recap.topPerformers": { "id": "Top Performers", "en": "Top Performers" },
+  "recap.topPerformers": { "id": "Performa Terbaik", "en": "Top Performers" },
   "recap.consistency.empty": { "id": "Belum ada data konsistensi.", "en": "No consistency data yet." },
-  "recap.card.tight": { "id": "Match Ketat", "en": "Tight Match" },
+  "recap.card.tight": { "id": "Pertandingan Ketat", "en": "Tight Match" },
   "recap.card.avgMargin": { "id": "Rata Margin", "en": "Avg. Margin" },
   "recap.card.avgMarginSub": { "id": "Skor per match", "en": "Score per match" },
   "recap.rotation.ok": { "id": "Rotasi sudah seimbang.", "en": "Rotation is balanced." },
   "recap.rotation.warn": { "id": "Sebaran rotasi belum merata (selisih main {spread}).", "en": "Rotation spread is uneven (play gap {spread})." },
   "recap.margin.low": { "id": "Selisih rata-rata rendah → pertandingan kompetitif.", "en": "Low average margin → competitive matches." },
   "recap.margin.high": { "id": "Selisih rata-rata cukup tinggi → disparitas performa terlihat.", "en": "Average margin is high → performance disparity visible." },
-  "recap.tightest": { "id": "Match paling ketat: Match {round} (Skor {score}).", "en": "Tightest match: Match {round} (Score {score})." },
+  "recap.tightest": { "id": "Pertandingan paling ketat: Match {round} (Skor {score}).", "en": "Tightest match: Match {round} (Score {score})." },
   "recap.copySuccess": { "id": "Recap disalin ke clipboard", "en": "Recap copied to clipboard" },
   "recap.html2canvasFail": { "id": "Gagal memuat html2canvas", "en": "Failed to load html2canvas" },
 
