@@ -122,7 +122,7 @@
 
     // Header title
     const courtNo = (typeof activeCourt !== 'undefined') ? (Number(activeCourt)+1) : (Number(window.activeCourt||0)+1);
-    const headerTitle = t('recap.header','Match Recap — Court {court}').replace('{court}', courtNo).replace('{title}', textFrom(byId('appTitle')) || 'Match Recap').replace('{courtNo}', courtNo);
+    const headerTitle = t('recap.header','Rekap Pertandingan - Lapangan {court}').replace('{court}', courtNo).replace('{title}', textFrom(byId('appTitle')) || 'Match Recap').replace('{courtNo}', courtNo);
     const hdr = document.createElement('div');
     hdr.className = 'recap-titlebar';
     hdr.textContent = headerTitle;
@@ -207,15 +207,23 @@
     el.className = 'recap-match-card';
     const winnerTxt = m.winner==='A' ? t('recap.winA','Menang: Team A') : m.winner==='B' ? t('recap.winB','Menang: Team B') : t('recap.draw','Seri');
     const badgeClass = m.winner==='A' ? 'badge-a' : m.winner==='B' ? 'badge-b' : 'badge-d';
+    const matchLabel = t('recap.matchLabel','Match {round}').replace('{round}', m.round);
+    const courtLabel = t('recap.courtLabel','Court {court}').replace('{court}', m.court);
+    const timeLabel = escapeHtml(m.time || '');
+    const teamALabel = t('recap.teamA','Team A');
+    const teamBLabel = t('recap.teamB','Team B');
+    const vsLabel = t('recap.vs','vs');
+    const marginLabel = t('recap.margin','Margin {value}').replace('{value}', m.margin);
+
     el.innerHTML = `
-      <div class="rmc-top"><span>Match ${m.round} • Court ${m.court}</span><span>${escapeHtml(m.time||'')}</span></div>
+      <div class="rmc-top"><span>${escapeHtml(matchLabel)} • ${escapeHtml(courtLabel)}</span><span>${timeLabel}</span></div>
       <div class="rmc-mid">
-        <div class="rmc-team-block"><div class="rmc-team-label label-a">TEAM A</div><div class="rmc-team">${escapeHtml(m.a1)} • ${escapeHtml(m.a2)}</div></div>
-        <div class="rmc-vs">vs</div>
-        <div class="rmc-team-block right"><div class="rmc-team-label label-b">TEAM B</div><div class="rmc-team">${escapeHtml(m.b1)} • ${escapeHtml(m.b2)}</div></div>
+      <div class="rmc-team-block"><div class="rmc-team-label label-a">${escapeHtml(teamALabel)}</div><div class="rmc-team">${escapeHtml(m.a1)} • ${escapeHtml(m.a2)}</div></div>
+      <div class="rmc-vs">${escapeHtml(vsLabel)}</div>
+      <div class="rmc-team-block right"><div class="rmc-team-label label-b">${escapeHtml(teamBLabel)}</div><div class="rmc-team">${escapeHtml(m.b1)} • ${escapeHtml(m.b2)}</div></div>
       </div>
       <div class="rmc-score"><div class="rmc-sa">${m.saN}</div><div class="rmc-sb">${m.sbN}</div></div>
-      <div class="rmc-tags"><span class="rmc-badge ${badgeClass}">${winnerTxt}</span><span class="rmc-badge neutral">Margin ${m.margin}</span></div>
+      <div class="rmc-tags"><span class="rmc-badge ${badgeClass}">${winnerTxt}</span><span class="rmc-badge neutral">${escapeHtml(marginLabel)}</span></div>
     `;
     return el;
   }
@@ -280,7 +288,7 @@
     hdr.className = 'recap-insight-heading';
     const h1 = document.createElement('div');
     h1.className = 'rih-title';
-    h1.textContent = t('recap.title','Padel Match Recap');
+    h1.textContent = t('analysis.title','Ulasan');
     const h2 = document.createElement('div');
     h2.className = 'rih-subtitle';
     h2.textContent = t('recap.subtitle','Analisis Performa & Strategi Pemain');
@@ -305,7 +313,7 @@
   }
 
   function buildTopRankingCard(standings, matches, avgMargin){
-    const card = createInsightCard(t('recap.topPerformers','Top Performers'), '🏆');
+    const card = createInsightCard(t('recap.topPerformers','Performa Terbaik'), '🏆');
     const list = document.createElement('div');
     list.className = 'insight-player-list';
     const top = standings.slice().sort((a,b)=> a.rank-b.rank || b.pf-a.pf).slice(0,3);
@@ -402,8 +410,8 @@
     if (!agg.length){
       list.appendChild(emptyInsightText(t('recap.empty','Belum ada data.')));
     } else {
-      if (best) list.appendChild(pairPerfRow(best, 'Best Pairing', false, 'best'));
-      if (worst && worst.name !== best?.name) list.appendChild(pairPerfRow(worst, 'Bad Pairing', true, 'bad'));
+      if (best) list.appendChild(pairPerfRow(best, t('recap.pair.best','Best Pairing'), false, 'best'));
+      if (worst && worst.name !== best?.name) list.appendChild(pairPerfRow(worst, t('recap.pair.bad','Bad Pairing'), true, 'bad'));
     }
     card.appendChild(list);
     return card;
@@ -902,7 +910,7 @@
       const t = [...tr.children].map(td=>td.textContent.trim());
       return `${t[0]}. ${t[1]} | Total ${t[2]} | Diff ${t[3]} | W${t[4]}-L${t[5]}-D${t[6]} | ${t[7]}`;
     });
-    const header = t('recap.copyHeader','Match Recap - {title}').replace('{title}', title);
+    const header = t('recap.copyHeader','Rekap Pertandingan - {title}').replace('{title}', title);
     let out = `${header}${date?` (${date})`:''}\n\n`;
     if (matches.length){
       out += `${t('recap.copyMatches','Matches ({count})').replace('{count}', matches.length)}\n`;

@@ -1,5 +1,6 @@
 "use strict";
 const __renameT = (k,f)=> (window.__i18n_get ? __i18n_get(k,f) : f);
+const __renameEscape = (s)=> String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 // ===== Rename helpers (robust mapping for multi-rename) =====
 function _normName(s){ return String(s||'').trim().toLowerCase(); }
 function _lev(a,b){
@@ -203,7 +204,7 @@ function validateNames(){
   if (dups.length){
     items.push(
       "<div class='text-amber-600'>Duplikat nama: " +
-      dups.map(([a,b])=> players[a] + " ↔ " + players[b]).join(', ') +
+      dups.map(([a,b])=> __renameEscape(players[a]) + " & " + __renameEscape(players[b])).join(", ") +
       "</div>"
     );
   }
@@ -219,7 +220,7 @@ function validateNames(){
     if (dups2.length){
       const filtered = items.filter(s => !s.startsWith("<div class='text-amber-600'>Duplikat nama:"));
       const fixed = "<div class='text-amber-600'>Duplikat nama: " +
-                    dups2.map(([a,b])=> players[a] + " & " + players[b]).join(', ') +
+                    dups2.map(([a,b])=> __renameEscape(players[a]) + " & " + __renameEscape(players[b])).join(", ") +
                     "</div>";
       items.length = 0; items.push(...filtered, fixed);
     }
@@ -237,7 +238,7 @@ function validateNames(){
     items.push(
       "<div class='text-blue-600'>" +
       __renameT('rename.similar','Mirip (cek typo): {pairs}')
-        .replace('{pairs}', sugg.map(([a,b])=> a + " ~ " + b).join(', ')) +
+        .replace('{pairs}', sugg.map(([a,b])=> __renameEscape(a) + " ~ " + __renameEscape(b)).join(", ")) +
       "</div>"
     );
   }
@@ -261,7 +262,7 @@ function validateNames(){
       items.push(
         "<div class='text-rose-600'>" +
         __renameT('rename.mixedMissing','Mode Mixed: Lengkapi <b>Gender</b> untuk: {names}.')
-          .replace('{names}', missingGender.join(', ')) +
+          .replace('{names}', missingGender.map(__renameEscape).join(", ")) +
         "</div>"
       );
     }
@@ -269,7 +270,7 @@ function validateNames(){
       items.push(
         "<div class='text-rose-600'>" +
         __renameT('rename.levelMissing','Mode Level: Lengkapi <b>Level</b> (beg/pro) untuk: {names}.')
-          .replace('{names}', missingLevel.join(', ')) +
+          .replace('{names}', missingLevel.map(__renameEscape).join(", ")) +
         "</div>"
       );
     }
