@@ -43,15 +43,12 @@
     const hostPlayers = document.createElement('section');
     hostPlayers.id = 'section-pemain';
     hostPlayers.className = 'bg-white dark:bg-gray-800 p-4 rounded-2xl shadow hidden';
-    hostPlayers.style.marginTop = '0';
     const hostRecap = document.createElement('section');
     hostRecap.id = 'section-recap';
     hostRecap.className = 'bg-white dark:bg-gray-800 p-4 rounded-2xl shadow hidden';
-    hostRecap.style.marginTop = '0';
     const hostInsight = document.createElement('section');
     hostInsight.id = 'section-insight';
     hostInsight.className = 'bg-white dark:bg-gray-800 p-4 rounded-2xl shadow hidden';
-    hostInsight.style.marginTop = '0';
     // Build new structure order in main: Jadwal, Klasemen, Pemain, Recap, Insight
     // 1) Jadwal wrapper placed where controls section sits
     if (secControls){ secControls.before(hostJadwal); hostJadwal.appendChild(secControls); }
@@ -59,7 +56,6 @@
     // 2) Klasemen wrapper
     const hostKlasemen = document.createElement('section');
     hostKlasemen.id = 'section-klasemen';
-    hostKlasemen.style.marginTop = '0';
     if (secTable){ secTable.before(hostKlasemen); hostKlasemen.appendChild(secTable); }
     // 3) Pemain, Recap, Insight hosts appended at end (players near top could also be moved after header)
     main.appendChild(hostPlayers);
@@ -98,7 +94,7 @@
     const wrap = document.createElement('div');
     wrap.className = 'mx-auto max-w-7xl px-2';
     const ul = document.createElement('ul');
-    ul.className = 'flex items-start justify-between gap-1 py-2';
+    ul.className = 'flex items-end justify-between gap-1 py-2';
     wrap.appendChild(ul); bar.appendChild(wrap);
 
     const getTabLabel = (key)=>{
@@ -128,7 +124,6 @@
       hostKas = document.createElement('section');
       hostKas.id = 'section-kas';
       hostKas.className = 'bg-white dark:bg-gray-800 p-4 rounded-2xl shadow hidden';
-      hostKas.style.marginTop = '0';
       main.appendChild(hostKas);
     }
 
@@ -148,10 +143,7 @@
         const st = document.createElement('style');
         st.id = 'mobileTabbarStyles';
         st.textContent = `
-          #mobileTabbar button{ -webkit-tap-highlight-color: transparent; outline: none; min-height:78px; }
-          #mobileTabbar ul{ align-items: flex-start; }
-          #mobileTabbar .mobtab-label{ display:block; text-align:center; line-height:1.25; min-height:28px; }
-          #mobileTabbar .mobtab-icon{ display:grid; place-items:center; }
+          #mobileTabbar button{ -webkit-tap-highlight-color: transparent; outline: none; }
           #mobileTabbar button:focus{ outline: none; box-shadow: none; }
           #mobileTabbar button:focus-visible{ outline: none; box-shadow: none; }
           /* Active state follows theme and beats sticky :hover */
@@ -245,11 +237,11 @@
       btn.type = 'button';
       btn.id = `tab-${key}`;
       btn.className = [
-        'flex','flex-col','items-center','justify-start','gap-1','px-3','py-2','rounded-xl','min-w-[60px]','text-center','leading-tight',
+        'flex','flex-col','items-center','justify-center','px-3','py-2','rounded-xl','min-w-[60px]',
         'text-[11px]','font-medium','text-gray-700','dark:text-gray-200','hover:bg-gray-100','dark:hover:bg-gray-700'
       ].join(' ');
       btn.innerHTML = `
-        <span class="mobtab-icon w-6 h-6 grid place-items-center">${iconSvg}</span>
+        <span class="w-6 h-6 grid place-items-center">${iconSvg}</span>
         <span class="mt-0.5 mobtab-label">${escapeHtml(label)}</span>`;
       btn.addEventListener('click', () => select(key));
       li.appendChild(btn);
@@ -333,7 +325,6 @@
         hostKasLocal = document.createElement('section');
         hostKasLocal.id = 'section-kas';
         hostKasLocal.className = 'bg-white dark:bg-gray-800 p-4 rounded-2xl shadow hidden';
-        hostKasLocal.style.marginTop = '0';
         try{ document.querySelector('main')?.appendChild(hostKasLocal); }catch{}
       }
       // Append tab item at the end
@@ -597,257 +588,200 @@ function injectMobileKlasemenStyles(){
   document.head.appendChild(s);
 }
 
-// Inline SVG icons (lucide-like) for recap template
-function recapIconActivity(cls='w-4 h-4'){
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${cls}"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>`;
-}
-function recapIconHistory(cls='w-4 h-4'){
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${cls}"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>`;
-}
-function recapIconUsers(cls='w-4 h-4'){
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${cls}"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`;
-}
-function recapIconTrophy(cls='w-4 h-4'){
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${cls}"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>`;
-}
-function recapIconFilter(cls='w-4 h-4'){
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${cls}"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>`;
-}
-function recapIconSearch(cls='w-4 h-4'){
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${cls}"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
-}
-function recapIconMedal(cls='w-4 h-4'){
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${cls}"><polygon points="12 15 8.5 21 7 21 12 11 17 21 15.5 21 12 15"/><path d="M18 10a6 6 0 1 0-12 0"/></svg>`;
-}
-
 // Build redesigned mobile recap with filters
-
-
 function buildRecapMobileUI(host){
-  const t = (window.__i18n_get ? __i18n_get : (k,f)=>f);
-  const players = getStandingsSnapshot();
-  const matches = collectMatchesMobile();
-  const partnerData = (typeof window !== 'undefined' && window.partnerInsights) ? window.partnerInsights : {};
-  let selected = players.length ? players[0].name : null;
+  const data = collectMatchesMobile();
+  const courts = Array.from(new Set(data.map(m=> m.court))).sort((a,b)=>a-b);
 
   host.innerHTML = '';
-  const root = document.createElement('div');
-  root.className = 'grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6';
-  host.appendChild(root);
+  const wrap = document.createElement('div');
+  wrap.className = 'space-y-4';
 
-  // Left column: filter + list
-  const filterCol = document.createElement('div');
-  filterCol.className = 'md:col-span-4';
-  const filterCard = document.createElement('div');
-  filterCard.className = 'bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 space-y-3';
-  const filterHead = document.createElement('div');
-  filterHead.className = 'flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-100';
-  filterHead.innerHTML = `${recapIconFilter('w-4 h-4')}<span>${t('mobile.recap.filter','Filter Pemain')}</span>`;
-  filterCard.appendChild(filterHead);
+  // Header card
+  const card = document.createElement('div');
+  card.className = 'rounded-2xl border dark:border-gray-700 bg-white dark:bg-gray-800 p-3 md:p-4';
+  const title = document.createElement('div');
+  title.className = 'flex items-center gap-2 font-semibold text-gray-800 dark:text-gray-100';
+  title.innerHTML = `<span>📍</span><span>${t('mobile.recap.title','Match Recap — {event}').replace('{event}', escapeHtml((document.getElementById('appTitle')?.textContent||'').trim()||'Event'))}</span>`;
+  const sub = document.createElement('div');
+  sub.className = 'mt-1 text-sm text-gray-600 dark:text-gray-300';
+  const loc = (document.getElementById('chipLocText')?.textContent||'').trim();
+  const dat = (document.getElementById('chipDateText')?.textContent||'').trim();
+  sub.textContent = [loc, dat].filter(Boolean).join(', ');
+  card.appendChild(title); card.appendChild(sub);
 
-  const sel = document.createElement('select');
-  sel.className = 'w-full border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100';
-  players.forEach(p=> sel.appendChild(new Option(`${p.rank}. ${p.name}`, p.name)));
-  sel.addEventListener('change', ()=>{ selected = sel.value; renderDetail(); });
-  filterCard.appendChild(sel);
-  filterCol.appendChild(filterCard);
-  root.appendChild(filterCol);
+  // Search + filters
+  const search = document.createElement('input');
+  search.type = 'search';
+  search.placeholder = t('mobile.recap.search','Cari pemain / skor...');
+  search.className = 'mt-3 filter-input border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100';
+  search.id = 'recapSearch';
 
-  // Right column: detail + matches
-  const detailCol = document.createElement('div');
-  detailCol.className = 'md:col-span-8 space-y-4';
-  const detailWrap = document.createElement('div');
-  const historyWrap = document.createElement('div');
-  detailCol.appendChild(detailWrap);
-  detailCol.appendChild(historyWrap);
-  root.appendChild(detailCol);
+  const row = document.createElement('div');
+  row.className = 'mt-3 grid grid-cols-2 gap-2';
 
-  function statusLabel(p){
-    if (!p) return { text:'-', class:'text-slate-600' };
-    if (p.diff > 20) return { text:'ON FIRE', class:'text-emerald-700' };
-    if (p.winRate < 30) return { text:'STRUGGLING', class:'text-rose-600' };
-    return { text:'STABLE', class:'text-blue-700' };
-  }
+  const selCourt = document.createElement('select');
+  selCourt.className = 'filter-input border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100';
+  selCourt.id = 'recapSelCourt';
+  selCourt.appendChild(new Option(t('mobile.recap.allCourts','Semua Lapangan'),'all'));
+  courts.forEach(c=> selCourt.appendChild(new Option((window.__i18n_get ? __i18n_get('render.court','Lapangan') : 'Lapangan')+' '+c, String(c))));
 
-  function renderDetail(){
-    detailWrap.innerHTML = '';
-    historyWrap.innerHTML = '';
-    const player = players.find(p=> p.name===selected);
-    if (!player){
-      detailWrap.textContent = t('mobile.recap.noPlayer','Tidak ada data pemain.');
+  const selRes = document.createElement('select');
+  selRes.className = 'filter-input border rounded-xl px-3 py-2 w-full bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100';
+  selRes.id = 'recapSelResult';
+  [
+    ['all', t('mobile.recap.result.all','Semua Hasil')],
+    ['win', t('mobile.recap.result.win','Menang')],
+    ['lose', t('mobile.recap.result.lose','Kalah')],
+    ['draw', t('mobile.recap.result.draw','Seri')]
+  ].forEach(([v,label])=> selRes.appendChild(new Option(label, v)));
+
+  row.appendChild(selCourt); row.appendChild(selRes);
+
+  // Stats
+  const stats = document.createElement('div');
+  stats.className = 'mt-3 grid grid-cols-2 gap-2';
+  const stat1 = statBox(t('recap.metric.totalMatch','Total Match'),'0');
+  const stat2 = statBox(t('recap.metric.totalPoint','Total Poin'),'0');
+  const stat3 = statBox(t('recap.metric.avgMargin','Rata Selisih'),'0');
+  const stat4 = statBox(t('stats.tight','Skor Paling Ketat'),'-');
+  stats.appendChild(stat1.wrap); stats.appendChild(stat2.wrap);
+  stats.appendChild(stat3.wrap); stats.appendChild(stat4.wrap);
+
+  card.appendChild(search);
+  card.appendChild(row);
+  card.appendChild(stats);
+  wrap.appendChild(card);
+
+  // Section title
+  const sec = document.createElement('div');
+  sec.className = 'rounded-2xl border dark:border-gray-700 bg-white dark:bg-gray-800 p-3 md:p-4';
+  const secTitle = document.createElement('div');
+  secTitle.className = 'font-semibold text-gray-800 dark:text-gray-100 mb-2 flex items-center gap-2';
+  secTitle.innerHTML = `<span>🎞️</span><span>${t('mobile.recap.section','Rekap Pertandingan')}</span>`;
+  const list = document.createElement('div');
+  list.className = 'space-y-2';
+  sec.appendChild(secTitle); sec.appendChild(list);
+  wrap.appendChild(sec);
+
+  host.appendChild(wrap);
+
+  // Render function with filters
+  function apply(){
+    const q = (search.value||'').trim().toLowerCase();
+    const fc = selCourt.value;
+    const fr = selRes.value; // 'all' | 'win' | 'lose' | 'draw'
+    const hasQuery = q.length > 0;
+
+    const rows = data.filter(m => {
+      if (fc !== 'all' && String(m.court) !== fc) return false;
+
+      // text filter must hit somewhere (names or score) when query exists
+      if (hasQuery){
+        const hay = `${m.a1} ${m.a2} ${m.b1} ${m.b2} ${m.saN}-${m.sbN}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+
+      // result filter linked to searched name
+      if (fr !== 'all'){
+        if (!hasQuery) return true; // ignore result filter if no name typed
+        const playerHit = (m.a1||'').toLowerCase().includes(q) || (m.a2||'').toLowerCase().includes(q) || (m.b1||'').toLowerCase().includes(q) || (m.b2||'').toLowerCase().includes(q);
+        if (!playerHit) return false; // require name match for win/lose/draw
+        if (fr === 'draw') return m.winner === 'D';
+        const side = querySide(m, q);
+        if (!side) return false; // ambiguous which team
+        if (fr === 'win') return m.winner === side;
+        if (fr === 'lose') return m.winner !== 'D' && m.winner !== side;
+      }
+      return true;
+    });
+    stat1.val.textContent = String(rows.length);
+    const tp = rows.reduce((s,m)=> s + m.saN + m.sbN, 0);
+    stat2.val.textContent = String(tp);
+    // Rata selisih & skor paling ketat
+    const avg = rows.length ? (rows.reduce((s,m)=> s + Math.abs(m.saN - m.sbN), 0) / rows.length) : 0;
+    stat3.val.textContent = rows.length ? avg.toFixed(1) : '0';
+    if (rows.length){
+      const tight = rows.slice().sort((a,b)=>{
+        const da = Math.abs(a.saN-a.sbN), db = Math.abs(b.saN-b.sbN);
+        return da - db || a.round - b.round;
+      })[0];
+      stat4.val.textContent = `${tight.saN}–${tight.sbN}`;
+      if (stat4.label) stat4.label.textContent = `${(window.__i18n_get ? __i18n_get('stats.tight','Skor Paling Ketat') : 'Skor Paling Ketat')} (Match ${tight.round})`;
+    } else {
+      stat4.val.textContent = '-';
+      if (stat4.label) stat4.label.textContent = (window.__i18n_get ? __i18n_get('stats.tight','Skor Paling Ketat') : 'Skor Paling Ketat');
+    }
+    list.innerHTML = '';
+    if (!rows.length){
+      const empty = document.createElement('div');
+      empty.className = 'text-sm text-gray-600 dark:text-gray-300';
+      empty.textContent = (window.__i18n_get ? __i18n_get('stats.noMatch','Tidak ada match untuk filter ini.') : 'Tidak ada match untuk filter ini.');
+      list.appendChild(empty);
       return;
     }
-
-    const status = statusLabel(player);
-    const headCard = document.createElement('div');
-    headCard.className = 'bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden';
-    headCard.innerHTML = `
-      <div class="flex justify-between items-start p-4 text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600">
-        <div>
-          <div class="text-2xl font-bold">${escapeHtml(player.name)}</div>
-          <div class="text-sm text-white/80 flex items-center gap-2">${recapIconMedal('w-4 h-4')}<span>${t('mobile.recap.rank','Peringkat')} ${player.rank} • ${player.role||'Balanced'}</span></div>
-        </div>
-        <div class="text-right">
-          <div class="text-3xl font-bold">${player.winRate}%</div>
-          <div class="text-[11px] uppercase tracking-wide text-white/80">${t('mobile.recap.winrate','Win Rate')}</div>
-        </div>
-      </div>
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 bg-white dark:bg-slate-900">
-        ${statTile(t('recap.metric.totalPoint','Total Poin'), player.total, 'text-slate-800')}
-        ${statTile(t('recap.metric.diff','Selisih (Diff)'), `${player.diff>=0?'+':''}${player.diff}`, player.diff>=0?'text-emerald-600':'text-rose-600')}
-        ${statTile(t('recap.metric.record','Rekor'), `${player.w}W - ${player.l}L`, 'text-slate-800')}
-        ${statTile(t('recap.metric.status','Status'), status.text, status.class)}
-      </div>`;
-    detailWrap.appendChild(headCard);
-
-    // Partner insight (hidden for now)
-    // const insightCard = document.createElement('div');
-    // insightCard.className = 'bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-4';
-    // const pi = partnerData[player.name];
-    // if (pi){
-    //   insightCard.innerHTML = `
-    //     <div class="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-100 mb-2">${recapIconUsers('w-4 h-4')}<span>${t('mobile.recap.partner','Analisis Pasangan')}</span></div>
-    //     <div class="flex items-center justify-between">
-    //       <div>
-    //         <div class="text-xs uppercase text-slate-500">${t('mobile.recap.bestPartner','Rekomendasi Partner')}</div>
-    //         <div class="text-lg font-bold text-slate-900 dark:text-white">${escapeHtml(pi.best||'-')}</div>
-    //         <div class="text-sm text-slate-600 dark:text-slate-300">${escapeHtml(pi.note||'')}</div>
-    //       </div>
-    //       <div class="px-3 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-sm font-semibold">${escapeHtml(pi.synergy||'')}</div>
-    //     </div>`;
-    // } else {
-    //   insightCard.innerHTML = `
-    //     <div class="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-100 mb-2">${recapIconUsers('w-4 h-4')}<span>${t('mobile.recap.partner','Analisis Pasangan')}</span></div>
-    //     <div class="text-sm text-slate-400 italic bg-slate-50 dark:bg-slate-800 rounded-xl p-3">${t('mobile.recap.noPartner','Data sinergi spesifik belum tersedia untuk pemain ini.')}</div>`;
-    // }
-    // detailWrap.appendChild(insightCard);
-
-    // Match history
-    const historyCard = document.createElement('div');
-    historyCard.className = 'bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm';
-    const playerMatches = buildPlayerMatches(player.name, matches);
-    const count = playerMatches.length;
-    historyCard.innerHTML = `
-      <div class="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700">
-        <div class="flex items-center gap-2 font-semibold text-slate-800 dark:text-slate-100">${recapIconHistory('w-4 h-4')}<span>${t('mobile.recap.history','Riwayat Pertandingan')}</span></div>
-        <span class="text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-200 px-2 py-1 rounded-full">${count} ${t('recap.metric.totalMatch','Match')}</span>
-      </div>`;
-    const list = document.createElement('div');
-    list.className = 'divide-y divide-slate-100 dark:divide-slate-800';
-    if (!count){
-      const empty = document.createElement('div');
-      empty.className = 'p-6 text-center text-slate-500';
-      empty.textContent = t('mobile.recap.noMatch','Belum ada data match tersimpan.');
-      list.appendChild(empty);
-    } else {
-      playerMatches.forEach(m=> list.appendChild(renderMatchRow(player.name, m, t)));
-    }
-    historyCard.appendChild(list);
-    historyWrap.appendChild(historyCard);
+    rows.forEach(m => list.appendChild(matchCardMobile(m)));
   }
 
-  function statTile(label, value, cls){
-    return `<div class="text-center bg-slate-50 dark:bg-slate-800 rounded-xl px-3 py-2 border border-slate-200 dark:border-slate-700">
-      <div class="text-xs text-slate-500 dark:text-slate-300">${label}</div>
-      <div class="text-lg font-bold ${cls||''} dark:text-slate-100">${value}</div>
-    </div>`;
-  }
+  [search, selCourt, selRes].forEach(el=> el.addEventListener('input', apply));
+  selCourt.addEventListener('change', apply); selRes.addEventListener('change', apply);
+  apply();
 
-  function buildPlayerMatches(name, data){
-    return data.map(m=>{
-      const inA = [m.a1,m.a2].includes(name);
-      const inB = [m.b1,m.b2].includes(name);
-      if (!inA && !inB) return null;
-      const myScore = inA ? m.saN : m.sbN;
-      const opScore = inA ? m.sbN : m.saN;
-      const partner = inA ? (name===m.a1 ? m.a2 : m.a1) : (name===m.b1 ? m.b2 : m.b1);
-      const opponentTeam = inA ? [m.b1, m.b2] : [m.a1, m.a2];
-      const result = m.winner === 'D' ? 'D' : (m.winner === (inA ? 'A' : 'B') ? 'W' : 'L');
-      return {
-        id: m.round,
-        myScore,
-        opponentScore: opScore,
-        partner,
-        opponentTeam,
-        result,
-        court: m.court
-      };
-    }).filter(Boolean);
-  }
+  // Install light observers to refresh when data changes while staying on Recap
+  try{ setupRecapAutoRefresh(host); }catch{}
 
-  renderDetail();
+  function statBox(label, value){
+    const w = document.createElement('div');
+    w.className = 'rounded-xl border dark:border-gray-700 bg-white dark:bg-gray-900 p-3';
+    const l = document.createElement('div'); l.className='text-xs text-gray-600 dark:text-gray-300 mb-1'; l.textContent = label;
+    const v = document.createElement('div'); v.className='text-2xl font-bold'; v.textContent=value;
+    w.appendChild(l); w.appendChild(v);
+    return {wrap:w, val:v, label:l};
+  }
 }
 
-function renderMatchRow(playerName, match, t){
-  const row = document.createElement('div');
-  row.className = 'relative px-4 py-4 space-y-2';
-
-  const labelText = `${t('mobile.recap.match','Match #{round}').replace('{round}', match.id)}`;
-
-  const header = document.createElement('div');
-  header.className = 'flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide leading-none';
-  const tag = document.createElement('span');
-  tag.className = 'text-[11px] font-semibold px-2 py-1 rounded-full inline-block shadow-sm';
-  if (match.result === 'W'){ tag.className += ' bg-emerald-100 text-emerald-700'; tag.textContent = t('mobile.recap.result.win','Win'); }
-  else if (match.result === 'L'){ tag.className += ' bg-rose-100 text-rose-700'; tag.textContent = t('mobile.recap.result.lose','Loss'); }
-  else { tag.className += ' bg-amber-100 text-amber-700'; tag.textContent = t('mobile.recap.result.draw','Draw'); }
-  header.appendChild(tag);
-
-  const matchLabel = document.createElement('div');
-  matchLabel.className = 'absolute right-4 top-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500 leading-none';
-  matchLabel.innerHTML = labelText;
-
-  const body = document.createElement('div');
-  body.className = 'flex items-start gap-3';
-
-  const left = document.createElement('div');
-  left.className = 'flex-1 min-w-0 text-left pt-4';
-  const names = document.createElement('div');
-  names.className = 'text-[13px] leading-tight text-slate-800 dark:text-slate-100';
-  names.innerHTML = `<span class="font-bold">${escapeHtml(playerName)}</span> + ${escapeHtml(match.partner||'-')}`;
-  left.appendChild(names);
-
-  const scoreWrap = document.createElement('div');
-  scoreWrap.className = 'flex-shrink-0 self-center';
+function matchCardMobile(m){
+  const card = document.createElement('div');
+  card.className = 'rounded-2xl border dark:border-gray-700 bg-white dark:bg-gray-800 p-3';
+  const top = document.createElement('div');
+  top.className = 'text-xs text-gray-600 dark:text-gray-300 mb-2';
+  const time = m.time ? ` • ${m.time}` : '';
+  top.textContent = `${t('mobile.recap.match','Match #{round}').replace('{round}', m.round)} • ${t('render.court','Lapangan')} ${m.court}${time}`;
+  const grid = document.createElement('div');
+  grid.className = 'grid grid-cols-5 gap-1 items-center';
+    const a = teamBox((window.__i18n_get ? __i18n_get('tennis.teamA','Tim A') : 'TEAM A'), `${m.a1} & ${m.a2}`, m.winner==='A', m.winner==='D');
+    const b = teamBox((window.__i18n_get ? __i18n_get('tennis.teamB','Tim B') : 'TEAM B'), `${m.b1} & ${m.b2}`, m.winner==='B', m.winner==='D');
   const score = document.createElement('div');
-  score.className = 'text-lg font-extrabold text-slate-800 dark:text-white bg-slate-100 dark:bg-slate-800 px-3 py-2 rounded-md min-w-[76px] text-center';
-  score.textContent = `${match.myScore} - ${match.opponentScore}`;
-  scoreWrap.appendChild(score);
-
-  const right = document.createElement('div');
-  right.className = 'flex-1 min-w-0 text-right pt-4';
-  const opp = document.createElement('div');
-  opp.className = 'text-[13px] leading-tight text-slate-600 dark:text-slate-300 whitespace-normal break-words text-right';
-  opp.textContent = `${match.opponentTeam.join(' & ')}`;
-  right.appendChild(opp);
-
-  body.appendChild(left);
-  body.appendChild(scoreWrap);
-  body.appendChild(right);
-
-  row.appendChild(header);
-  row.appendChild(matchLabel);
-  row.appendChild(body);
-  return row;
+  score.className='col-span-1 text-center text font-extrabold leading-none select-none';
+  score.textContent=`${m.saN}–${m.sbN}`;
+  grid.appendChild(a); grid.appendChild(score); grid.appendChild(b);
+  card.appendChild(top); card.appendChild(grid);
+  return card;
 }
 
-function getStandingsSnapshot(){
-  const rows = document.querySelectorAll('#standings tbody tr');
-  const out = [];
-  rows.forEach(tr=>{
-    const tds = [...tr.children].map(td => (td.textContent||'').trim());
-    if (tds.length < 8) return;
-    const rank = Number(tds[0])||0;
-    const name = tds[1]||'';
-    const total = Number(tds[2])||0;
-    const diff = Number(tds[3])||0;
-    const w = Number(tds[4])||0; const l = Number(tds[5])||0; const d = Number(tds[6])||0;
-    const gp = w+l+d;
-    const winRate = gp ? Math.round((w/gp)*100) : 0;
-    out.push({ rank, name, total, diff, w, l, d, winRate, role: gp>0 ? (winRate>=60?'Balanced':'Underdog') : 'Balanced' });
-  });
-  return out;
+function teamBox(label, names, win, draw){
+  const box = document.createElement('div');
+  const clsWin  = 'bg-emerald-700/20 dark:bg-emerald-900/30 border-emerald-700/40';
+  const clsLose = 'bg-red-700/20 dark:bg-red-900/30 border-red-700/40';
+  const clsDraw = 'bg-gray-100 dark:bg-gray-900 border-gray-700';
+  const surf = win ? clsWin : (draw ? clsDraw : clsLose);
+  box.className = 'col-span-2 min-w-0 rounded-xl border p-2.5 ' + surf;
+  const head = document.createElement('div');
+  head.className = 'flex items-center gap-1 text-[10px] font-semibold text-gray-600 dark:text-gray-300 mb-0.5';
+  const lab = document.createElement('span'); lab.textContent = label;
+  head.appendChild(lab);
+  if (win){
+    const cup = document.createElement('span');
+    cup.className = 'ml-1 text-amber-400';
+    cup.textContent = '🏆';
+    head.appendChild(cup);
+  }
+  const nm = document.createElement('div');
+  nm.className='text-[12px] sm:text-[13px] whitespace-nowrap overflow-hidden text-ellipsis';
+  nm.textContent = names;
+  box.appendChild(head); box.appendChild(nm); return box;
 }
+
 function collectMatchesMobile(){
   const out = [];
   try{
