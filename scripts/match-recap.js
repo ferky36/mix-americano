@@ -406,7 +406,7 @@
     list.className = 'pair-perf-list';
     const agg = aggregatePairs(matches);
     const best = agg.slice().sort((a,b)=> (b.pf - a.pf) || (b.diff - a.diff))[0];
-    const worst = agg.slice().sort((a,b)=> (a.pf - b.pf) || (a.diff - b.diff))[0];
+    const worst = agg.slice().sort((a,b)=> (a.diff - b.diff) || (a.pf - b.pf))[0]; // paling buruk: selisih paling negatif, lalu total poin terendah
     if (!agg.length){
       list.appendChild(emptyInsightText(t('recap.empty','Belum ada data.')));
     } else {
