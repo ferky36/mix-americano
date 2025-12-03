@@ -173,6 +173,8 @@
     // Initial state
     // Default tab: Jadwal & Pemain (combined)
     select('jadwal');
+    // Pastikan tiap kali pindah event, tab balik ke Jadwal & Pemain
+    watchEventSwitchResetTab();
     // Ensure Kas tab reflects current role after init
     try{ updateMobileCashTab?.(); }catch{}
     setTimeout(()=>{ try{ updateMobileCashTab?.(); }catch{} }, 300);
@@ -347,6 +349,25 @@
       try{ unmountCashflowToModal(); }catch{}
       if (hostKasLocal) hostKasLocal.classList.add('hidden');
     }
+  }
+  // Pantau perubahan currentEventId agar tab kembali ke Jadwal saat pindah event
+  function watchEventSwitchResetTab(){
+    try{
+      if (window.__mobileTabEventWatcher) return;
+      let lastEvent = getEventId();
+      const tick = ()=>{
+        const now = getEventId();
+        if (now !== lastEvent){
+          lastEvent = now;
+          select('jadwal');
+        }
+      };
+      window.__mobileTabEventWatcher = setInterval(tick, 900);
+    }catch{}
+  }
+  function getEventId(){
+    try{ if (typeof currentEventId !== 'undefined') return currentEventId || null; }catch{}
+    try{ return window.currentEventId || null; }catch{ return null; }
   }
   try{ window.updateMobileCashTab = updateMobileCashTab; }catch{}
   function moneyIcon(){
@@ -679,6 +700,21 @@ function buildRecapMobileUI(host){
     }
 
     const status = statusLabel(player);
+    const playerMatches = buildPlayerMatches(player.name, matches);
+    const partnerStats = partnerStatsFor(player.name, playerMatches);
+    const topPlayer = players.reduce((acc,p)=>{
+      if (!acc) return p;
+      if (p.total === acc.total) return (p.diff>acc.diff) ? p : acc;
+      return p.total>acc.total ? p : acc;
+    }, null);
+    const bottomPlayer = players.reduce((acc,p)=>{
+      if (!acc) return p;
+      if (p.total === acc.total) return (p.diff<acc.diff) ? p : acc;
+      return p.total<acc.total ? p : acc;
+    }, null);
+    const isTopSelected = topPlayer && topPlayer.name === player.name;
+    const isBottomSelected = bottomPlayer && bottomPlayer.name === player.name;
+    const pi = partnerData[player.name];
     const headCard = document.createElement('div');
     headCard.className = 'bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden';
     headCard.innerHTML = `
@@ -700,32 +736,107 @@ function buildRecapMobileUI(host){
       </div>`;
     detailWrap.appendChild(headCard);
 
-    // Partner insight (hidden for now)
-    // const insightCard = document.createElement('div');
-    // insightCard.className = 'bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-4';
-    // const pi = partnerData[player.name];
-    // if (pi){
-    //   insightCard.innerHTML = `
-    //     <div class="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-100 mb-2">${recapIconUsers('w-4 h-4')}<span>${t('mobile.recap.partner','Analisis Pasangan')}</span></div>
-    //     <div class="flex items-center justify-between">
-    //       <div>
-    //         <div class="text-xs uppercase text-slate-500">${t('mobile.recap.bestPartner','Rekomendasi Partner')}</div>
-    //         <div class="text-lg font-bold text-slate-900 dark:text-white">${escapeHtml(pi.best||'-')}</div>
-    //         <div class="text-sm text-slate-600 dark:text-slate-300">${escapeHtml(pi.note||'')}</div>
-    //       </div>
-    //       <div class="px-3 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-sm font-semibold">${escapeHtml(pi.synergy||'')}</div>
-    //     </div>`;
-    // } else {
-    //   insightCard.innerHTML = `
-    //     <div class="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-100 mb-2">${recapIconUsers('w-4 h-4')}<span>${t('mobile.recap.partner','Analisis Pasangan')}</span></div>
-    //     <div class="text-sm text-slate-400 italic bg-slate-50 dark:bg-slate-800 rounded-xl p-3">${t('mobile.recap.noPartner','Data sinergi spesifik belum tersedia untuk pemain ini.')}</div>`;
-    // }
-    // detailWrap.appendChild(insightCard);
+    // Partner insight (aktif kembali, berbasis filter pemain)
+    const insightCard = document.createElement('div');
+    insightCard.className = 'bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 space-y-3';
+    const hasStats = partnerStats.length > 0;
+    const hasInsight = !!pi || hasStats;
+    const bestStat = partnerStats[0] || null;
+    const worstStat = [...partnerStats].sort((a,b)=>
+      // Partner terburuk: WR paling rendah, jika sama pilih selisih poin paling negatif, lalu jumlah main terbanyak
+      a.winRate - b.winRate || a.diff - b.diff || b.played - a.played
+    )[0] || null;
+    const bestPartner = pi?.best || bestStat?.partner || '-';
+    const bestRecord = bestStat ? `${bestStat.win}W-${bestStat.lose}L${bestStat.draw?`-${bestStat.draw}D`:''}` : '-';
+    const fmtDiff = (n)=> `${n>=0?'+':''}${n}`;
+    const fill = (str, ctx={})=> (str||'').replace(/\{(\w+)\}/g, (_m,k)=> (ctx[k]!==undefined ? ctx[k] : _m));
+    const bestCtx = {
+      player: player.name,
+      partner: bestPartner,
+      wr: bestStat?.winRate ?? 0,
+      diff: fmtDiff(bestStat?.diff ?? 0),
+      record: bestRecord,
+      played: bestStat?.played ?? 0
+    };
+    const bestSentence = bestStat
+      ? fill(
+          t(
+            'mobile.recap.partnerBestSentence',
+            '{partner} adalah partner terbaik {player} saat ini: {played} pertandingan ({record}, WR {wr}%, selisih poin {diff}).'
+          ),
+          bestCtx
+        )
+      : '';
+    const bestRecency = fill(
+      t('mobile.recap.partnerRecency','Rekomendasi ini dihitung dari riwayat pertandingan terbaru {player} bersama semua partner.'),
+      bestCtx
+    );
+    const bestNote = pi?.note || '';
+    const synergyLabel = pi?.synergy || (bestStat ? `${bestStat.winRate}% WR` : t('mobile.recap.partnerSynergy','Skor Sinergi'));
+    insightCard.innerHTML = `
+      <div class="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-100">${recapIconUsers('w-4 h-4')}<span>${t('mobile.recap.partner','Analisis Pasangan')}</span></div>`;
+
+    if (!hasInsight){
+      const empty = document.createElement('div');
+      empty.className = 'text-sm text-slate-500 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 rounded-xl p-3';
+      empty.textContent = t('mobile.recap.noPartner','Data sinergi spesifik belum tersedia untuk pemain ini.');
+      insightCard.appendChild(empty);
+    } else {
+      const highlight = document.createElement('div');
+      highlight.className = 'bg-indigo-50 dark:bg-slate-800/70 rounded-xl border border-indigo-100 dark:border-slate-700 p-3 flex items-start justify-between gap-3';
+      highlight.innerHTML = `
+        <div>
+          <div class="text-[11px] uppercase tracking-wide text-indigo-700 dark:text-indigo-200 font-semibold">${t('recap.pair.best','Pasangan Terbaik')}</div>
+          <div class="text-lg font-bold text-slate-900 dark:text-white">${escapeHtml(bestPartner)}</div>
+          <ul class="mt-1 list-disc pl-4 space-y-1 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+            ${bestSentence ? `<li>${escapeHtml(bestSentence)}</li>` : ''}
+            ${bestRecency ? `<li>${escapeHtml(bestRecency)}</li>` : ''}
+            ${bestNote ? `<li>${escapeHtml(bestNote)}</li>` : ''}
+          </ul>
+        </div>
+        <div class="text-right">
+          <div class="text-xs bg-white/60 dark:bg-slate-900/60 text-indigo-800 dark:text-indigo-100 px-2 py-1 rounded-full inline-flex items-center gap-1 font-semibold">${synergyLabel}</div>
+        </div>`;
+      insightCard.appendChild(highlight);
+
+      if (hasStats){
+        const list = document.createElement('div');
+        list.className = 'space-y-2';
+        partnerStats.slice(0,4).forEach(stat=>{
+          const row = document.createElement('div');
+          row.className = 'flex items-center justify-between gap-2 bg-slate-50 dark:bg-slate-800 rounded-xl px-3 py-2 border border-slate-200 dark:border-slate-700';
+          row.innerHTML = `
+            <div>
+              <div class="font-semibold text-slate-900 dark:text-white">${escapeHtml(player.name)} + ${escapeHtml(stat.partner||'-')}</div>
+              <div class="text-[11px] text-slate-500 dark:text-slate-400">WR ${stat.winRate}% | ${stat.win}W-${stat.lose}L${stat.draw?`-${stat.draw}D`:''} | ${stat.played} ${t('mobile.recap.partnerMatches','Match bersama')}</div>
+            </div>
+            <div class="text-right">
+              <div class="text-sm font-semibold ${stat.diff>=0?'text-emerald-600':'text-rose-600'}">${stat.diff>=0?'+':''}${stat.diff}</div>
+              <div class="text-[11px] text-slate-500 dark:text-slate-400">${t('mobile.recap.partnerDiff','Selisih poin')}</div>
+            </div>`;
+          list.appendChild(row);
+        });
+        insightCard.appendChild(list);
+
+        const hasLosses = (player.l && player.l>0) || playerMatches.some(m=> m.result==='L');
+        if (hasLosses && worstStat && worstStat.partner && worstStat.partner !== bestPartner){
+          const warn = document.createElement('div');
+          warn.className = 'pt-2 text-xs text-rose-600 dark:text-rose-300 border-t border-slate-200 dark:border-slate-700';
+          warn.textContent = `${t('mobile.recap.partnerAvoid','Hindari pasangan dengan')} ${worstStat.partner} (${worstStat.played}x, WR ${worstStat.winRate}%, ${t('mobile.recap.partnerDiffShort','selisih')} ${worstStat.diff>=0?'+':''}${worstStat.diff})`;
+          insightCard.appendChild(warn);
+        }
+      } else {
+        const note = document.createElement('div');
+        note.className = 'text-sm text-slate-500 dark:text-slate-300';
+        note.textContent = pi?.note || t('mobile.recap.partnerAutoNote','Dihitung dari performa terbaru pemain yang dipilih.');
+        insightCard.appendChild(note);
+      }
+    }
+    detailWrap.appendChild(insightCard);
 
     // Match history
     const historyCard = document.createElement('div');
     historyCard.className = 'bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm';
-    const playerMatches = buildPlayerMatches(player.name, matches);
     const count = playerMatches.length;
     historyCard.innerHTML = `
       <div class="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700">
@@ -773,6 +884,27 @@ function buildRecapMobileUI(host){
         court: m.court
       };
     }).filter(Boolean);
+  }
+
+  function partnerStatsFor(name, matchList){
+    const map = {};
+    (matchList||[]).forEach(m=>{
+      const p = m.partner || '';
+      if (!p) return;
+      if (!map[p]) map[p] = { partner:p, played:0, win:0, lose:0, draw:0, scoreFor:0, scoreAg:0 };
+      const s = map[p];
+      s.played += 1;
+      s.scoreFor += Number(m.myScore)||0;
+      s.scoreAg += Number(m.opponentScore)||0;
+      if (m.result === 'W') s.win += 1;
+      else if (m.result === 'L') s.lose += 1;
+      else s.draw += 1;
+    });
+    return Object.values(map).map(s=>({
+      ...s,
+      winRate: s.played ? Math.round((s.win/s.played)*100) : 0,
+      diff: s.scoreFor - s.scoreAg
+    })).sort((a,b)=> b.winRate - a.winRate || b.diff - a.diff || b.played - a.played);
   }
 
   renderDetail();
