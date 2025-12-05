@@ -44,7 +44,7 @@
     try{
       await ensureXLSX();
       const data = getStandingsAoA();
-      if (!data.length){ alert(window.__i18n_get ? __i18n_get('standings.noTable','Tabel klasemen belum tersedia.') : 'Tabel klasemen belum tersedia.'); return; }
+      if (!data.length){ showToast?.(window.__i18n_get ? __i18n_get('standings.noTable','Tabel klasemen belum tersedia.') : 'Tabel klasemen belum tersedia.', 'warn'); return; }
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.aoa_to_sheet(data);
       // Set column widths (best-effort)
@@ -55,14 +55,14 @@
       const title = (document.getElementById('appTitle')?.textContent || 'Event');
       const name = `${title.replace(/[^\w\- ]+/g,'').trim().replace(/\s+/g,'_')}_Standings_${date}.xlsx`;
       XLSX.writeFile(wb, name);
-    }catch(e){ console.error(e); alert(window.__i18n_get ? __i18n_get('standings.exportExcelFail','Gagal export Excel.') : 'Gagal export Excel.'); }
+    }catch(e){ console.error(e); showToast?.(window.__i18n_get ? __i18n_get('standings.exportExcelFail','Gagal export Excel.') : 'Gagal export Excel.', 'error'); }
   };
 
   // Export to PDF via Print (open a new window and print). Users can Save as PDF.
   window.exportStandingsToPDF = function(){
     try{
       const tbl = document.getElementById('standings');
-      if (!tbl){ alert(window.__i18n_get ? __i18n_get('standings.noTable','Tabel klasemen belum tersedia.') : 'Tabel klasemen belum tersedia.'); return; }
+      if (!tbl){ showToast?.(window.__i18n_get ? __i18n_get('standings.noTable','Tabel klasemen belum tersedia.') : 'Tabel klasemen belum tersedia.', 'warn'); return; }
       const date = (document.getElementById('sessionDate')?.value || new Date().toISOString().slice(0,10));
       const title = (document.getElementById('appTitle')?.textContent || 'Event');
       const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/>
@@ -80,11 +80,11 @@
         ${tbl.outerHTML}
       </body></html>`;
       const w = window.open('', '_blank');
-      if (!w){ alert(window.__i18n_get ? __i18n_get('standings.popupBlocked','Popup diblokir. Izinkan popup untuk export PDF.') : 'Popup diblokir. Izinkan popup untuk export PDF.'); return; }
+      if (!w){ showToast?.(window.__i18n_get ? __i18n_get('standings.popupBlocked','Popup diblokir. Izinkan popup untuk export PDF.') : 'Popup diblokir. Izinkan popup untuk export PDF.', 'warn'); return; }
       w.document.open(); w.document.write(html); w.document.close();
       w.focus();
       setTimeout(()=>{ try{ w.print(); }catch{} }, 200);
-    }catch(e){ console.error(e); alert(window.__i18n_get ? __i18n_get('standings.exportPDFFail','Gagal export PDF.') : 'Gagal export PDF.'); }
+    }catch(e){ console.error(e); showToast?.(window.__i18n_get ? __i18n_get('standings.exportPDFFail','Gagal export PDF.') : 'Gagal export PDF.', 'error'); }
   };
 
   // Insert buttons above/right of standings table

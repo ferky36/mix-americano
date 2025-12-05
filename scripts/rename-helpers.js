@@ -121,9 +121,38 @@ function promoteFromWaiting(name){
   try{ maybeAutoSaveCloud(); }catch{}
 }
 
-function removeFromWaiting(name){
+async function removeFromWaiting(name){
   const target = String(name||'').trim().toLowerCase();
-  if (!confirm(__renameT('rename.waitingRemoveConfirm','Hapus {name} dari waiting list?').replace('{name}', name))) return;
+  let ok = false;
+  try{
+    if (typeof askYesNo === 'function') ok = await askYesNo(__renameT('rename.waitingRemoveConfirm','Hapus {name} dari waiting list?').replace('{name}', name));
+    else {
+      if (!window.__ynModal){
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.55);';
+        const panel = document.createElement('div');
+        panel.style.cssText = 'background:#fff;padding:16px 18px;border-radius:12px;max-width:340px;width:92%;box-shadow:0 12px 28px rgba(0,0,0,0.25);';
+        const txt = document.createElement('div'); txt.style.cssText='font-weight:600;margin-bottom:12px;color:#111;white-space:pre-line;'; panel.appendChild(txt);
+        const row = document.createElement('div'); row.style.cssText='display:flex;gap:10px;justify-content:flex-end;'; panel.appendChild(row);
+        const bNo = document.createElement('button'); bNo.textContent='Tidak'; bNo.style.cssText='padding:8px 12px;border-radius:10px;border:1px solid #d1d5db;background:#fff;color:#111;';
+        const bYes = document.createElement('button'); bYes.textContent='Ya'; bYes.style.cssText='padding:8px 12px;border-radius:10px;background:#2563eb;color:#fff;border:0;';
+        row.append(bNo,bYes); overlay.appendChild(panel); document.body.appendChild(overlay);
+        window.__ynModal = { overlay, txt, bNo, bYes };
+      }
+      const { overlay, txt, bNo, bYes } = window.__ynModal;
+      ok = await new Promise(res=>{
+        txt.textContent = __renameT('rename.waitingRemoveConfirm','Hapus {name} dari waiting list?').replace('{name}', name);
+        overlay.style.display = 'flex';
+        const cleanup = (v)=>{ overlay.style.display='none'; bNo.onclick=bYes.onclick=null; res(v); };
+        bYes.onclick = ()=> cleanup(true);
+        bNo.onclick  = ()=> cleanup(false);
+        overlay.onclick = (e)=>{ if (e.target===overlay) cleanup(false); };
+      });
+    }
+  }catch{
+    ok = false;
+  }
+  if (!ok) { showToast?.(__renameT('rename.waitingRemoveCancelled','Batal hapus {name} dari waiting list.').replace('{name}', name), 'info'); return; }
   if (!Array.isArray(waitingList)) waitingList = [];
   for (let i = waitingList.length - 1; i >= 0; i--) {
     if (String(waitingList[i]||'').trim().toLowerCase() === target) {

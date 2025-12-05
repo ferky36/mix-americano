@@ -245,7 +245,7 @@ async function saveStateToCloud() {
       try{ openSearchEventModal?.(); }catch{}
       return false;
     }
-    alert(__toastT('toast.saveFailed','Gagal menyimpan ke Cloud. Coba lagi.'));
+    showToast?.(__toastT('toast.saveFailed','Gagal menyimpan ke Cloud. Coba lagi.'), 'error');
     return false;
   }
 }

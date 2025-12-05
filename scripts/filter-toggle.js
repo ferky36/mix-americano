@@ -64,6 +64,32 @@ window.addEventListener('beforeunload', saveToLocalSilent);
 })();
 
 
+// Helper konfirmasi Yes/No (pakai modal askYesNo jika tersedia)
+async function __askYesNo(msg){
+  try{ if (typeof askYesNo === 'function') return await askYesNo(msg); }catch{}
+  if (!window.__ynModal){
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.55);';
+    const panel = document.createElement('div');
+    panel.style.cssText = 'background:#fff;padding:16px 18px;border-radius:12px;max-width:340px;width:92%;box-shadow:0 12px 28px rgba(0,0,0,0.25);';
+    const txt = document.createElement('div'); txt.style.cssText='font-weight:600;margin-bottom:12px;color:#111;white-space:pre-line;'; panel.appendChild(txt);
+    const row = document.createElement('div'); row.style.cssText='display:flex;gap:10px;justify-content:flex-end;'; panel.appendChild(row);
+    const bNo = document.createElement('button'); bNo.textContent='Tidak'; bNo.style.cssText='padding:8px 12px;border-radius:10px;border:1px solid #d1d5db;background:#fff;color:#111;';
+    const bYes = document.createElement('button'); bYes.textContent='Ya'; bYes.style.cssText='padding:8px 12px;border-radius:10px;background:#2563eb;color:#fff;border:0;';
+    row.append(bNo,bYes); overlay.appendChild(panel); document.body.appendChild(overlay);
+    window.__ynModal = { overlay, txt, bNo, bYes };
+  }
+  const { overlay, txt, bNo, bYes } = window.__ynModal;
+  return new Promise(res=>{
+    txt.textContent = msg;
+    overlay.style.display = 'flex';
+    const cleanup = (v)=>{ overlay.style.display='none'; bNo.onclick=bYes.onclick=null; res(v); };
+    bYes.onclick = ()=> cleanup(true);
+    bNo.onclick  = ()=> cleanup(false);
+    overlay.onclick = (e)=>{ if (e.target===overlay) cleanup(false); };
+  });
+}
+
 // Ketika ganti tanggal → simpan dulu yang lama, lalu load tanggal baru
 // byId('sessionDate')?.addEventListener('change', () => {
 //   saveToLocalSilent();
@@ -77,10 +103,10 @@ window.addEventListener('beforeunload', saveToLocalSilent);
 //   }
 // });
 
-byId('btnApplyPlayerTemplate')?.addEventListener('click', () => {
-  if (confirm(t('players.template.confirm','Terapkan template pemain 10 orang? Daftar sekarang akan diganti.'))) {
-    applyDefaultPlayersTemplate();
-  }
+byId('btnApplyPlayerTemplate')?.addEventListener('click', async () => {
+  const ok = await __askYesNo(t('players.template.confirm','Terapkan template pemain 10 orang? Daftar sekarang akan diganti.'));
+  if (!ok) { showToast?.(t('players.template.cancel','Batal menerapkan template.'), 'info'); return; }
+  applyDefaultPlayersTemplate();
 });
 
 
@@ -728,7 +754,7 @@ byId('eventCreateBtn')?.addEventListener('click', async () => {
   if (btnCreate) { btnCreate.disabled = true; btnCreate.textContent = t('event.creating','Creating...'); }
   const name = (byId('eventNameInput').value || '').trim();
   const date = normalizeDateKey(byId('eventDateInput').value || '');
-  if (!name || !date) { alert(t('event.required','Nama event dan tanggal wajib diisi.')); return; }
+  if (!name || !date) { showToast?.(t('event.required','Nama event dan tanggal wajib diisi.'), 'warn'); return; }
 
   try {
     // pastikan user login
@@ -737,7 +763,7 @@ byId('eventCreateBtn')?.addEventListener('click', async () => {
 
     const { id, created } = await createEventIfNotExists(name, date);
     if (!created) {
-      alert(t('event.exists','Event dengan nama itu di tanggal tersebut sudah ada.\nSilakan pilih nama lain atau tanggal lain.'));
+      showToast?.(t('event.exists','Event dengan nama itu di tanggal tersebut sudah ada.\nSilakan pilih nama lain atau tanggal lain.'), 'warn');
       return;
     }
 
@@ -875,7 +901,7 @@ byId('eventCreateBtn')?.addEventListener('click', async () => {
 
     } catch (err) {
     console.error(err);
-    alert(t('event.failed','Gagal membuat event. Coba lagi.'));
+    showToast?.(t('event.failed','Gagal membuat event. Coba lagi.'), 'error');
   } finally {
     if (btnCreate) { btnCreate.disabled = false; btnCreate.textContent = oldText || t('event.create','Create & Buat Link'); }
   }
@@ -891,7 +917,7 @@ byId('eventCopyBtn')?.addEventListener('click', async () => {
     byId('eventCopyBtn').textContent = t('invite.copySuccess','Copied!');
     setTimeout(()=> byId('eventCopyBtn').textContent = t('invite.copyLabel','Copy'), 2000);
   } catch {
-    alert(t('invite.copyFail','Gagal menyalin link, salin manual:') + ' ' + link);
+    showToast?.(t('invite.copyFail','Gagal menyalin link, salin manual:') + ' ' + link, 'error');
   }
 });
 
@@ -910,7 +936,7 @@ byId('searchDateSelect')?.addEventListener('change', async ()=>{
 byId('openEventBtn')?.addEventListener('click', async ()=>{
   const d = getSearchDateValue() || '';
   const ev = byId('searchEventSelect')?.value || '';
-  if (!d || !ev) { alert(t('event.required','Nama event dan tanggal wajib diisi.')); return; }
+  if (!d || !ev) { showToast?.(t('event.required','Nama event dan tanggal wajib diisi.'), 'warn'); return; }
   byId('eventModal')?.classList.add('hidden');
   await switchToEvent(ev, d);
 });
@@ -954,11 +980,12 @@ async function onDeleteSelectedEvent(){
   const d = getSearchDateValue() || '';
   const ev = byId('searchEventSelect')?.value || '';
   if (!d || !ev) return;
-  if (!confirm(t('event.deleteConfirm','Hapus event ini secara permanen? Tindakan ini tidak bisa dibatalkan.'))) return;
+  const ok = await __askYesNo(t('event.deleteConfirm','Hapus event ini secara permanen? Tindakan ini tidak bisa dibatalkan.'));
+  if (!ok) { showToast?.(t('event.deleteCancelled','Hapus event dibatalkan.'), 'info'); return; }
   try{
     showLoading(t('event.deleting','Menghapus event…'));
     const { data: ud } = await sb.auth.getUser();
-    if (!ud?.user){ alert(t('invite.loginRequired','Silakan login terlebih dahulu.')); return; }
+    if (!ud?.user){ showToast?.(t('invite.loginRequired','Silakan login terlebih dahulu.'), 'warn'); return; }
     const { data, error } = await sb.rpc('delete_event', { p_event_id: ev });
     if (error) throw error;
     const status = (data && data.status) || '';
@@ -979,14 +1006,13 @@ async function onDeleteSelectedEvent(){
   finally { hideLoading(); }
 }
 
-byId('btnLeaveEvent')?.addEventListener('click', ()=>{
-  if (confirm('Keluar event dan hapus data lokal?')) {
-    leaveEventMode(true);   // true = clear localStorage
-    roundsByCourt[activeCourt] = [];
-    markDirty(); renderAll();refreshFairness();
-    window.location.reload(true);
-
-  }
+byId('btnLeaveEvent')?.addEventListener('click', async ()=>{
+  const ok = await __askYesNo('Keluar event dan hapus data lokal?');
+  if (!ok) { showToast?.('Batal keluar event.', 'info'); return; }
+  leaveEventMode(true);   // true = clear localStorage
+  roundsByCourt[activeCourt] = [];
+  markDirty(); renderAll();refreshFairness();
+  window.location.reload(true);
 });
 
 // Toggle visibility of Share/Undang and Keluar buttons based on event presence

@@ -81,7 +81,7 @@ try {
 function clearScoresActive(){
   const arr = roundsByCourt[activeCourt] || [];
   if (arr.length && arr.some(r => r && (r.scoreA || r.scoreB))) {
-    if (!confirm(__rT('render.confirm.clearActive','Hapus skor di lapangan aktif?'))) return;
+    showToast?.(__rT('render.confirm.clearActive','Hapus skor di lapangan aktif?'), 'warn');
   }
   arr.forEach(r => {
     if (r) {
@@ -99,7 +99,7 @@ function clearScoresActive(){
 function clearScoresAll(){
   const hasAny = roundsByCourt.some(c => (c||[]).some(r => r && (r.scoreA || r.scoreB)));
   if (hasAny) {
-    if (!confirm(__rT('render.confirm.clearAll','Hapus skor di SEMUA lapangan?'))) return;
+    showToast?.(__rT('render.confirm.clearAll','Hapus skor di SEMUA lapangan?'), 'warn');
   }
   roundsByCourt.forEach(courtArr => {
     courtArr.forEach(r => { if (r) { r.scoreA = ''; r.scoreB = ''; } });
@@ -154,7 +154,7 @@ function renderCourtsToolbar(){
         e.stopPropagation();
         const keep = byId('courtsToolbar').scrollLeft;
         const msg = __rT('render.court.deleteConfirm','Hapus Lapangan {num}? Data ronde di lapangan ini akan hilang.').replace('{num}', (idx+1));
-        if (!confirm(msg)) return;
+        showToast?.(msg, 'warn');
         roundsByCourt.splice(idx,1);
         if (activeCourt >= roundsByCourt.length) activeCourt = roundsByCourt.length-1;
         markDirty();
