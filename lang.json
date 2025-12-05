@@ -135,6 +135,14 @@
     "id": "Pertandingan/Lapangan",
     "en": "Matches/Court"
   },
+  "confirm.yes": {
+    "id": "Ya",
+    "en": "Yes"
+  },
+  "confirm.no": {
+    "id": "Tidak",
+    "en": "No"
+  },
   "players.collapse": {"id": "Manajemen Pemain", "en": "Player Management" },
   "players.collapseHint": {
   },
@@ -191,8 +199,8 @@
     "en": "Players List"
   },
   "players.deleteBtn": {
-    "id": "hapus",
-    "en": "delete"
+    "id": "Hapus",
+    "en": "Delete"
   },
   "players.deleteConfirm": {
     "id": "Hapus",
