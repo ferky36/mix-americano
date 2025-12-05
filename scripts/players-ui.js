@@ -82,7 +82,7 @@ function renderPlayersList() {
       if (!isViewer()){
         const editBtn = document.createElement('button');
         editBtn.className = 'px-2 py-0.5 text-xs rounded border dark:border-gray-700 flex items-center gap-1';
-        editBtn.textContent = t('players.edit','edit');
+        editBtn.textContent = t('players.edit','Edit');
         editBtn.title = t('players.editTitle','Rename pemain');
         editBtn.addEventListener('click', (e)=>{
           e.preventDefault(); e.stopPropagation();
