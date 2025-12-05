@@ -135,10 +135,7 @@
     "id": "Pertandingan/Lapangan",
     "en": "Matches/Court"
   },
-  "players.collapse": {
-    "id": "▼ Pemain",
-    "en": "▼ Players"
-  },
+  "players.collapse": {"id": "Manajemen Pemain", "en": "Player Management" },
   "players.collapseHint": {
   },
   "players.editText": {
@@ -1647,3 +1644,4 @@
   "score.clearAllConfirm": { "id": "Kosongkan semua pemain dan waiting list?", "en": "Clear all players and waiting list?" },
   "score.applyPlayersConfirm": { "id": "Menerapkan pemain akan reset pairing+skor pada lapangan aktif. Lanjutkan?", "en": "Applying players will reset pairing+scores on the active court. Continue?" }
 }
+

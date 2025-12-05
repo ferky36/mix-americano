@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Padel Match Recap & Insight</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* --- CSS STYLING --- */
+        :root {
+            --bg-color: #0f172a;       /* Dark Blue Background */
+            --card-bg: #1e293b;        /* Card Background */
+            --accent: #bef264;         /* Neon Green (Padel/Tennis Ball) */
+            --text-main: #f8fafc;      /* White Text */
+            --text-muted: #94a3b8;     /* Gray Text */
+            --danger: #ef4444;         /* Red for bad stats */
+            --warning: #f59e0b;        /* Orange for warnings */
+            --success: #10b981;        /* Green for good stats */
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 2rem;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        /* Header */
+        header {
+            margin-bottom: 2rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        h1 { font-size: 1.8rem; font-weight: 700; color: var(--text-main); }
+        .subtitle { color: var(--text-muted); font-size: 0.9rem; margin-top: 5px; }
+        
+        .badge {
+            background: rgba(190, 242, 100, 0.1);
+            color: var(--accent);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            border: 1px solid var(--accent);
+        }
+
+        /* Grid System */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: transform 0.2s;
+        }
+        
+        .card:hover { transform: translateY(-3px); border-color: rgba(190, 242, 100, 0.3); }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .card-title i { color: var(--accent); }
+
+        /* Player Items */
+        .player-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255,255,255,0.03);
+            padding: 10px 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+
+        .player-info { display: flex; align-items: center; gap: 10px; }
+        .avatar {
+            width: 35px; height: 35px;
+            background: linear-gradient(45deg, var(--accent), #10b981);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            color: #000; font-weight: bold; font-size: 0.9rem;
+        }
+        
+        .p-name { font-weight: 600; font-size: 0.95rem; }
+        .p-stat { font-size: 0.75rem; color: var(--text-muted); }
+
+        .score-display { text-align: right; }
+        .score-main { font-size: 1.2rem; font-weight: bold; color: var(--accent); }
+        .score-sub { font-size: 0.75rem; color: var(--success); }
+        
+        /* Support & Pairing Logic */
+        .pill {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+        .pill.red { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+        .pill.green { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+
+        .pairing-box {
+            background: rgba(0,0,0,0.2);
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .arrow { color: var(--text-muted); font-size: 0.8rem; }
+        .reason { display: block; font-size: 0.7rem; color: var(--text-muted); margin-top: 5px; font-style: italic;}
+
+        /* Insights Stats */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .stat-box {
+            text-align: center;
+            background: rgba(255,255,255,0.05);
+            padding: 10px;
+            border-radius: 8px;
+        }
+        .stat-val { font-size: 1.1rem; font-weight: bold; display: block; margin-bottom: 2px;}
+        .stat-lbl { font-size: 0.7rem; color: var(--text-muted); }
+
+        /* Progress Bar */
+        .progress-container { margin-top: 15px; }
+        .progress-label { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 5px; }
+        .progress-bg { height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; }
+        .progress-fill { height: 100%; background: var(--warning); border-radius: 3px; width: 50%; }
+
+        @media(max-width: 600px) {
+            body { padding: 1rem; }
+            h1 { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <div>
+                <h1>Padel Match Recap</h1>
+                <div class="subtitle">Analisis Statistik & Strategi Pemain</div>
+            </div>
+            <div class="badge"><i class="fa-solid fa-chart-simple"></i> Match Report</div>
+        </header>
+
+        <div class="grid">
+            
+            <div class="card">
+                <div class="card-title"><i class="fa-solid fa-trophy"></i> Peringkat Total</div>
+                
+                <div class="player-row">
+                    <div class="player-info">
+                        <div class="avatar">F</div>
+                        <div>
+                            <span class="p-name">Ferdi</span>
+                            <div class="p-stat">WinRate 100%</div>
+                        </div>
+                    </div>
+                    <div class="score-display">
+                        <div class="score-main">93</div>
+                        <div class="score-sub">+25 Best</div>
+                    </div>
+                </div>
+
+                <div class="player-row">
+                    <div class="player-info">
+                        <div class="avatar" style="filter: grayscale(1);">I</div>
+                        <div>
+                            <span class="p-name">ico</span>
+                            <div class="p-stat">WinRate 75%</div>
+                        </div>
+                    </div>
+                    <div class="score-display">
+                        <div class="score-main">87</div>
+                        <div class="score-sub">+21</div>
+                    </div>
+                </div>
+
+                <div class="player-row" style="opacity: 0.6;">
+                    <div class="player-info">
+                        <div class="avatar" style="background: #64748b; color: white;">D</div>
+                        <div><span class="p-name">Dellarosa</span></div>
+                    </div>
+                    <div class="score-display"><div class="score-main" style="color: #cbd5e1;">83</div></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title"><i class="fa-solid fa-people-arrows"></i> Rekomendasi Pairing</div>
+                
+                <div class="pairing-box">
+                    <div>
+                        <span style="color:var(--danger)">Utut</span> <span style="font-size:0.7rem">(WR 25%)</span>
+                        <i class="fa-solid fa-arrow-right arrow" style="margin: 0 8px;"></i>
+                        <span style="color:var(--success)">Ferdi</span> <span style="font-size:0.7rem">(WR 100%)</span>
+                        <span class="reason">Menyeimbangkan skor (Δ-21 ke +25)</span>
+                    </div>
+                </div>
+
+                <div class="pairing-box">
+                    <div>
+                        <span style="color:var(--danger)">Marchel</span> <span style="font-size:0.7rem">(WR 25%)</span>
+                        <i class="fa-solid fa-arrow-right arrow" style="margin: 0 8px;"></i>
+                        <span style="color:var(--success)">ico</span> <span style="font-size:0.7rem">(WR 75%)</span>
+                        <span class="reason">Boost performa (Δ-16 ke +21)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title"><i class="fa-solid fa-triangle-exclamation" style="color: var(--warning)"></i> Butuh Penyangga</div>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">
+                    Pemain dengan Delta negatif, butuh partner Δ positif.
+                </p>
+                
+                <div class="player-row" style="padding: 8px;">
+                    <span class="p-name">Novan</span>
+                    <div>
+                        <span class="pill red">WR 0%</span>
+                        <span class="pill red">Δ -15</span>
+                    </div>
+                </div>
+                <div class="player-row" style="padding: 8px;">
+                    <span class="p-name">Marchel</span>
+                    <div>
+                        <span class="pill red">WR 25%</span>
+                        <span class="pill red">Δ -16</span>
+                    </div>
+                </div>
+                <div class="player-row" style="padding: 8px;">
+                    <span class="p-name">Utut</span>
+                    <div>
+                        <span class="pill red">WR 25%</span>
+                        <span class="pill red">Δ -21</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title"><i class="fa-solid fa-magnifying-glass-chart"></i> Insight & Konsistensi</div>
+                
+                <div class="progress-container">
+                    <div class="progress-label">
+                        <span>Consistency Watch: <b>Rangga Al</b></span>
+                        <span>Total 70</span>
+                    </div>
+                    <div class="progress-bg"><div class="progress-fill"></div></div>
+                    <span style="font-size: 0.7rem; color: var(--text-muted); margin-top: 5px; display:block;">
+                        "Kontribusi bagus, hasil belum stabil."
+                    </span>
+                </div>
+
+                <div class="stat-grid">
+                    <div class="stat-box">
+                        <span class="stat-val" style="color: var(--accent);">Match 8</span>
+                        <span class="stat-lbl">Game Terketat (17-17)</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-val"><i class="fa-solid fa-check"></i></span>
+                        <span class="stat-lbl">Rotasi Merata</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</body>
+</html>

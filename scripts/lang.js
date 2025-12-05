@@ -36,7 +36,7 @@
     "filter.break": { "id": "Jeda/Match (menit)", "en": "Break/Match (minutes)" },
     "filter.showBreakRows": { "id": "Tampilkan baris jeda", "en": "Show break rows" },
     "filter.rounds": { "id": "Pertandingan/Lapangan", "en": "Matches/Court" },
-    "players.collapse": { "id": "▼ Pemain", "en": "▼ Players" },
+    "players.collapse": { "id": "Manajemen Pemain", "en": "Player Management" },
     "players.editText": { "id": "Edit sebagai teks", "en": "Edit as text" },
     "players.applyTemplate": { "id": "Apply Template Pemain", "en": "Apply Player Template" },
     "players.clear": { "id": "Kosongkan", "en": "Clear" },
@@ -814,3 +814,4 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 })();
+

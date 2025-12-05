@@ -396,9 +396,44 @@ if (btnFilter) {
   });
 }
 
-byId("btnCollapsePlayers").addEventListener("click", () =>
-  byId("playersPanel").classList.toggle("hidden")
-);
+function syncPlayersCollapseIcon(){
+  const panel = byId("playersPanel");
+  const arrowDown = document.getElementById("playersArrowDown");
+  const arrowUp = document.getElementById("playersArrowUp");
+  const btn = byId("btnCollapsePlayers");
+  const toggle = document.getElementById("playersActionsToggle");
+  const actions = document.getElementById("playersActions");
+  if (!panel) return;
+  const hidden = panel.classList.contains("hidden");
+  if (arrowDown) arrowDown.classList.toggle("hidden", !hidden);
+  if (arrowUp) arrowUp.classList.toggle("hidden", hidden);
+  if (btn) btn.setAttribute("aria-expanded", String(!hidden));
+  if (toggle) toggle.classList.toggle("hidden", hidden);
+  if (hidden && actions){
+    actions.classList.add("hidden");
+    actions.classList.remove("flex");
+  }
+}
+
+byId("btnCollapsePlayers")?.addEventListener("click", () => {
+  const panel = byId("playersPanel");
+  if (!panel) return;
+  panel.classList.toggle("hidden");
+  syncPlayersCollapseIcon();
+});
+
+// Keep icon direction in sync when other scripts toggle the panel
+(function watchPlayersPanel(){
+  const panel = byId("playersPanel");
+  if (!panel) return;
+  // Default collapsed on load
+  panel.classList.add("hidden");
+  syncPlayersCollapseIcon();
+  try{
+    const mo = new MutationObserver(syncPlayersCollapseIcon);
+    mo.observe(panel, { attributes:true, attributeFilter:["class"] });
+  }catch{}
+})();
 
 byId('btnResetActive').addEventListener('click', async ()=>{
   const arr = roundsByCourt[activeCourt] || [];

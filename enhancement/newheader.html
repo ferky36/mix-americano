@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manajemen Pemain</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Konfigurasi Tailwind untuk Font Inter -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f7f7;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <!-- Container utama kini lebih lebar (max-w-5xl) untuk desktop -->
+    <div id="app" class="max-w-5xl mx-auto bg-white shadow-xl rounded-xl overflow-hidden">
+        <header class="p-4 flex justify-between items-center border-b bg-indigo-600 text-white">
+            <!-- Sisi Kiri Header: Tombol Collapse Utama -->
+            <button id="toggleSectionButton" class="flex items-center space-x-2 font-semibold p-2 rounded-lg bg-indigo-700 hover:bg-indigo-800 transition duration-150">
+                <span id="collapseIcon" class="transform transition-transform duration-300">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </span>
+                <span>Manajemen Pemain</span>
+            </button>
+
+            <!-- Sisi Kanan Header: Tombol Utility -->
+            <div class="flex items-center space-x-2">
+                
+                <!-- Tombol Utility Terpisah (Desktop Only) -->
+                <div class="hidden md:flex items-center space-x-2">
+                    <button class="bg-indigo-700 text-white text-sm font-medium py-2 px-3 rounded-lg hover:bg-indigo-800 transition duration-150">
+                        Edit sebagai teks
+                    </button>
+                    <button class="bg-indigo-700 text-white text-sm font-medium py-2 px-3 rounded-lg hover:bg-indigo-800 transition duration-150">
+                        Apply Template Pemain
+                    </button>
+                    <button class="bg-red-700 text-white text-sm font-medium py-2 px-3 rounded-lg hover:bg-red-800 transition duration-150">
+                        Kosongkan
+                    </button>
+                </div>
+
+                <!-- Tombol Utility Menu (Dropdown - Mobile & Tablet Only) -->
+                <div class="relative md:hidden">
+                    <button id="utilityMenuButton" class="p-2 rounded-full hover:bg-indigo-700 transition duration-150 focus:outline-none">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    </button>
+                    <!-- Dropdown Content -->
+                    <div id="utilityMenu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl z-10 text-gray-800">
+                        <button class="block w-full text-left px-4 py-2 hover:bg-gray-100 rounded-t-lg">Edit sebagai teks</button>
+                        <button class="block w-full text-left px-4 py-2 hover:bg-gray-100">Apply Template Pemain</button>
+                        <button class="block w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100 rounded-b-lg">Kosongkan Semua</button>
+                    </div>
+                </div>
+
+            </div>
+        </header>
+
+        <!-- Konten Utama (Dapat di-Collapse) -->
+        <div id="mainContent" class="p-4 transition-all duration-300 overflow-hidden">
+            <!-- Form Tambah Pemain -->
+            <div class="mb-6 flex space-x-2">
+                <input type="text" id="playerNameInput" placeholder="Nama pemain..." class="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm transition duration-150" aria-label="Nama pemain">
+                <button onclick="addPlayer()" class="bg-indigo-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-indigo-700 transition duration-150 shadow-md">
+                    Tambah
+                </button>
+            </div>
+
+            <!-- Daftar Pemain - Menggunakan Grid Layout untuk desktop -->
+            <div id="playerList" class="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                <!-- Kartu Pemain akan ditambahkan di sini oleh JavaScript -->
+            </div>
+        </div>
+        
+    </div>
+
+    <script>
+        // Data Pemain
+        let players = [
+            { id: 1, name: "Della", gender: "Wanita", level: "Beginner", paid: true, isExpanded: false },
+            { id: 2, name: "Rangga", gender: "Pria", level: "Intermediate", paid: false, isExpanded: false },
+            { id: 3, name: "Siti", gender: "Wanita", level: "Pro", paid: true, isExpanded: false },
+            { id: 4, name: "Bagus", gender: "Pria", level: "Beginner", paid: true, isExpanded: false },
+            { id: 5, name: "Rina", gender: "Wanita", level: "Intermediate", paid: false, isExpanded: false },
+            { id: 6, name: "Tono", gender: "Pria", level: "Pro", paid: true, isExpanded: false },
+        ];
+
+        const playerList = document.getElementById('playerList');
+        const toggleSectionButton = document.getElementById('toggleSectionButton');
+        const mainContent = document.getElementById('mainContent');
+        const collapseIcon = document.getElementById('collapseIcon');
+        const utilityMenuButton = document.getElementById('utilityMenuButton');
+        const utilityMenu = document.getElementById('utilityMenu');
+
+        // --- Fungsi Utama ---
+
+        /** Menggambar ulang seluruh daftar pemain. */
+        function renderPlayerList() {
+            playerList.innerHTML = '';
+            players.forEach(player => {
+                const playerCard = createPlayerCard(player);
+                playerList.appendChild(playerCard);
+            });
+        }
+
+        /** Membuat elemen kartu pemain. */
+        function createPlayerCard(player) {
+            // Container Card Utama
+            const card = document.createElement('div');
+            card.id = `player-${player.id}`;
+            card.className = 'bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden transition-all duration-300';
+            
+            // Header Card (Selalu Terlihat)
+            const header = document.createElement('div');
+            header.className = 'flex justify-between items-center p-4 cursor-pointer hover:bg-gray-50';
+            header.onclick = () => togglePlayerExpand(player.id);
+            
+            header.innerHTML = `
+                <div class="flex flex-col">
+                    <h2 class="text-lg font-bold text-gray-800">${player.name}</h2>
+                    <span class="text-sm text-gray-500">Level: ${player.level}</span>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <!-- Indikator Pembayaran/Status -->
+                    <span class="${player.paid ? 'bg-green-500' : 'bg-red-500'} text-white text-xs font-medium px-2.5 py-1 rounded-full">
+                        ${player.paid ? 'Lunas' : 'Belum Bayar'}
+                    </span>
+                    <!-- Icon Expand/Collapse -->
+                    <span class="transform transition-transform duration-300 ${player.isExpanded ? 'rotate-180' : 'rotate-0'}">
+                        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </span>
+                </div>
+            `;
+
+            // Detail Card (Konten yang di-Collapse/Expand)
+            const details = document.createElement('div');
+            details.id = `details-${player.id}`;
+            details.className = `p-4 space-y-3 bg-gray-50 border-t ${player.isExpanded ? 'block' : 'hidden'}`;
+            
+            details.innerHTML = `
+                <!-- Dropdown Gender -->
+                <label class="block">
+                    <span class="text-sm font-medium text-gray-600">Gender:</span>
+                    <select onchange="updatePlayerDetail(${player.id}, 'gender', this.value)" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                        <option value="Pilih Gender" ${player.gender === 'Pilih Gender' ? 'selected' : ''}>-Pilih Gender-</option>
+                        <option value="Pria" ${player.gender === 'Pria' ? 'selected' : ''}>Pria</option>
+                        <option value="Wanita" ${player.gender === 'Wanita' ? 'selected' : ''}>Wanita</option>
+                    </select>
+                </label>
+                
+                <!-- Dropdown Level -->
+                <label class="block">
+                    <span class="text-sm font-medium text-gray-600">Level:</span>
+                    <select onchange="updatePlayerDetail(${player.id}, 'level', this.value)" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                        <option value="Beginner" ${player.level === 'Beginner' ? 'selected' : ''}>Beginner</option>
+                        <option value="Intermediate" ${player.level === 'Intermediate' ? 'selected' : ''}>Intermediate</option>
+                        <option value="Pro" ${player.level === 'Pro' ? 'selected' : ''}>Pro</option>
+                    </select>
+                </label>
+
+                <!-- Tombol Aksi -->
+                <div class="flex justify-between items-center pt-2">
+                    <button onclick="togglePaidStatus(${player.id})" class="text-sm font-medium py-2 px-3 rounded-lg transition duration-150 ${player.paid ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200' : 'bg-green-100 text-green-800 hover:bg-green-200'}">
+                        ${player.paid ? 'Batalkan Bayar' : 'Tandai Sudah Bayar'}
+                    </button>
+                    <button onclick="deletePlayer(${player.id})" class="bg-red-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-red-600 transition duration-150 shadow-md flex items-center space-x-1">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        <span>Hapus</span>
+                    </button>
+                </div>
+            `;
+            
+            card.appendChild(header);
+            card.appendChild(details);
+            return card;
+        }
+
+        // --- Logika Interaksi ---
+
+        /** Toggle collapse/expand untuk seluruh bagian konten utama. */
+        toggleSectionButton.addEventListener('click', () => {
+            const isHidden = mainContent.classList.toggle('hidden');
+            if (isHidden) {
+                mainContent.style.maxHeight = '0';
+                mainContent.style.paddingTop = '0';
+                mainContent.style.paddingBottom = '0';
+                collapseIcon.classList.remove('rotate-180');
+            } else {
+                // Atur tinggi untuk animasi transisi yang halus (gunakan nilai besar)
+                mainContent.style.maxHeight = '5000px'; 
+                mainContent.style.paddingTop = '1rem'; // p-4
+                mainContent.style.paddingBottom = '1rem'; // p-4
+                collapseIcon.classList.add('rotate-180');
+            }
+        });
+
+        /** Toggle collapse/expand untuk menu utilitas. */
+        utilityMenuButton.addEventListener('click', (event) => {
+            event.stopPropagation();
+            utilityMenu.classList.toggle('hidden');
+        });
+
+        /** Tutup menu utilitas saat klik di luar area. */
+        document.addEventListener('click', (event) => {
+            if (!utilityMenuButton.contains(event.target) && !utilityMenu.classList.contains('hidden')) {
+                utilityMenu.classList.add('hidden');
+            }
+        });
+
+        /** Toggle expand/collapse untuk kartu pemain individual. */
+        function togglePlayerExpand(id) {
+            const playerIndex = players.findIndex(p => p.id === id);
+            if (playerIndex !== -1) {
+                players[playerIndex].isExpanded = !players[playerIndex].isExpanded;
+                renderPlayerList();
+            }
+        }
+
+        /** Tambah pemain baru. */
+        function addPlayer() {
+            const input = document.getElementById('playerNameInput');
+            const newName = input.value.trim();
+            
+            if (newName) {
+                const newId = players.length > 0 ? Math.max(...players.map(p => p.id)) + 1 : 1;
+                players.push({
+                    id: newId,
+                    name: newName,
+                    gender: "Pilih Gender",
+                    level: "Beginner",
+                    paid: false,
+                    isExpanded: true // Otomatis buka saat ditambahkan
+                });
+                input.value = '';
+                renderPlayerList();
+            }
+        }
+
+        /** Hapus pemain. */
+        function deletePlayer(id) {
+            // Mengganti alert() dengan konfirmasi UI kustom jika diperlukan
+            if (window.confirm("Apakah Anda yakin ingin menghapus pemain ini?")) {
+                 players = players.filter(p => p.id !== id);
+                 renderPlayerList();
+            }
+        }
+
+        /** Perbarui detail pemain (Gender/Level). */
+        function updatePlayerDetail(id, key, value) {
+            const player = players.find(p => p.id === id);
+            if (player) {
+                player[key] = value;
+                // Tidak perlu render ulang seluruh list, tapi kita render untuk memastikan header terupdate jika diperlukan
+                // Khususnya jika level ditampilkan di header
+                renderPlayerList(); 
+            }
+        }
+
+        /** Toggle status pembayaran. */
+        function togglePaidStatus(id) {
+            const player = players.find(p => p.id === id);
+            if (player) {
+                player.paid = !player.paid;
+                renderPlayerList();
+            }
+        }
+
+        // --- Inisialisasi ---
+        document.addEventListener('DOMContentLoaded', () => {
+            renderPlayerList();
+            // Inisialisasi state awal collapse
+            mainContent.classList.remove('hidden');
+            mainContent.style.maxHeight = '5000px'; 
+            mainContent.style.paddingTop = '1rem';
+            mainContent.style.paddingBottom = '1rem';
+            collapseIcon.classList.add('rotate-180');
+        });
+    </script>
+</body>
+</html>

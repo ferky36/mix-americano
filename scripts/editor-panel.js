@@ -64,7 +64,7 @@ function setupPlayersToolbarUI(){
       collapse.dataset.iconified = '1';
       collapse.classList.add('icon-btn');
       collapse.setAttribute('data-i18n','players.collapse');
-      collapse.innerHTML = '<svg class="icon inline-block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg><span class="btn-label">'+__epT('players.label','Pemain')+'</span>';
+      collapse.innerHTML = '<span class="inline-flex items-center gap-[2px] text-white"><svg id="playersArrowDown" class="icon inline-block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg><svg id="playersArrowUp" class="icon inline-block hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg></span><span class="btn-label">'+__epT('players.label','Pemain')+'</span>';
       const hint = collapse.parentElement?.querySelector('span');
       if (hint) hint.classList.add('helper-hint');
     }
