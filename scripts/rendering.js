@@ -78,10 +78,16 @@ try {
   };
 } catch {}
 
-function clearScoresActive(){
+async function clearScoresActive(){
   const arr = roundsByCourt[activeCourt] || [];
   if (arr.length && arr.some(r => r && (r.scoreA || r.scoreB))) {
-    if (!confirm(__rT('render.confirm.clearActive','Hapus skor di lapangan aktif?'))) return;
+    const msg = __rT('render.confirm.clearActive','Hapus skor? Tindakan ini akan menghapus semua score di semua pertandingan');
+    let ok = false;
+    try{
+      if (typeof askYesNo === 'function') ok = await askYesNo(msg);
+      else ok = confirm(msg);
+    }catch{ ok = confirm(msg); }
+    if (!ok) return;
   }
   arr.forEach(r => {
     if (r) {
@@ -99,7 +105,7 @@ function clearScoresActive(){
 function clearScoresAll(){
   const hasAny = roundsByCourt.some(c => (c||[]).some(r => r && (r.scoreA || r.scoreB)));
   if (hasAny) {
-    if (!confirm(__rT('render.confirm.clearAll','Hapus skor di SEMUA lapangan?'))) return;
+    showToast?.(__rT('render.confirm.clearAll','Hapus skor di SEMUA lapangan?'), 'warn');
   }
   roundsByCourt.forEach(courtArr => {
     courtArr.forEach(r => { if (r) { r.scoreA = ''; r.scoreB = ''; } });
@@ -111,6 +117,10 @@ function clearScoresAll(){
 function renderCourtsToolbar(){
   const bar = byId('courtsToolbar');
   const addBtn = byId('btnAddCourt');
+  // Sembunyikan tombol tambah lapangan sementara
+  if (addBtn) addBtn.style.display = 'none';
+  // sementara nonaktifkan render toolbar lapangan (tambah/label)
+  return;
   if (addBtn){
     addBtn.disabled = isViewer();
     try{
@@ -154,7 +164,7 @@ function renderCourtsToolbar(){
         e.stopPropagation();
         const keep = byId('courtsToolbar').scrollLeft;
         const msg = __rT('render.court.deleteConfirm','Hapus Lapangan {num}? Data ronde di lapangan ini akan hilang.').replace('{num}', (idx+1));
-        if (!confirm(msg)) return;
+        showToast?.(msg, 'warn');
         roundsByCourt.splice(idx,1);
         if (activeCourt >= roundsByCourt.length) activeCourt = roundsByCourt.length-1;
         markDirty();

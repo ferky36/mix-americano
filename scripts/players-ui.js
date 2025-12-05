@@ -1,6 +1,30 @@
 "use strict";
 // ================== PLAYERS UI ================== //
 const t = (k,f)=> (window.__i18n_get ? __i18n_get(k,f) : f);
+async function askYN(msg){
+  try{ if (typeof askYesNo === 'function') return await askYesNo(msg); }catch{}
+  if (!window.__ynModal){
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.55);';
+    const panel = document.createElement('div');
+    panel.style.cssText = 'background:#fff;padding:16px 18px;border-radius:12px;max-width:340px;width:92%;box-shadow:0 12px 28px rgba(0,0,0,0.25);';
+    const txt = document.createElement('div'); txt.style.cssText='font-weight:600;margin-bottom:12px;color:#111;white-space:pre-line;'; panel.appendChild(txt);
+    const row = document.createElement('div'); row.style.cssText='display:flex;gap:10px;justify-content:flex-end;'; panel.appendChild(row);
+    const bNo = document.createElement('button'); bNo.textContent='Tidak'; bNo.style.cssText='padding:8px 12px;border-radius:10px;border:1px solid #d1d5db;background:#fff;color:#111;';
+    const bYes = document.createElement('button'); bYes.textContent='Ya'; bYes.style.cssText='padding:8px 12px;border-radius:10px;background:#2563eb;color:#fff;border:0;';
+    row.append(bNo,bYes); overlay.appendChild(panel); document.body.appendChild(overlay);
+    window.__ynModal = { overlay, txt, bNo, bYes };
+  }
+  const { overlay, txt, bNo, bYes } = window.__ynModal;
+  return new Promise(res=>{
+    txt.textContent = msg;
+    overlay.style.display = 'flex';
+    const cleanup = (v)=>{ overlay.style.display='none'; bNo.onclick=bYes.onclick=null; res(v); };
+    bYes.onclick = ()=> cleanup(true);
+    bNo.onclick  = ()=> cleanup(false);
+    overlay.onclick = (e)=>{ if (e.target===overlay) cleanup(false); };
+  });
+}
 function escapeHtml(s) {
   return s.replace(
     /[&<>'"]/g,
@@ -134,8 +158,9 @@ function renderPlayersList() {
       try { __updatePaidCardStyle(); } catch {}
 
 
-    li.querySelector(".del").addEventListener("click", () => {
-      if (!confirm(t('players.deleteConfirm','Hapus') + " " + name + "?")) return;
+    li.querySelector(".del").addEventListener("click", async () => {
+      const ok = await askYN(t('players.deleteConfirm','Hapus') + " " + name + "?");
+      if (!ok) { showToast?.(t('players.deleteCancelled','Hapus dibatalkan'), 'info'); return; }
       players.splice(idx, 1);
       removePlayerFromRounds(name);
       delete playerMeta[name];

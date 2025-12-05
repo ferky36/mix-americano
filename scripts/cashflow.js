@@ -513,7 +513,7 @@
       const buf = await wb.xlsx.writeBuffer();
       const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(()=> URL.revokeObjectURL(a.href), 2000);
-    }catch(e){ console.error(e); alert(__c('cash.exportExcelFail','Gagal export Excel.')); }
+    }catch(e){ console.error(e); showToast?.(__c('cash.exportExcelFail','Gagal export Excel.'), 'error'); }
   }
   // New PDF export that mirrors the Excel layout using pdfmake
   async function exportCashflowPDFNBC(){
@@ -577,7 +577,7 @@
       content.push({ columns:[ {width:'48%', table:{ widths:['*',100], body:[ [ {text:'Masuk:', fillColor:'#E6F4EA', color:'#059669', bold:true}, {text:`Rp ${money(grandIn)}`, alignment:'right', fillColor:'#E6F4EA', color:'#059669', bold:true} ], [ {text:'Sisa:', color: balAll>=0?'#0EA5E9':'#DC2626', bold:true}, {text:`Rp ${money(balAll)}`, alignment:'right', color: balAll>=0?'#0EA5E9':'#DC2626', bold:true} ] ]}, layout:{hLineColor:'#E5E7EB', vLineColor:'#E5E7EB'} }, {width:8, text:''}, {width:'48%', table:{ widths:['*',100], body:[ [ {text:'Keluar:', fillColor:'#FCE8E6', color:'#DC2626', bold:true}, {text:`Rp ${money(grandOut)}`, alignment:'right', fillColor:'#FCE8E6', color:'#DC2626', bold:true} ] ]}, layout:{hLineColor:'#E5E7EB', vLineColor:'#E5E7EB'} } ], columnGap:8 });
       const docDef={ pageSize:'A4', pageOrientation:'landscape', pageMargins:[20,24,20,28], defaultStyle:{ font:'Roboto', fontSize:10 }, content };
       pdfMake.createPdf(docDef).download(__c('cash.exportFilePdf','Laporan Cashflow Padel NBC.pdf'));
-    }catch(e){ console.error(e); alert(__c('cash.exportPDFFail','Gagal export PDF.')); }
+    }catch(e){ console.error(e); showToast?.(__c('cash.exportPDFFail','Gagal export PDF.'), 'error'); }
   }
   // Route any legacy calls to the new exporter
   try{ exportCashflowExcel = exportCashflowExcelNBC; }catch{}
@@ -599,7 +599,7 @@
       const info = (byId('cashEventInfo')?.textContent||'').trim().replace(/[\\/:*?"<>|]+/g,'');
       const name = `${title||'Event'}_Cashflow_${info||new Date().toISOString().slice(0,10)}.xlsx`;
       XLSX.writeFile(wb, name);
-    }catch(e){ console.error(e); alert(__c('cash.exportExcelFail','Gagal export Excel.')); }
+    }catch(e){ console.error(e); showToast?.(__c('cash.exportExcelFail','Gagal export Excel.'), 'error'); }
   }
 
   function buildCashflowHTML(){
@@ -666,10 +666,10 @@
         ${tbl([['Keterangan','Amount','Pax','Total'], ...cash.keluar.map(it=>[(rangeMode.active&&it.eventTitle?`[${it.eventTitle}] `:'') + (it.label||'-'), Number(it.amount||0), Number(it.pax||1), Number(it.amount||0)*Number(it.pax||1)])])}
       </body></html>`;
       const w = window.open('', '_blank');
-      if (!w){ alert(__c('cash.popupBlocked','Popup diblokir. Izinkan popup untuk export PDF.')); return; }
+      if (!w){ showToast?.(__c('cash.popupBlocked','Popup diblokir. Izinkan popup untuk export PDF.'), 'warn'); return; }
       w.document.open(); w.document.write(html); w.document.close();
       w.focus(); setTimeout(()=>{ try{ w.print(); }catch{} }, 200);
-    }catch(e){ console.error(e); alert(__c('cash.exportPDFFail','Gagal export PDF.')); }
+    }catch(e){ console.error(e); showToast?.(__c('cash.exportPDFFail','Gagal export PDF.'), 'error'); }
   }
 
   function exportCashflow(format){
@@ -691,11 +691,37 @@
     };
   }
 
+  async function askYesNoLocal(msg){
+    try{ if (typeof askYesNo === 'function') return await askYesNo(msg); }catch{}
+    if (!window.__ynModal){
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.55);';
+      const panel = document.createElement('div');
+      panel.style.cssText = 'background:#fff;padding:16px 18px;border-radius:12px;max-width:340px;width:92%;box-shadow:0 12px 28px rgba(0,0,0,0.25);';
+      const txt = document.createElement('div'); txt.style.cssText='font-weight:600;margin-bottom:12px;color:#111;white-space:pre-line;'; panel.appendChild(txt);
+      const row = document.createElement('div'); row.style.cssText='display:flex;gap:10px;justify-content:flex-end;'; panel.appendChild(row);
+      const bNo = document.createElement('button'); bNo.textContent='Tidak'; bNo.style.cssText='padding:8px 12px;border-radius:10px;border:1px solid #d1d5db;background:#fff;color:#111;';
+      const bYes = document.createElement('button'); bYes.textContent='Ya'; bYes.style.cssText='padding:8px 12px;border-radius:10px;background:#2563eb;color:#fff;border:0;';
+      row.append(bNo,bYes); overlay.appendChild(panel); document.body.appendChild(overlay);
+      window.__ynModal = { overlay, txt, bNo, bYes };
+    }
+    const { overlay, txt, bNo, bYes } = window.__ynModal;
+    return new Promise(res=>{
+      txt.textContent = msg;
+      overlay.style.display = 'flex';
+      const cleanup = (v)=>{ overlay.style.display='none'; bNo.onclick=bYes.onclick=null; res(v); };
+      bYes.onclick = ()=> cleanup(true);
+      bNo.onclick  = ()=> cleanup(false);
+      overlay.onclick = (e)=>{ if (e.target===overlay) cleanup(false); };
+    });
+  }
+
   async function delRow(id){
-    if (rangeMode.active) { alert(__c('cash.rangeDeleteNA','Hapus tidak tersedia pada mode rentang.')); return; }
+    if (rangeMode.active) { showToast?.(__c('cash.rangeDeleteNA','Hapus tidak tersedia pada mode rentang.'), 'warn'); return; }
     const can = (typeof isCashAdmin==='function') ? isCashAdmin() : (!!window._isCashAdmin);
-    if (!can) { alert(__c('cash.accessDenied','Anda tidak memiliki akses Cashflow untuk event ini.')); return; }
-    if (!confirm(__c('cash.deleteConfirm','Hapus baris ini?'))) return;
+    if (!can) { showToast?.(__c('cash.accessDenied','Anda tidak memiliki akses Cashflow untuk event ini.'), 'warn'); return; }
+    const ok = await askYesNoLocal(__c('cash.deleteConfirm','Hapus baris ini?'));
+    if (!ok) { showToast?.(__c('cash.deleteCancelled','Aksi hapus dibatalkan.'), 'info'); return; }
     try{
       if (isCloudMode() && window.sb && currentEventId){
         // Prefer RPC (security definer) to bypass RLS visibility issues
@@ -716,7 +742,7 @@
         cash = obj;
       }
       render();
-    }catch(e){ console.error(e); alert(__c('cash.deleteFail','Gagal hapus.')); }
+    }catch(e){ console.error(e); showToast?.(__c('cash.deleteFail','Gagal hapus.'), 'error'); }
   }
 
   function readLocal(key){ try{ return JSON.parse(localStorage.getItem(key)||'{"masuk":[],"keluar":[]}'); }catch{ return {masuk:[],keluar:[]}; } }
@@ -822,7 +848,7 @@
   async function submitForm(e){
     e.preventDefault();
     const can = (typeof isCashAdmin==='function') ? isCashAdmin() : (!!window._isCashAdmin);
-    if (!can) { alert(__c('cash.accessDenied','Anda tidak memiliki akses Cashflow untuk event ini.')); return; }
+    if (!can) { showToast?.(__c('cash.accessDenied','Anda tidak memiliki akses Cashflow untuk event ini.'), 'warn'); return; }
     const payload = {
       event_id: currentEventId || null,
       kind: editing.kind,
@@ -868,12 +894,12 @@
       }
       render();
       closeForm();
-    }catch(err){ console.error(err); alert(__c('cash.saveFail','Gagal menyimpan.')); }
+    }catch(err){ console.error(err); showToast?.(__c('cash.saveFail','Gagal menyimpan.'), 'error'); }
   }
 
   async function onOpen(){
     if (!rangeMode.active && !currentEventId){ showToast?.(__c('cash.toast.openEvent','Buka event dulu.'), 'warn'); return; }
-    if (!(typeof isCashAdmin==='function' && isCashAdmin())){ alert(__c('cash.accessDenied','Anda tidak memiliki akses Cashflow untuk event ini.')); return; }
+    if (!(typeof isCashAdmin==='function' && isCashAdmin())){ showToast?.(__c('cash.accessDenied','Anda tidak memiliki akses Cashflow untuk event ini.'), 'warn'); return; }
     showLoading?.('Memuat kas…');
     try{
       if (rangeMode.active){ await loadRangeSafe(); } else { await loadFromCloud(); }
@@ -917,8 +943,8 @@
   async function applyRange(){
     const s = (byId('cashStart')?.value||'').trim();
     const e = (byId('cashEnd')?.value||'').trim();
-    if (!s || !e){ alert(__c('cash.rangeRequired','Isi tanggal Start dan End.')); return; }
-    if (s > e){ alert(__c('cash.rangeInvalid','Tanggal Start harus <= End.')); return; }
+    if (!s || !e){ showToast?.(__c('cash.rangeRequired','Isi tanggal Start dan End.'), 'warn'); return; }
+    if (s > e){ showToast?.(__c('cash.rangeInvalid','Tanggal Start harus <= End.'), 'warn'); return; }
     rangeMode = { active:true, start:s, end:e };
     showLoading?.('Memuat kas (range)…');
     try{ await loadRangeSafe(); } finally { hideLoading?.(); }

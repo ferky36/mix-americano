@@ -30,7 +30,7 @@ function isCashAdmin(){
 function setAccessRole(role){ accessRole = (role === 'viewer') ? 'viewer' : 'editor'; applyAccessMode(); renderAll?.(); renderPlayersList?.(); renderViewerPlayersList?.(); }
 function applyAccessMode(){
   document.documentElement.setAttribute('data-readonly', String(isViewer()));
-  const disableIds = ['btnAddCourt','btnMakeEventLink','btnShareEvent','btnApplyPlayersActive','btnResetActive','btnClearScoresActive','btnClearScoresAll'];
+  const disableIds = ['btnAddCourt','btnMakeEventLink','btnShareEvent','btnApplyPlayersActive','btnResetActive','btnClearScoresActive'];
   disableIds.forEach(id=>{ const el = byId(id); if (el) el.disabled = isViewer(); });
 
   // Kontrol skor: boleh aktif jika editor ATAU viewer score-only
@@ -58,7 +58,7 @@ function applyAccessMode(){
     'pairMode',
     'btnResetActive',
     'btnClearScoresActive',
-    'btnClearScoresAll'
+    // btnClearScoresAll removed
   ];
   hideGeneralIds.forEach(id=>{ const el = byId(id); if (el) el.classList.toggle('hidden', isViewer()); });
   // Filter/Jadwal toggle visibility:
