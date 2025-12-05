@@ -93,10 +93,10 @@ function ensureConfirmModal(){
   const btnRow = document.createElement('div');
   btnRow.style.cssText = 'display:flex;gap:10px;justify-content:flex-end;';
   const btnNo = document.createElement('button');
-  btnNo.textContent = 'Tidak';
+  btnNo.textContent = __s('confirm.no', 'Tidak');
   btnNo.style.cssText = 'padding:8px 12px;border-radius:10px;border:1px solid #d1d5db;background:#fff;color:#111;';
   const btnYes = document.createElement('button');
-  btnYes.textContent = 'Ya';
+  btnYes.textContent = __s('confirm.yes', 'Ya');
   btnYes.style.cssText = 'padding:8px 12px;border-radius:10px;background:#2563eb;color:#fff;border:0;';
   btnRow.appendChild(btnNo); btnRow.appendChild(btnYes);
   panel.appendChild(text); panel.appendChild(btnRow); overlay.appendChild(panel);
