@@ -204,7 +204,7 @@
   },
   "players.deleteConfirm": {
     "id": "Hapus",
-    "en": "Delete"
+    "en": "Delete"Plang
   },
   "players.gender.placeholder": {
     "id": "-Pilih Gender-",
@@ -219,8 +219,8 @@
     "en": "Pro"
   },
   "players.edit": {
-    "id": "Ubah",
-    "en": "Ubah"
+    "id": "edit",
+    "en": "edit"
   },
   "players.editTitle": {
     "id": "Rename pemain",
@@ -991,7 +991,7 @@
     "en": "Joined as"
   },
   "join.edit": {
-    "id": "Ubah",
+    "id": "Edit",
     "en": "Edit"
   },
   "join.leave": {
@@ -1612,7 +1612,7 @@
   "rename.eventMissing": { "id": "Event tidak ditemukan atau sudah dihapus.", "en": "Event not found or already deleted." },
   "rename.waitingRemoveConfirm": { "id": "Hapus {name} dari waiting list?", "en": "Remove {name} from waiting list?" },
 
-  "cash.edit": { "id": "Ubah", "en": "Edit" },
+  "cash.edit": { "id": "Edit", "en": "Edit" },
   "cash.delete": { "id": "Hapus", "en": "Delete" },
   "cash.titleRange": { "id": "Cashflow Range", "en": "Cashflow Range" },
   "cash.exportFile": { "id": "Laporan Cashflow Padel NBC.xlsx", "en": "Padel NBC Cashflow Report.xlsx" },
