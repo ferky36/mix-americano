@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Padel Pro Analytics</title>
+    
+    <!-- React & DOM (Versi Stabil) -->
+    <script src="https://unpkg.com/react@18.2.0/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.development.js" crossorigin></script>
+    
+    <!-- Prop-types (Dibutuhkan oleh Recharts UMD) -->
+    <script src="https://unpkg.com/prop-types/prop-types.js"></script>
+    
+    <!-- Recharts (Versi Stabil 2.12.7) -->
+    <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
+    
+    <!-- Babel -->
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        body {
+            background-color: #f8fafc;
+            font-family: 'Inter', sans-serif;
+        }
+        .card-shadow {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        /* Custom Scrollbar for better UX */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useMemo } = React;
+        const Recharts = window.Recharts || {};
+        const { 
+            BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+            ScatterChart, Scatter, ZAxis, ReferenceLine, Cell
+        } = Recharts;
+
+        // --- IKON SVG INTERNAL ---
+        const Icons = {
+            Activity: (props) => (
+                <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            ),
+            Trophy: (props) => (
+                <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+            ),
+            Users: (props) => (
+                <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            ),
+            Filter: (props) => (
+                <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+            ),
+            ChevronDown: (props) => (
+                <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            ),
+            AlertCircle: (props) => (
+                <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            ),
+            Medal: (props) => (
+                <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 15 8.5 21 7 21 12 11 17 21 15.5 21 12 15"/><path d="M18 10a6 6 0 1 0-12 0"/></svg>
+            ),
+            History: (props) => (
+                <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>
+            )
+        };
+
+        const { Trophy, Users, Activity, Filter, ChevronDown, AlertCircle, Medal, History } = Icons;
+
+        // --- DATA PEMAIN (KLASEMEN) ---
+        const rawData = [
+            { rank: 1, name: "Ferdi", total: 93, diff: 25, w: 4, l: 0, d: 0, winRate: 100, role: "Dominator" },
+            { rank: 2, name: "ico", total: 87, diff: 21, w: 3, l: 1, d: 0, winRate: 75, role: "High Performer" },
+            { rank: 3, name: "Dellarosa", total: 83, diff: 18, w: 2, l: 1, d: 0, winRate: 66.7, role: "Consistent" },
+            { rank: 4, name: "Debo", total: 79, diff: 15, w: 2, l: 1, d: 0, winRate: 66.7, role: "Solid" },
+            { rank: 5, name: "Rangga Al", total: 70, diff: -4, w: 2, l: 2, d: 0, winRate: 50.0, role: "Balanced" },
+            { rank: 6, name: "ranggara", total: 69, diff: -11, w: 1, l: 2, d: 0, winRate: 33.3, role: "Fighter" },
+            { rank: 7, name: "faissy", total: 69, diff: -12, w: 2, l: 2, d: 0, winRate: 50.0, role: "Wildcard" },
+            { rank: 8, name: "Novan", total: 66, diff: -15, w: 0, l: 3, d: 0, winRate: 0.0, role: "Needs Support" },
+            { rank: 9, name: "Marchel", total: 64, diff: -16, w: 1, l: 3, d: 0, winRate: 25.0, role: "Underdog" },
+            { rank: 10, name: "Utut", total: 64, diff: -21, w: 1, l: 3, d: 0, winRate: 25.0, role: "Underdog" }
+        ];
+
+        // --- DATA MATCH (MATCH HISTORY) ---
+        // Diambil dari gambar Match Recap Court 1 (Match 1 - 10)
+        const matchesData = [
+            { id: 1, teamA: ["ico", "Marchel"], teamB: ["Ferdi", "ranggara"], scoreA: 20, scoreB: 22 },
+            { id: 2, teamA: ["Rangga Al", "Debo"], teamB: ["Marchel", "Utut"], scoreA: 17, scoreB: 14 },
+            { id: 3, teamA: ["ranggara", "Dellarosa"], teamB: ["Rangga Al", "faissy"], scoreA: 16, scoreB: 19 },
+            { id: 4, teamA: ["Novan", "faissy"], teamB: ["Debo", "Ferdi"], scoreA: 14, scoreB: 27 },
+            { id: 5, teamA: ["Utut", "Rangga Al"], teamB: ["Dellarosa", "Ferdi"], scoreA: 17, scoreB: 26 },
+            { id: 6, teamA: ["Novan", "Debo"], teamB: ["Utut", "ico"], scoreA: 18, scoreB: 19 },
+            { id: 7, teamA: ["Marchel", "faissy"], teamB: ["ico", "Dellarosa"], scoreA: 12, scoreB: 24 },
+            { id: 8, teamA: ["Dellarosa", "Novan"], teamB: ["ranggara", "Debo"], scoreA: 17, scoreB: 17 },
+            { id: 9, teamA: ["ico", "faissy"], teamB: ["Utut", "ranggara"], scoreA: 24, scoreB: 14 },
+            { id: 10, teamA: ["Marchel", "Ferdi"], teamB: ["Rangga Al", "Novan"], scoreA: 18, scoreB: 17 }
+        ];
+
+        // Simulasi data partner (Synergy)
+        const partnerInsights = {
+            "Ferdi": { best: "Utut", synergy: "+High", note: "Menenangkan agresivitas partner" },
+            "Debo": { best: "Ferdi", synergy: "+13", note: "Best Pairing (Match 4)" },
+            "Marchel": { best: "ico", synergy: "+Good", worst: "faissy (-12)", note: "Perlu partner finisher" },
+            "Utut": { best: "Ferdi", synergy: "+25", note: "Performa naik drastis saat bersama Ferdi" },
+            "ico": { best: "Marchel", synergy: "+Positive", note: "Solid baseline control" }
+        };
+
+        const App = () => {
+            const [selectedPlayer, setSelectedPlayer] = useState("All");
+            const [sortBy, setSortBy] = useState("rank"); 
+            
+            // --- LOGIC ---
+            const filteredData = useMemo(() => {
+                let data = [...rawData];
+                if (sortBy === "winRate") data.sort((a, b) => b.winRate - a.winRate);
+                if (sortBy === "total") data.sort((a, b) => b.total - a.total);
+                if (sortBy === "diff") data.sort((a, b) => b.diff - a.diff);
+                return data;
+            }, [sortBy]);
+
+            const scatterData = rawData.map(p => ({
+                x: p.diff,
+                y: p.winRate,
+                z: p.total,
+                name: p.name,
+                rank: p.rank
+            }));
+
+            const currentPlayerStats = selectedPlayer !== "All" 
+                ? rawData.find(p => p.name === selectedPlayer) 
+                : null;
+
+            // Logic untuk mendapatkan list match pemain yang dipilih
+            const playerMatches = useMemo(() => {
+                if (!currentPlayerStats) return [];
+                const name = currentPlayerStats.name;
+                
+                return matchesData.map(match => {
+                    const isTeamA = match.teamA.includes(name);
+                    const isTeamB = match.teamB.includes(name);
+                    
+                    if (!isTeamA && !isTeamB) return null;
+
+                    const myTeam = isTeamA ? match.teamA : match.teamB;
+                    const opponentTeam = isTeamA ? match.teamB : match.teamA;
+                    const myScore = isTeamA ? match.scoreA : match.scoreB;
+                    const opponentScore = isTeamA ? match.scoreB : match.scoreA;
+                    
+                    let result = 'DRAW';
+                    let resultColor = 'text-gray-500 bg-gray-100';
+                    
+                    if (myScore > opponentScore) {
+                        result = 'WIN';
+                        resultColor = 'text-green-600 bg-green-100';
+                    } else if (myScore < opponentScore) {
+                        result = 'LOSS';
+                        resultColor = 'text-red-500 bg-red-100';
+                    }
+
+                    // Find partner
+                    const partner = myTeam.find(p => p !== name);
+
+                    return { 
+                        ...match, 
+                        result, 
+                        resultColor,
+                        myScore, 
+                        opponentScore, 
+                        partner, 
+                        opponentTeam 
+                    };
+                }).filter(m => m !== null);
+            }, [currentPlayerStats]);
+
+            const StatCard = ({ title, value, subtext, color, icon: Icon }) => (
+                <div className="bg-white p-6 rounded-xl border border-gray-100 card-shadow flex items-start justify-between">
+                    <div>
+                        <p className="text-sm font-medium text-gray-500 mb-1">{title}</p>
+                        <h3 className="text-2xl font-bold text-gray-800">{value}</h3>
+                        {subtext && <p className={`text-xs mt-1 ${color}`}>{subtext}</p>}
+                    </div>
+                    <div className={`p-3 rounded-lg ${color.replace('text-', 'bg-').replace('600', '100')}`}>
+                        <Icon className={`w-6 h-6 ${color}`} />
+                    </div>
+                </div>
+            );
+
+            // Jika Recharts belum siap, tampilkan loading
+            if (!BarChart || !ScatterChart) {
+                return <div className="p-10 text-center text-gray-500">Memuat Grafik... (Silakan refresh jika terlalu lama)</div>;
+            }
+
+            return (
+                <div className="min-h-screen pb-12">
+                    {/* Header */}
+                    <header className="bg-slate-900 text-white py-6 px-4 mb-8">
+                        <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center">
+                            <div>
+                                <h1 className="text-2xl font-bold flex items-center gap-2">
+                                    <Activity className="text-green-400" />
+                                    Padel Event Analytics
+                                </h1>
+                                <p className="text-slate-400 text-sm mt-1">Court 1 Match Analysis Dashboard</p>
+                            </div>
+                            <div className="mt-4 md:mt-0 flex gap-3">
+                                <div className="bg-slate-800 px-4 py-2 rounded-lg text-center">
+                                    <span className="block text-xs text-slate-400">Total Match</span>
+                                    <span className="font-bold text-lg">10</span>
+                                </div>
+                                <div className="bg-slate-800 px-4 py-2 rounded-lg text-center">
+                                    <span className="block text-xs text-slate-400">Total Poin</span>
+                                    <span className="font-bold text-lg">372</span>
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+
+                    <div className="max-w-6xl mx-auto px-4 grid grid-cols-1 md:grid-cols-12 gap-6">
+                        
+                        {/* LEFT COLUMN: FILTERS & LIST */}
+                        <div className="md:col-span-4 space-y-6">
+                            
+                            {/* Filter Section */}
+                            <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="font-bold text-gray-700 flex items-center gap-2">
+                                        <Filter className="w-4 h-4" /> Filter Pemain
+                                    </h3>
+                                </div>
+                                <div className="relative">
+                                    <select 
+                                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none text-gray-700 cursor-pointer"
+                                        value={selectedPlayer}
+                                        onChange={(e) => setSelectedPlayer(e.target.value)}
+                                    >
+                                        <option value="All">Tampilkan Semua Pemain</option>
+                                        {rawData.map(p => (
+                                            <option key={p.name} value={p.name}>{p.rank}. {p.name}</option>
+                                        ))}
+                                    </select>
+                                    <div className="absolute right-3 top-3.5 pointer-events-none text-gray-400">
+                                        <ChevronDown className="w-5 h-5" />
+                                    </div>
+                                </div>
+
+                                {/* Quick Leaderboard Mini */}
+                                <div className="mt-6">
+                                    <div className="flex justify-between text-xs font-semibold text-gray-400 mb-2 px-2">
+                                        <span>PEMAIN</span>
+                                        <div className="flex gap-3">
+                                            <span className="cursor-pointer hover:text-blue-500" onClick={() => setSortBy('winRate')}>WR%</span>
+                                            <span className="cursor-pointer hover:text-blue-500" onClick={() => setSortBy('diff')}>DIFF</span>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+                                        {filteredData.map((player) => (
+                                            <div 
+                                                key={player.name}
+                                                onClick={() => setSelectedPlayer(player.name)}
+                                                className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-all ${selectedPlayer === player.name ? 'bg-blue-50 border-blue-500 ring-1 ring-blue-500' : 'bg-gray-50 hover:bg-gray-100 border border-transparent'}`}
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <span className={`w-6 h-6 flex items-center justify-center text-xs font-bold rounded-full ${player.rank <= 3 ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-200 text-gray-600'}`}>
+                                                        {player.rank}
+                                                    </span>
+                                                    <div>
+                                                        <p className="font-semibold text-sm text-gray-800">{player.name}</p>
+                                                        <p className="text-[10px] text-gray-500 uppercase">{player.role}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className={`text-sm font-bold ${player.winRate >= 50 ? 'text-green-600' : 'text-red-500'}`}>
+                                                        {player.winRate}%
+                                                    </div>
+                                                    <div className={`text-xs ${player.diff > 0 ? 'text-green-600' : 'text-red-500'}`}>
+                                                        {player.diff > 0 ? '+' : ''}{player.diff} pts
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* RIGHT COLUMN: VISUALIZATION & DETAIL */}
+                        <div className="md:col-span-8 space-y-6">
+                            
+                            {/* SECTION: PLAYER DETAIL (IF SELECTED) */}
+                            {currentPlayerStats ? (
+                                <div className="space-y-6">
+                                    <div className="bg-white rounded-xl border border-blue-100 shadow-sm overflow-hidden animate-fade-in">
+                                        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 text-white flex justify-between items-center">
+                                            <div>
+                                                <h2 className="text-3xl font-bold">{currentPlayerStats.name}</h2>
+                                                <p className="opacity-80 text-sm mt-1 flex items-center gap-2">
+                                                    <Medal className="w-4 h-4" /> Peringkat {currentPlayerStats.rank} • {currentPlayerStats.role}
+                                                </p>
+                                            </div>
+                                            <div className="text-right">
+                                                <div className="text-3xl font-bold">{currentPlayerStats.winRate}%</div>
+                                                <div className="text-xs opacity-75 uppercase tracking-wider">Win Rate</div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="p-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+                                            <div className="p-3 bg-gray-50 rounded-lg text-center">
+                                                <p className="text-xs text-gray-500">Total Poin</p>
+                                                <p className="text-xl font-bold text-gray-800">{currentPlayerStats.total}</p>
+                                            </div>
+                                            <div className="p-3 bg-gray-50 rounded-lg text-center">
+                                                <p className="text-xs text-gray-500">Selisih (Diff)</p>
+                                                <p className={`text-xl font-bold ${currentPlayerStats.diff > 0 ? 'text-green-600' : 'text-red-500'}`}>
+                                                    {currentPlayerStats.diff > 0 ? '+' : ''}{currentPlayerStats.diff}
+                                                </p>
+                                            </div>
+                                            <div className="p-3 bg-gray-50 rounded-lg text-center">
+                                                <p className="text-xs text-gray-500">Rekor</p>
+                                                <p className="text-xl font-bold text-gray-800">
+                                                    <span className="text-green-600">{currentPlayerStats.w}W</span> - <span className="text-red-500">{currentPlayerStats.l}L</span>
+                                                </p>
+                                            </div>
+                                            <div className="p-3 bg-blue-50 rounded-lg text-center border border-blue-100">
+                                                <p className="text-xs text-blue-600 font-semibold">Status</p>
+                                                <p className="text-sm font-bold text-blue-800 mt-1">
+                                                    {currentPlayerStats.diff > 20 ? "🔥 ON FIRE" : currentPlayerStats.winRate < 30 ? "⚠️ STRUGGLING" : "⚖️ STABLE"}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Partner Insight Section */}
+                                        <div className="px-6 pb-6">
+                                            <h4 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                                                <Users className="w-4 h-4" /> Analisis Pasangan (Partner Synergy)
+                                            </h4>
+                                            {partnerInsights[currentPlayerStats.name] ? (
+                                                <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100">
+                                                    <div className="flex justify-between items-start">
+                                                        <div>
+                                                            <span className="text-xs text-indigo-500 font-bold uppercase tracking-wider">Rekomendasi Partner</span>
+                                                            <div className="text-lg font-bold text-indigo-900 mt-1">
+                                                                {partnerInsights[currentPlayerStats.name].best}
+                                                            </div>
+                                                            <p className="text-sm text-indigo-700 mt-1">
+                                                                {partnerInsights[currentPlayerStats.name].note}
+                                                            </p>
+                                                        </div>
+                                                        <div className="bg-white px-3 py-1 rounded shadow-sm text-green-600 font-bold text-sm">
+                                                            {partnerInsights[currentPlayerStats.name].synergy}
+                                                        </div>
+                                                    </div>
+                                                    {partnerInsights[currentPlayerStats.name].worst && (
+                                                         <div className="mt-3 pt-3 border-t border-indigo-100 flex items-center gap-2 text-xs text-red-500">
+                                                            <AlertCircle className="w-3 h-3" />
+                                                            Hindari pasangan dengan: {partnerInsights[currentPlayerStats.name].worst}
+                                                         </div>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <div className="p-4 bg-gray-50 rounded-lg text-gray-400 text-sm italic text-center">
+                                                    Data sinergi spesifik belum tersedia untuk pemain ini.
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* MATCH HISTORY SECTION (NEW) */}
+                                    <div className="bg-white rounded-xl border border-gray-200 card-shadow overflow-hidden">
+                                        <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                                            <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                                                <History className="w-4 h-4 text-gray-600" /> Riwayat Pertandingan
+                                            </h3>
+                                            <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-full">
+                                                {playerMatches.length} Match
+                                            </span>
+                                        </div>
+                                        <div className="divide-y divide-gray-100">
+                                            {playerMatches.length > 0 ? playerMatches.map(match => (
+                                                <div key={match.id} className="p-4 hover:bg-slate-50 transition-colors">
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <span className="text-xs font-mono text-gray-400">MATCH {match.id}</span>
+                                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${match.resultColor}`}>
+                                                            {match.result}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between">
+                                                        {/* Tim Kita */}
+                                                        <div className="flex-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-bold text-gray-800">{currentPlayerStats.name}</span>
+                                                                <span className="text-gray-400 text-xs">+</span>
+                                                                <span className="text-sm text-gray-600">{match.partner}</span>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        {/* Skor */}
+                                                        <div className="mx-4 flex flex-col items-center">
+                                                            <div className="text-xl font-bold font-mono tracking-widest text-slate-800 bg-slate-100 px-3 py-1 rounded">
+                                                                {match.myScore} - {match.opponentScore}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Lawan */}
+                                                        <div className="flex-1 text-right">
+                                                            <div className="text-xs text-gray-400 mb-0.5">vs</div>
+                                                            <div className="text-sm font-medium text-gray-600">
+                                                                {match.opponentTeam.join(" & ")}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )) : (
+                                                <div className="p-8 text-center text-gray-400 text-sm italic">
+                                                    Belum ada data match tersimpan.
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                /* SECTION: GLOBAL OVERVIEW (DEFAULT) */
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <StatCard 
+                                        title="Top Performer" 
+                                        value="Ferdi" 
+                                        subtext="100% Win Rate • +25 Diff"
+                                        color="text-green-600"
+                                        icon={Trophy}
+                                    />
+                                    <StatCard 
+                                        title="Most Intense Match" 
+                                        value="17 - 17" 
+                                        subtext="Match 8: Draw / Tight"
+                                        color="text-orange-500"
+                                        icon={Activity}
+                                    />
+                                </div>
+                            )}
+
+                           
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const CustomTooltip = ({ active, payload }) => {
+            if (active && payload && payload.length) {
+                const data = payload[0].payload;
+                return (
+                    <div className="bg-white p-3 border border-gray-100 shadow-lg rounded-lg text-sm">
+                        <p className="font-bold text-gray-800 mb-1">{data.name}</p>
+                        <p className="text-gray-600">Win Rate: <span className="font-semibold text-blue-600">{data.y}%</span></p>
+                        <p className="text-gray-600">Selisih: <span className={`font-semibold ${data.x > 0 ? 'text-green-600' : 'text-red-500'}`}>{data.x > 0 ? '+' : ''}{data.x}</span></p>
+                    </div>
+                );
+            }
+            return null;
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

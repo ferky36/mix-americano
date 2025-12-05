@@ -171,39 +171,61 @@
         </div>
         <!-- panel PEMAIN collapsible -->
         <div class="filter-field filter-field--full">
-          <div class="mt-2 p-3 rounded-2xl border bg-white dark:bg-gray-800 dark:border-gray-700">
-            <div class="flex flex-wrap items-center gap-2">
-              <button id="btnCollapsePlayers" class="px-2 py-1 text-xs rounded-lg border bg-white dark:bg-gray-800 dark:border-gray-700" data-i18n="players.collapse">▼ Pemain</button>
-              <button id="btnPasteText" class="px-2 py-1 text-xs rounded-lg border bg-white dark:bg-gray-800 dark:border-gray-700" data-i18n="players.editText">Edit sebagai teks</button>
-              <button id="btnApplyPlayerTemplate" class="px-2 py-1 text-xs rounded-lg border bg-white dark:bg-gray-800 dark:border-gray-700" data-i18n="players.applyTemplate">
-                Apply Template Pemain
+          <div class="rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 dark:from-indigo-700 dark:to-indigo-800 text-white px-4 py-3 flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap relative">
+            <div class="flex items-center gap-3 flex-1 min-w-[180px]">
+              <button id="btnCollapsePlayers" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-indigo-800/70 hover:bg-indigo-900 transition text-sm font-semibold shadow" data-i18n="players.collapse">
+                <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white gap-[2px]">
+                  <svg id="playersArrowDown" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 block" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                  <svg id="playersArrowUp" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
+                  </svg>
+                </span>
+                <span class="text-base font-semibold">Manajemen Pemain</span>
               </button>
-              <button id="btnClearPlayers" class="px-2 py-1 text-xs rounded-lg border bg-white dark:bg-gray-800 dark:border-gray-700" data-i18n="players.clear">Kosongkan</button>
+              <p class="hidden md:block text-indigo-100 text-sm leading-snug">Kelola daftar, gender, level, dan status bayar pemain.</p>
             </div>
-            <div id="playersPanel" class="mt-3 hidden">
-              <div id="playersToolbar" class="flex gap-2 mb-2">
-                <input id="newPlayer" placeholder="Nama pemain…" data-i18n-placeholder="players.new.placeholder" class="flex-1 max-w-[70%] sm:max-w-none border rounded-lg px-3 py-2 bg-white dark:bg-gray-900 dark:border-gray-700">
-                <button id="btnAddPlayer" class="px-3 py-2 rounded-lg bg-indigo-600 text-white flex items-center justify-center" data-i18n="players.add">
-                  <span class="hidden sm:inline">Tambah</span>
-                  <span class="sm:hidden" aria-hidden="true">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 12c2.761 0 5-2.239 5-5s-2.239-5-5-5-5 2.239-5 5 2.239 5 5 5Z"/>
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 21a7.5 7.5 0 0 1 15 0"/>
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M19 8h4M21 6v4"/>
-                    </svg>
-                  </span>
+            <div class="relative flex items-center gap-2 justify-end">
+              <button id="playersActionsToggle" class="md:hidden p-2 rounded-full hover:bg-indigo-600/60 focus:outline-none focus:ring-2 focus:ring-white/50" aria-label="Menu pemain">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="6" r="1.5" />
+                  <circle cx="12" cy="12" r="1.5" />
+                  <circle cx="12" cy="18" r="1.5" />
+                </svg>
+              </button>
+              <div id="playersActions" class="hidden md:flex md:items-center md:gap-2 flex-col md:flex-row absolute md:static right-0 top-[calc(100%+10px)] md:top-auto md:translate-y-0 translate-y-1 z-10 md:z-auto bg-white text-gray-800 md:bg-transparent md:text-white rounded-xl shadow-2xl md:shadow-none border border-gray-100 md:border-0 overflow-hidden min-w-[210px] md:min-w-0 text-left">
+                <button id="btnPasteText" class="w-full md:w-auto px-4 py-2 text-sm font-semibold hover:bg-gray-50 md:hover:bg-indigo-500/60 transition text-left md:text-center" data-i18n="players.editText">Edit sebagai teks</button>
+                <button id="btnApplyPlayerTemplate" class="w-full md:w-auto px-4 py-2 text-sm font-semibold hover:bg-gray-50 md:hover:bg-indigo-500/60 transition text-left md:text-center" data-i18n="players.applyTemplate">
+                  Apply Template Pemain
                 </button>
+                <button id="btnClearPlayers" class="w-full md:w-auto px-4 py-2 text-sm font-semibold text-red-600 md:text-white hover:bg-gray-50 md:hover:bg-red-500/70 transition text-left md:text-center" data-i18n="players.clear">Kosongkan</button>
               </div>
-              <div id="playerListContainer">
-                <ul id="playersList" class="min-h-[44px] grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2"></ul>
-              </div>
-              <div id="playersWarnings" class="text-xs mt-2"></div>
-              <div id="textModal" class="hidden mt-2">
-                <textarea id="playersText" rows="6" class="w-full border rounded-xl px-3 py-2 bg-white dark:bg-gray-900 dark:border-gray-700" placeholder="Satu nama per baris" data-i18n-placeholder="players.text.placeholder"></textarea>
-                <div class="flex gap-2 mt-2">
-                  <button id="btnApplyText" class="px-3 py-2 rounded-lg bg-emerald-600 text-white" data-i18n="players.applyText">Terapkan</button>
-                  <button id="btnCancelText" class="px-3 py-2 rounded-lg border bg-white dark:bg-gray-800 dark:border-gray-700" data-i18n="players.cancel">Batal</button>
-                </div>
+            </div>
+          </div>
+          <div id="playersPanel" class="mt-3 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 hidden">
+            <div id="playersToolbar" class="flex flex-col sm:flex-row gap-3 sm:items-center mb-3">
+              <input id="newPlayer" placeholder="Nama pemain..." data-i18n-placeholder="players.new.placeholder" class="flex-1 border rounded-lg px-3 py-3 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm focus:ring-2 focus:ring-indigo-400">
+              <button id="btnAddPlayer" class="px-4 py-3 rounded-lg bg-indigo-600 text-white font-semibold flex items-center justify-center gap-2 shadow hover:bg-indigo-700" data-i18n="players.add">
+                <span class="hidden sm:inline">Tambah</span>
+                <span class="sm:hidden" aria-hidden="true">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 12c2.761 0 5-2.239 5-5s-2.239-5-5-5-5 2.239-5 5 2.239 5 5 5Z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 21a7.5 7.5 0 0 1 15 0"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 8h4M21 6v4"/>
+                  </svg>
+                </span>
+              </button>
+            </div>
+            <div id="playerListContainer" class="mt-2">
+              <ul id="playersList" class="min-h-[44px] grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"></ul>
+            </div>
+            <div id="playersWarnings" class="text-xs mt-3 text-amber-600 dark:text-amber-300"></div>
+            <div id="textModal" class="hidden mt-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3 space-y-3">
+              <textarea id="playersText" rows="6" class="w-full border rounded-xl px-3 py-2 bg-white dark:bg-gray-900 dark:border-gray-700" placeholder="Satu nama per baris" data-i18n-placeholder="players.text.placeholder"></textarea>
+              <div class="flex flex-wrap gap-2">
+                <button id="btnApplyText" class="px-3 py-2 rounded-lg bg-emerald-600 text-white font-semibold shadow hover:bg-emerald-700" data-i18n="players.applyText">Terapkan</button>
+                <button id="btnCancelText" class="px-3 py-2 rounded-lg border bg-white dark:bg-gray-800 dark:border-gray-700 font-semibold hover:bg-gray-50 dark:hover:bg-gray-700" data-i18n="players.cancel">Batal</button>
               </div>
             </div>
           </div>
@@ -665,7 +687,9 @@
   <!-- <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script> -->
   <!-- Supabase SDK dari CDN -->
   <script src="config.js"></script>
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <!-- <script src="https://unpkg.com/@supabase/supabase-js@2"></script> -->
+  <!-- <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script> -->
+   <script src="supabase/js/supabase.min.js"></script>
   <script id="supabase-init">
     (function initSupabase(){
       const SUPABASE_URL  = window.__SUPABASE_URL;
@@ -726,6 +750,32 @@
   <script src="app.js?v=2025-08-29"></script>
   <script src="app-responsive-addon.js?v=2025-08-29"></script>
   <script src="scripts/mobile-nav.js"></script>
+  <script>
+    // Toggle action menu pada header pemain (mobile)
+    (function(){
+      const toggle = document.getElementById('playersActionsToggle');
+      const menu = document.getElementById('playersActions');
+      if (!toggle || !menu) return;
+      const isDesktop = () => window.matchMedia && window.matchMedia('(min-width: 768px)').matches;
+      const closeMenu = () => { if (isDesktop()) return; menu.classList.add('hidden'); menu.classList.remove('flex'); };
+      toggle.addEventListener('click', (e) => {
+        if (isDesktop()) return;
+        e.stopPropagation();
+        const open = !menu.classList.contains('hidden');
+        if (open) { closeMenu(); return; }
+        menu.classList.add('flex');
+        menu.classList.remove('hidden');
+      });
+      document.addEventListener('click', (e) => {
+        if (isDesktop()) return;
+        if (!menu.contains(e.target) && e.target !== toggle) closeMenu();
+      });
+      window.addEventListener('resize', () => {
+        if (isDesktop()) { menu.classList.remove('hidden'); menu.classList.remove('flex'); }
+        else { closeMenu(); }
+      });
+    })();
+  </script>
   <script>
     (function(){
       function hide(){ try{ var el=document.getElementById('appSplash'); if(!el) return; el.classList.add('hide'); setTimeout(function(){ try{ el.remove(); }catch{} }, 420); }catch{} }
