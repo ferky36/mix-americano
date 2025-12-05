@@ -78,10 +78,16 @@ try {
   };
 } catch {}
 
-function clearScoresActive(){
+async function clearScoresActive(){
   const arr = roundsByCourt[activeCourt] || [];
   if (arr.length && arr.some(r => r && (r.scoreA || r.scoreB))) {
-    showToast?.(__rT('render.confirm.clearActive','Hapus skor di lapangan aktif?'), 'warn');
+    const msg = __rT('render.confirm.clearActive','Hapus skor? Tindakan ini akan menghapus semua score di semua pertandingan');
+    let ok = false;
+    try{
+      if (typeof askYesNo === 'function') ok = await askYesNo(msg);
+      else ok = confirm(msg);
+    }catch{ ok = confirm(msg); }
+    if (!ok) return;
   }
   arr.forEach(r => {
     if (r) {
@@ -111,6 +117,10 @@ function clearScoresAll(){
 function renderCourtsToolbar(){
   const bar = byId('courtsToolbar');
   const addBtn = byId('btnAddCourt');
+  // Sembunyikan tombol tambah lapangan sementara
+  if (addBtn) addBtn.style.display = 'none';
+  // sementara nonaktifkan render toolbar lapangan (tambah/label)
+  return;
   if (addBtn){
     addBtn.disabled = isViewer();
     try{

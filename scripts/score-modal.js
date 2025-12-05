@@ -412,7 +412,6 @@ byId('btnResetActive').addEventListener('click', async ()=>{
 });
 
 byId('btnClearScoresActive').addEventListener('click', clearScoresActive);
-byId('btnClearScoresAll').addEventListener('click', clearScoresAll);
 // save ke cloud atau local storage
 byId('btnSave')?.addEventListener('click', async () => {
   console.log(isCloudMode());
