@@ -145,6 +145,8 @@
   },
   "players.collapse": {"id": "Manajemen Pemain", "en": "Player Management" },
   "players.collapseHint": {
+    "id": "Kelola daftar, gender, level, dan status bayar pemain.",
+    "en": "Manage the player list, gender, level, and payment status."
   },
   "players.editText": {
     "id": "Edit sebagai teks",

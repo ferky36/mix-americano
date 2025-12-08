@@ -39,6 +39,7 @@
     "confirm.yes": { "id": "Ya", "en": "Yes" },
     "confirm.no": { "id": "Tidak", "en": "No" },
     "players.collapse": { "id": "Manajemen Pemain", "en": "Player Management" },
+    "players.collapseHint": { "id": "Kelola daftar, gender, level, dan status bayar pemain.", "en": "Manage the player list, gender, level, and payment status." },
     "players.editText": { "id": "Edit sebagai teks", "en": "Edit as text" },
     "players.applyTemplate": { "id": "Apply Template Pemain", "en": "Apply Player Template" },
     "players.clear": { "id": "Kosongkan", "en": "Clear" },
