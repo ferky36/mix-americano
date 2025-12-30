@@ -289,7 +289,7 @@
       // Attempt using provided Excel template first; fallback to generated workbook
       async function __tryExportTemplate(evts){
         try{
-          const res = await fetch('enhancement/final_cashflow.xlsx', { cache:'no-store' });
+          const res = await fetch('enhancement/____final_cashflow.xlsx', { cache:'no-store' });
           if (!res.ok) throw new Error('Template not reachable');
           const ab = await res.arrayBuffer();
           const wbT = new ExcelJS.Workbook();
@@ -414,9 +414,18 @@
       const borderThin = { top:{style:'thin', color:{argb:'FFDDDDDD'}}, left:{style:'thin', color:{argb:'FFDDDDDD'}}, bottom:{style:'thin', color:{argb:'FFDDDDDD'}}, right:{style:'thin', color:{argb:'FFDDDDDD'}} };
       const greenFill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFE6F4EA'} };
       const redFill   = { type:'pattern', pattern:'solid', fgColor:{argb:'FFFCE8E6'} };
+      const titleFill = { type:'pattern', pattern:'solid', fgColor:{argb:'FF9AE66A'} };
+      const skyFill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFE8F4FC'} };
 
       let r = 1;
-      safeMerge(r,1,r,11); ws.getCell(r,1).value = __c('cash.exportTitle','Laporan Cashflow Padel NBC'); ws.getCell(r,1).font = titleFont; r+=2;
+      safeMerge(r,1,r,11);
+      const headerTitle = ws.getCell(r,1);
+      headerTitle.value = __c('cash.exportTitle','Laporan Cashflow Padel NBC');
+      headerTitle.font = titleFont;
+      headerTitle.fill = titleFill;
+      headerTitle.alignment = { horizontal:'center', vertical:'middle' };
+      try{ ws.getRow(r).height = 26; }catch{}
+      r+=2;
 
       let periodText = '';
       if (rangeMode.active){
@@ -437,6 +446,7 @@
         cTitle.value = isMasuk ? 'UANG MASUK' : 'UANG KELUAR';
         cTitle.font = { bold:true, color:{argb:'FF111827'} };
         cTitle.alignment = { horizontal:'center' };
+        cTitle.fill = isMasuk ? greenFill : redFill;
         const heads = ['ITEM','AMOUNT','PAX','TOTAL'];
         for (let i=0;i<heads.length;i++){
           const c = ws.getCell(anchorRow+1, startCol+i);
@@ -444,10 +454,8 @@
           c.alignment = { horizontal: i===0?'left':'right' }; c.border = borderThin;
         }
         let rowPtr = anchorRow+2;
-        let runningSum = 0;
         items.forEach(it=>{
           const amt = Number(it.amount||0); const pax = Number(it.pax||1); const tot = amt*pax;
-          runningSum += tot;
           const vals = [it.label||'-', amt, pax, tot];
           for (let i=0;i<4;i++){
             const c = ws.getCell(rowPtr, startCol+i);
@@ -457,13 +465,19 @@
           }
           rowPtr++;
         });
-        // Total row: set numeric total (avoid spreadsheet formulas which may error on some environments)
+        // Total row with SUM formula over TOTAL column
         ws.mergeCells(rowPtr, startCol, rowPtr, startCol+2);
         const tl = ws.getCell(rowPtr, startCol); tl.value = `Total ${isMasuk?'Masuk':'Keluar'}:`; tl.font = { bold:true }; tl.fill = isMasuk? greenFill : redFill; tl.border = borderThin;
         const tv = ws.getCell(rowPtr, startCol+3);
-        tv.value = runningSum;
+        if (rowPtr > (anchorRow+2)){
+          const a = ws.getCell(anchorRow+2, startCol+3).address;
+          const b = ws.getCell(rowPtr-1,   startCol+3).address;
+          tv.value = { formula: `SUM(${a}:${b})` };
+        } else {
+          tv.value = 0;
+        }
         tv.font = { bold:true }; tv.numFmt = fmtMoney; tv.fill = isMasuk? greenFill : redFill; tv.border = borderThin; tv.alignment = { horizontal:'right' };
-        return { last: rowPtr, totalCell: ws.getCell(rowPtr, startCol+3).address, totalValue: runningSum };
+        return { last: rowPtr, totalCell: ws.getCell(rowPtr, startCol+3).address };
       }
 
       function fmtDateIDStr(d){
@@ -484,13 +498,16 @@
         hLeft.fill = headerFill; hLeft.font = { bold:true, color:{argb:'FF374151'} };
         safeMerge(r,7,r,8); const cIn = ws.getCell(r,7); cIn.value = `Masuk: ${new Intl.NumberFormat('id-ID').format(sumIn)}`; cIn.font = { bold:true, color:{argb:'FF059669'} }; cIn.alignment = { horizontal:'center' }; cIn.fill = greenFill;
         safeMerge(r,9,r,10); const cOut = ws.getCell(r,9); cOut.value = `Keluar: ${new Intl.NumberFormat('id-ID').format(sumOut)}`; cOut.font = { bold:true, color:{argb:'FFDC2626'} }; cOut.alignment = { horizontal:'center' }; cOut.fill = redFill;
-        ws.getCell(r,11).value = `Sisa: ${new Intl.NumberFormat('id-ID').format(bal)}`; ws.getCell(r,11).font = { bold:true, color:{argb: bal>=0? 'FF0EA5E9':'FFDC2626'} };
+        const sCell = ws.getCell(r,11);
+        sCell.value = `Sisa: ${new Intl.NumberFormat('id-ID').format(bal)}`;
+        sCell.font = { bold:true, color:{argb: bal>=0? 'FF0EA5E9':'FFDC2626'} };
+        sCell.fill = skyFill; sCell.alignment = { horizontal:'center' };
         r += 2;
 
         const endMasuk = putTable(r, true, ev.masuk||[]);
         const endKeluar = putTable(r, false, ev.keluar||[]);
-        if (endMasuk && typeof endMasuk.totalValue === 'number') totalsLeft.push(endMasuk.totalValue);
-        if (endKeluar && typeof endKeluar.totalValue === 'number') totalsRight.push(endKeluar.totalValue);
+        if (endMasuk && endMasuk.totalCell) totalsLeft.push(endMasuk.totalCell);
+        if (endKeluar && endKeluar.totalCell) totalsRight.push(endKeluar.totalCell);
         r = Math.max(Number(endMasuk && endMasuk.last || 0), Number(endKeluar && endKeluar.last || 0)) + 2;
         r = Number.isFinite(r) && r>0 ? Math.trunc(r) : 1;
       }
@@ -498,13 +515,12 @@
       const balanceAll = grandIn - grandOut;
       safeMerge(r,1,r,5); const gTitle = ws.getCell(r,1); gTitle.value = 'Total Keseluruhan'; gTitle.font = { bold:true }; r++;
       safeMerge(r,1,r,3); const gIn = ws.getCell(r,1); gIn.value = 'Masuk:'; gIn.font = { bold:true, color:{argb:'FF059669'} }; gIn.fill = greenFill; gIn.border = borderThin;
-      // Use numeric grand totals to avoid cross-row formula issues
-      ws.getCell(r,4).value = grandIn || 0; ws.getCell(r,4).numFmt = fmtMoney; ws.getCell(r,4).font = { bold:true, color:{argb:'FF059669'} }; ws.getCell(r,4).fill = greenFill; ws.getCell(r,4).alignment = { horizontal:'right' }; ws.getCell(r,4).border = borderThin;
+      ws.getCell(r,4).value = totalsLeft.length ? { formula: `SUM(${totalsLeft.join(',')})` } : 0; ws.getCell(r,4).numFmt = fmtMoney; ws.getCell(r,4).font = { bold:true, color:{argb:'FF059669'} }; ws.getCell(r,4).fill = greenFill; ws.getCell(r,4).alignment = { horizontal:'right' }; ws.getCell(r,4).border = borderThin;
       safeMerge(r,7,r,9); const gOut = ws.getCell(r,7); gOut.value = 'Keluar:'; gOut.font = { bold:true, color:{argb:'FFDC2626'} }; gOut.fill = redFill; gOut.border = borderThin;
-      ws.getCell(r,10).value = grandOut || 0; ws.getCell(r,10).numFmt = fmtMoney; ws.getCell(r,10).font = { bold:true, color:{argb:'FFDC2626'} }; ws.getCell(r,10).fill = redFill; ws.getCell(r,10).alignment = { horizontal:'right' }; ws.getCell(r,10).border = borderThin;
+      ws.getCell(r,10).value = totalsRight.length ? { formula: `SUM(${totalsRight.join(',')})` } : 0; ws.getCell(r,10).numFmt = fmtMoney; ws.getCell(r,10).font = { bold:true, color:{argb:'FFDC2626'} }; ws.getCell(r,10).fill = redFill; ws.getCell(r,10).alignment = { horizontal:'right' }; ws.getCell(r,10).border = borderThin;
       r++;
       safeMerge(r,1,r,3); const gBal = ws.getCell(r,1); gBal.value = 'Sisa:'; gBal.font = { bold:true, color:{argb:'FF0EA5E9'} }; gBal.border = borderThin;
-      ws.getCell(r,4).value = balanceAll; ws.getCell(r,4).numFmt = fmtMoney; ws.getCell(r,4).font = { bold:true, color:{argb:'FF0EA5E9'} }; ws.getCell(r,4).alignment = { horizontal:'right' }; ws.getCell(r,4).border = borderThin;
+      ws.getCell(r,4).value = { formula: `D${r-1}-J${r-1}` }; ws.getCell(r,4).numFmt = fmtMoney; ws.getCell(r,4).font = { bold:true, color:{argb:'FF0EA5E9'} }; ws.getCell(r,4).alignment = { horizontal:'right' }; ws.getCell(r,4).border = borderThin;
 
       const name = __c('cash.exportFile','Laporan Cashflow Padel NBC.xlsx');
       const buf = await wb.xlsx.writeBuffer();
