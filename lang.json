@@ -936,6 +936,22 @@
     "id": "Mode RALLY: Poin diakumulasikan hingga waktu habis.",
     "en": "RALLY mode: Points accumulate until time expires."
   },
+  "tennis.rally.finishAt21Label": {
+    "id": "Selesaikan pada 21 poin",
+    "en": "Finish at 21 points"
+  },
+  "tennis.rally.reached21Title": {
+    "id": "Poin Telah Mencapai 21",
+    "en": "Total points reached 21"
+  },
+  "tennis.rally.reached21": {
+    "id": "Poin sudah mencapai 21.",
+    "en": "Total points have reached 21."
+  },
+  "tennis.rally.continueUntilEnd": {
+    "id": "Lanjutkan sampai waktu habis",
+    "en": "Continue until time expires"
+  },
   "tennis.set.scoreLabel": {
     "id": "Total Poin Dimenangkan:",
     "en": "Total Points Won:"
