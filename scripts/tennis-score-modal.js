@@ -31,6 +31,12 @@ const __tsT = (k,f)=> (window.__i18n_get ? __i18n_get(k,f) : f);
             <option value="TENNIS">${__tsT('tennis.mode.tennis','Tennis/Padel Score (0, 15, 30, 40)')}</option>
             <option value="RALLY">${__tsT('tennis.mode.rally','Rally Score (Poin Berlanjut)')}</option>
           </select>
+          <div id="rally-finish-wrap" class="hidden ml-3 text-sm">
+            <label class="inline-flex items-center gap-2">
+              <input id="rally-finish-21" type="checkbox" class="h-4 w-4" />
+              <span id="rally-finish-label" class="text-sm text-gray-700">${__tsT('tennis.rally.finishAt21Label','Finish at 21 points')}</span>
+            </label>
+          </div>
         </div>
 
         <div id="timer-display" class="text-3xl font-extrabold text-center text-gray-700 mb-4 p-2 bg-yellow-100 rounded-lg shadow-inner transition duration-300 ease-in-out">11:00</div>
@@ -200,6 +206,8 @@ const __tsT = (k,f)=> (window.__i18n_get ? __i18n_get(k,f) : f);
     }
     setText(setScoreLabelEl, 'tennis.set.gamesLabel','Games Dimenangkan (Set):');
     setText(statusMessage, 'tennis.status.chooseMode','Pilih mode skor dan tekan Mulai Pertandingan.');
+    const rfLabel = document.getElementById('rally-finish-label');
+    setText(rfLabel, 'tennis.rally.finishAt21Label','Finish at 21 points');
     setStartButtonLabel();
     setText(finishBtnEl, 'tennis.finishMatch','Selesai & Lihat Hasil Pertandingan');
     setText(forceResetBtnEl, 'tennis.resetZero','Reset Skor (0-0)');
@@ -292,6 +300,7 @@ const __tsT = (k,f)=> (window.__i18n_get ? __i18n_get(k,f) : f);
     pendingClearScore:false,
     serveCounts:{1:0,2:0,3:0,4:0},
     serveHistory:[]
+    ,rallyFinishAt21:false, finishAt21Prompted:false
   };
 
   // DOM refs
@@ -328,10 +337,15 @@ const __tsT = (k,f)=> (window.__i18n_get ? __i18n_get(k,f) : f);
       const pid = parseInt(el.getAttribute('data-serve-player'),10);
       if (!Number.isNaN(pid)) serveBadgeEls[pid] = el;
     });
-    actionConfirmModal = $("action-confirm-modal");
+      actionConfirmModal = $("action-confirm-modal");
     confirmActionBtn = $("confirm-action-btn");
     confirmModalTitle = $("confirm-modal-title");
     confirmModalDesc = $("confirm-modal-desc");
+    // Rally finish UI
+    const rallyFinishWrap = $("rally-finish-wrap");
+    const rallyFinishCheckbox = $("rally-finish-21");
+    // expose to outer scope
+    window.__rallyFinishWrap = rallyFinishWrap; window.__rallyFinishCheckbox = rallyFinishCheckbox;
     tsTitleEl = $("tsTitle");
     tsScheduleEl = $("tsSchedule");
     matchWinnerNamesEl = $("match-winner-names");
@@ -365,6 +379,16 @@ const __tsT = (k,f)=> (window.__i18n_get ? __i18n_get(k,f) : f);
     document.querySelector('#tsOverlay [data-ts-close]').addEventListener('click', requestClose);
     startMatchBtn.addEventListener('click', toggleMatchState);
     modeSelectorEl.addEventListener('change', (e)=>changeScoringMode(e.target));
+    // Rally finish checkbox listener
+    try{
+      if (window.__rallyFinishCheckbox){
+        window.__rallyFinishCheckbox.addEventListener('change', (ev)=>{
+          state.rallyFinishAt21 = !!ev.target.checked;
+          // reset prompt flag so it can trigger again when checkbox toggled on
+          state.finishAt21Prompted = false;
+        });
+      }
+    }catch{}
     // Prevent accidental double increment on first tap/click
     let lastScoreTs = 0;
     document.querySelectorAll('#tsOverlay .score-btn').forEach(btn=>{
@@ -651,6 +675,9 @@ function showConfirmationModal(actionType, opts){
     currentPendingAction = actionType;
     pendingCloseAfterReset = !!(opts && opts.closeAfter);
     let titleText = ""; let buttonText = "";
+    // Ensure cancel button defaults to generic 'Batal' unless overridden below
+    try{ const cancelBtn = $("cancel-action-btn"); if (cancelBtn) cancelBtn.textContent = __tsT('tennis.cancel','Batal'); }catch{}
+
     if (actionType==='reset'){
       if (pendingCloseAfterReset){
         titleText = __tsT('tennis.confirm.closeTitle','Tutup & Batalkan Pertandingan?');
@@ -672,6 +699,13 @@ function showConfirmationModal(actionType, opts){
       buttonText = __tsT('tennis.confirm.finishOk','Ya, Selesaikan Sekarang');
       if (confirmModalDesc) confirmModalDesc.textContent = __tsT('tennis.confirm.save','Skor saat ini akan disimpan sebagai hasil akhir pertandingan.');
     }
+    else if (actionType==='finish21'){
+      titleText = __tsT('tennis.rally.reached21Title','Poin Telah Mencapai 21');
+      buttonText = __tsT('tennis.confirm.finishOk','Ya, Selesaikan Sekarang');
+      if (confirmModalDesc) confirmModalDesc.textContent = __tsT('tennis.rally.reached21','Poin sudah mencapai 21.');
+      // Change cancel button copy to instruct user that cancelling continues until timer
+      try{ const cancelBtn = $("cancel-action-btn"); if (cancelBtn) cancelBtn.textContent = __tsT('tennis.rally.continueUntilEnd','Lanjutkan sampai waktu habis'); }catch{}
+    }
     else return;
     if (confirmModalTitle) confirmModalTitle.textContent = titleText;
     if (confirmActionBtn) confirmActionBtn.textContent = buttonText;
@@ -680,12 +714,12 @@ function showConfirmationModal(actionType, opts){
 
 function confirmAction(){
     if (actionConfirmModal) actionConfirmModal.classList.add('hidden');
-    if (currentPendingAction==='reset') { performMatchReset(); if (pendingCloseAfterReset) hideOverlay(); }
-    else if (currentPendingAction==='reset-clear') { clearRoundScoreImmediate(); }
-    else if (currentPendingAction==='finish') finishMatch(false,true);
+  if (currentPendingAction==='reset') { performMatchReset(); if (pendingCloseAfterReset) hideOverlay(); }
+  else if (currentPendingAction==='reset-clear') { clearRoundScoreImmediate(); }
+  else if (currentPendingAction==='finish' || currentPendingAction==='finish21') finishMatch(false,true);
     currentPendingAction = null; updateDisplay();
   }
-  function cancelAction(){ if (actionConfirmModal) actionConfirmModal.classList.add('hidden'); currentPendingAction=null; updateDisplay(); }
+  function cancelAction(){ if (actionConfirmModal) actionConfirmModal.classList.add('hidden'); if (currentPendingAction==='finish21'){ try{ /* user chose to continue until time ends; suppress further 21-point prompts */ state.finishAt21Prompted = true; }catch{} } currentPendingAction=null; updateDisplay(); }
 
   function clearRoundScoreImmediate(){
     let hasRoundContext = false;
@@ -866,6 +900,24 @@ function confirmAction(){
       modeSelectorEl.classList.toggle('disabled-select', dis);
     }
     updateServeBadges();
+    // Show rally-finish checkbox only when Rally mode selected
+    try{
+      const wrap = window.__rallyFinishWrap;
+      const checkbox = window.__rallyFinishCheckbox;
+      const show = state.scoringMode === 'RALLY';
+      if (wrap) wrap.classList.toggle('hidden', !show);
+      if (checkbox){
+        // Enable checkbox only for Match 1 (round 0) when not started and not running/recalc
+        let enable = show && !state.isMatchRunning && !state.isRecalcMode && (tsCtx.round === 0 || tsCtx.round == null);
+        try{
+          const r = (roundsByCourt?.[tsCtx.court]||[])[tsCtx.round] || {};
+          if (tsCtx.round === 0 && r && r.startedAt) enable = false;
+        }catch{}
+        // When disabling, keep the checked state so any previous selection still applies;
+        // only prevent user interaction by disabling the control.
+        try{ checkbox.disabled = !enable; checkbox.classList.toggle('opacity-50', !enable); }catch{}
+      }
+    }catch{}
     // Show finish button only when match running or in recalc mode
     try{
       if (finishBtnEl){
@@ -975,6 +1027,22 @@ function confirmAction(){
           rewindServerAfterCorrection(prevTotalPoints, totalPoints);
         }
       }
+      // If Rally finish-at-21 is enabled, prompt user when TOTAL points (both teams) reach 21
+      try{
+        const totalPointsNow = state.gamesT1 + state.gamesT2;
+        if (state.rallyFinishAt21 && !state.finishAt21Prompted){
+          if (totalPointsNow >= 21){
+            state.finishAt21Prompted = true;
+            currentPendingAction = 'finish21';
+            if (confirmModalTitle) confirmModalTitle.textContent = __tsT('tennis.rally.reached21Title','Poin Telah Mencapai 21');
+            if (confirmModalDesc) confirmModalDesc.textContent = __tsT('tennis.rally.reached21','Poin sudah mencapai 21.');
+            if (confirmActionBtn) confirmActionBtn.textContent = __tsT('tennis.confirm.finishOk','Ya, Selesaikan Sekarang');
+            // Adjust cancel button label specifically for this prompt
+            try{ const cb = $("cancel-action-btn"); if (cb) cb.textContent = __tsT('tennis.rally.continueUntilEnd','Lanjutkan sampai waktu habis'); }catch{}
+            if (actionConfirmModal){ actionConfirmModal.classList.remove('hidden'); actionConfirmModal.classList.add('flex'); }
+          }
+        }
+      }catch{}
       // Realtime: tulis langsung ke state ronde agar ikut terserialisasi & terkirim ke Cloud
       try{
         if (tsCtx.court!=null && tsCtx.round!=null){
@@ -1216,6 +1284,7 @@ function confirmAction(){
     state.scoreT1=0; state.scoreT2=0; state.gamesT1=0; state.gamesT2=0; state.isDeuce=false; state.isAdvantageT1=false; state.isAdvantageT2=false; state.currentPlayerServer=1; state.isMatchFinished=false;
     resetServeTracking();
     state.gameWinPending=false;
+    state.finishAt21Prompted = false;
     if (fullReset){ setStartButtonLabel(); startMatchBtn.classList.remove('bg-red-600','hover:bg-red-700','shadow-red-500/50'); startMatchBtn.classList.add('bg-indigo-600','hover:bg-indigo-700','shadow-indigo-500/50'); }
     if (hideModals){ $("game-won-modal").classList.add('hidden'); $("match-results-modal").classList.add('hidden'); $("action-confirm-modal").classList.add('hidden'); }
     if (matchWinnerNamesEl){ matchWinnerNamesEl.textContent=''; matchWinnerNamesEl.classList.add('hidden'); }
@@ -1340,6 +1409,15 @@ function confirmAction(){
       }
     }catch{}
     fillPlayersFromRound(courtIdx, roundIdx);
+    // Ensure rally checkbox state is consistent on open (updateDisplay will also handle it)
+    try{
+      const cb = window.__rallyFinishCheckbox;
+      if (cb){
+        const enabled = state.scoringMode==='RALLY' && !state.isRecalcMode && !state.isMatchRunning && (tsCtx.round === 0 || tsCtx.round == null);
+        cb.disabled = !enabled;
+        // preserve checked state when disabling so the setting remains effective during the match
+      }
+    }catch{}
     showOverlay(); updateDisplay();
   };
   window.closeScoreModal = function(){ hideOverlay(); };
