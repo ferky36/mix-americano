@@ -20,6 +20,11 @@ const __tsT = (k,f)=> (window.__i18n_get ? __i18n_get(k,f) : f);
         </div>
         <p id="tsSchedule" class="text-sm text-gray-500 mb-3 hidden">${__tsT('tennis.schedule','Waktu Main Terjadwal: -')}</p>
 
+        <div id="next-match-summary" class="text-sm text-gray-700 mb-3 hidden">
+          <p id="next-match-summary-players" class="font-semibold"></p>
+          <p id="next-match-summary-time" class="text-xs text-gray-500 hidden"></p>
+        </div>
+
         <div class="mb-4 flex flex-col md:flex-row justify-center items-center gap-2 md:gap-3 p-3 rounded-xl border border-indigo-200">
           <label for="mode-selector" class="text-sm font-semibold text-indigo-700">${__tsT('tennis.modeLabel','Pilih Metode Skor:')}</label>
           <select id="mode-selector" class="py-1 px-3 border border-indigo-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-sm w-full md:w-auto transition duration-150">
@@ -289,12 +294,13 @@ const __tsT = (k,f)=> (window.__i18n_get ? __i18n_get(k,f) : f);
   };
 
   // DOM refs
-  let $ = (id)=>document.getElementById(id);
-  let scoreDisplayT1, scoreDisplayT2, statusMessage, gameWonModal,
+    let $ = (id)=>document.getElementById(id);
+    let scoreDisplayT1, scoreDisplayT2, statusMessage, gameWonModal,
       gamesDisplayContainer, gamesDisplayT1, gamesDisplayT2, matchResultsModal, timerDisplayEl, startMatchBtn,
       player1NameEl, player2NameEl, player3NameEl, player4NameEl, modeSelectorEl, setScoreLabelEl,
       actionConfirmModal, confirmActionBtn, confirmModalTitle, confirmModalDesc, currentPendingAction, tsTitleEl,
       tsScheduleEl, matchWinnerNamesEl, nextMatchInfoEl, nextMatchPlayersEl, nextMatchTimeEl,
+      nextMatchSummaryEl, nextMatchSummaryPlayersEl, nextMatchSummaryTimeEl,
       finishBtnEl, forceResetBtnEl;
   let serveBadgeEls = {};
   let pendingCloseAfterReset = false; // if reset came from close request
@@ -331,6 +337,9 @@ const __tsT = (k,f)=> (window.__i18n_get ? __i18n_get(k,f) : f);
     nextMatchInfoEl = $("next-match-info");
     nextMatchPlayersEl = $("next-match-players");
     nextMatchTimeEl = $("next-match-time");
+    nextMatchSummaryEl = $("next-match-summary");
+    nextMatchSummaryPlayersEl = $("next-match-summary-players");
+    nextMatchSummaryTimeEl = $("next-match-summary-time");
     finishBtnEl = $("finish-match-btn");
     forceResetBtnEl = $("force-reset-btn");
 
@@ -524,6 +533,18 @@ const __tsT = (k,f)=> (window.__i18n_get ? __i18n_get(k,f) : f);
       }
     }
     nextMatchInfoEl.classList.remove('hidden');
+    // Also update small summary area (visible during match)
+    try{
+      if (nextMatchSummaryPlayersEl){
+        try{ nextMatchSummaryPlayersEl.innerHTML = hasPlayers ? `${safeTeamA} <span class="text-xs text-indigo-500">vs</span> ${safeTeamB}` : __tsT('tennis.nextMatchUnset','Pemain belum ditentukan'); }catch{ nextMatchSummaryPlayersEl.textContent = hasPlayers ? `${safeTeamA} vs ${safeTeamB}` : __tsT('tennis.nextMatchUnset','Pemain belum ditentukan'); }
+      }
+      if (nextMatchSummaryTimeEl){
+        const slot = computeScheduledWindow(nextRoundIdx);
+        if (slot){ nextMatchSummaryTimeEl.textContent = `${slot.start} - ${slot.end}`; nextMatchSummaryTimeEl.classList.remove('hidden'); }
+        else { nextMatchSummaryTimeEl.textContent = ''; nextMatchSummaryTimeEl.classList.add('hidden'); }
+      }
+      if (nextMatchSummaryEl) nextMatchSummaryEl.classList.remove('hidden');
+    }catch{}
   }
   function rotateServer(){
     switch(state.currentPlayerServer){
@@ -813,6 +834,7 @@ function confirmAction(){
           if (typeof maybeAutoSaveCloud==='function') maybeAutoSaveCloud();
           else if (typeof saveStateToCloud==='function') saveStateToCloud();
         }catch{}
+        try{ updateNextMatchInfo(tsCtx.court, tsCtx.round); }catch{}
       }
     }catch{}
 
@@ -1189,6 +1211,9 @@ function confirmAction(){
     if (nextMatchInfoEl) nextMatchInfoEl.classList.add('hidden');
     if (nextMatchPlayersEl) nextMatchPlayersEl.textContent='';
     if (nextMatchTimeEl){ nextMatchTimeEl.textContent=''; nextMatchTimeEl.classList.add('hidden'); }
+    if (nextMatchSummaryEl) nextMatchSummaryEl.classList.add('hidden');
+    if (nextMatchSummaryPlayersEl) nextMatchSummaryPlayersEl.textContent='';
+    if (nextMatchSummaryTimeEl){ nextMatchSummaryTimeEl.textContent=''; nextMatchSummaryTimeEl.classList.add('hidden'); }
     if (!state.isMatchRunning && !state.isMatchFinished){ statusMessage.textContent = __tsT('tennis.status.chooseMode','Pilih mode skor dan tekan Mulai Pertandingan.'); statusMessage.className='text-center text-gray-500 mt-2 text-sm'; }
     updateDisplay();
   }
@@ -1248,6 +1273,9 @@ function confirmAction(){
       if (nextMatchInfoEl) nextMatchInfoEl.classList.add('hidden');
       if (nextMatchPlayersEl) nextMatchPlayersEl.textContent='';
       if (nextMatchTimeEl){ nextMatchTimeEl.textContent=''; nextMatchTimeEl.classList.add('hidden'); }
+      if (nextMatchSummaryEl) nextMatchSummaryEl.classList.add('hidden');
+      if (nextMatchSummaryPlayersEl) nextMatchSummaryPlayersEl.textContent='';
+      if (nextMatchSummaryTimeEl){ nextMatchSummaryTimeEl.textContent=''; nextMatchSummaryTimeEl.classList.add('hidden'); }
     }catch{}
     try{ if (timerDisplayEl) timerDisplayEl.textContent = formatTime(getRoundMinutes()*60); }catch{}
     setStartButtonLabel();
