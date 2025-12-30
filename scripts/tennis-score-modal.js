@@ -266,6 +266,7 @@ const __tsT = (k,f)=> (window.__i18n_get ? __i18n_get(k,f) : f);
       if (!roundsByCourt[cIdx][0]) roundsByCourt[cIdx][0] = { a1:'', a2:'', b1:'', b2:'', scoreA:'', scoreB:'', server_offset:0 };
       roundsByCourt[cIdx][0].__scoringMode = mode;
     }catch{}
+    try{ if (finishBtnEl) finishBtnEl.classList.add('hidden'); }catch{}
   }
 
   function getRoundMinutes(){
@@ -342,6 +343,9 @@ const __tsT = (k,f)=> (window.__i18n_get ? __i18n_get(k,f) : f);
     nextMatchSummaryTimeEl = $("next-match-summary-time");
     finishBtnEl = $("finish-match-btn");
     forceResetBtnEl = $("force-reset-btn");
+
+    // default: hide finish button until match is running (keep visible in recalc mode)
+    try{ if (finishBtnEl) finishBtnEl.classList.add('hidden'); }catch{}
 
     // Event wires
     // Close handlers: behave like Reset when a match is running/started
@@ -862,6 +866,13 @@ function confirmAction(){
       modeSelectorEl.classList.toggle('disabled-select', dis);
     }
     updateServeBadges();
+    // Show finish button only when match running or in recalc mode
+    try{
+      if (finishBtnEl){
+        const shouldShow = !!(state.isMatchRunning || state.isRecalcMode);
+        finishBtnEl.classList.toggle('hidden', !shouldShow);
+      }
+    }catch{}
     if (state.isMatchFinished){ statusMessage.textContent=__tsT('tennis.status.finished','PERTANDINGAN SELESAI!'); statusMessage.className='text-center text-red-600 font-bold mt-2 text-md'; if (state.isRecalcMode && statusMessage) statusMessage.classList.add('hidden'); return; }
     state.isDeuce=false; state.isAdvantageT1=false; state.isAdvantageT2=false;
     let scoreTextT1, scoreTextT2;
@@ -1215,6 +1226,7 @@ function confirmAction(){
     if (nextMatchSummaryPlayersEl) nextMatchSummaryPlayersEl.textContent='';
     if (nextMatchSummaryTimeEl){ nextMatchSummaryTimeEl.textContent=''; nextMatchSummaryTimeEl.classList.add('hidden'); }
     if (!state.isMatchRunning && !state.isMatchFinished){ statusMessage.textContent = __tsT('tennis.status.chooseMode','Pilih mode skor dan tekan Mulai Pertandingan.'); statusMessage.className='text-center text-gray-500 mt-2 text-sm'; }
+    try{ if (finishBtnEl && !state.isMatchRunning && !state.isRecalcMode) finishBtnEl.classList.add('hidden'); }catch{}
     updateDisplay();
   }
 
