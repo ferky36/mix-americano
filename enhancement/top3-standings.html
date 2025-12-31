@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Podium — Top 3 Peringkat</title>
+  <style>
+    :root{ --bg:#0f172a; --card:#0b1220; --muted:#94a3b8; }
+    body{ font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial; margin:0; background:linear-gradient(180deg,#0f172a 0%, #071028 100%); color:#e6eef8; -webkit-font-smoothing:antialiased; }
+    .wrap{ max-width:980px; margin:36px auto; padding:24px; }
+    h1{ margin:0 0 8px; font-size:20px; letter-spacing:0.2px; }
+    p.lead{ margin:0 0 20px; color:var(--muted); }
+    .podium{ display:flex; gap:18px; align-items:end; justify-content:center; }
+    .card{ width:220px; background:rgba(255,255,255,0.04); border-radius:12px; padding:16px 14px; text-align:center; box-shadow:0 6px 20px rgba(2,6,23,0.6); }
+    .pos{ font-size:14px; color:var(--muted); margin-bottom:6px; }
+    .name{ font-weight:700; font-size:18px; margin:6px 0; color:#fff; }
+    .score{ font-size:13px; color:var(--muted); }
+    .badge{ display:inline-flex; align-items:center; justify-content:center; width:64px; height:64px; border-radius:999px; margin:6px auto; box-shadow:0 6px 16px rgba(2,6,23,0.6); font-weight:800; }
+    .gold{ background:linear-gradient(180deg,#ffd54a,#ffb300); color:#30210a; }
+    .silver{ background:linear-gradient(180deg,#e6e9ef,#c9ced6); color:#1b2430; }
+    .bronze{ background:linear-gradient(180deg,#edc09a,#c17b43); color:#2b1606; }
+    .col-2{ transform:translateY(8px); }
+    .col-1{ transform:translateY(-12px); }
+    .col-3{ transform:translateY(24px); }
+    .empty{ opacity:0.5; }
+    .controls{ margin-top:20px; display:flex; gap:8px; justify-content:center; }
+    button{ background:#0b1220; border:1px solid rgba(255,255,255,0.06); color:#e6eef8; padding:8px 12px; border-radius:8px; cursor:pointer; }
+    textarea{ width:100%; min-height:120px; margin-top:12px; border-radius:8px; padding:10px; background:#071028; color:#dbeafe; border:1px solid rgba(255,255,255,0.03); }
+    .hint{ margin-top:12px; color:var(--muted); font-size:13px; text-align:center; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Podium — Top 3 Peringkat</h1>
+    <p class="lead">Menampilkan juara 1, 2, dan 3 berdasarkan data klasemen. Data diambil otomatis jika ada fungsi <code>computeStandings()</code> atau variabel global <code>standings</code>. Jika tidak ditemukan, Anda bisa tempel JSON di bawah.</p>
+
+    <div id="podium" class="podium" aria-live="polite">
+      <!-- Cards inserted by JS -->
+    </div>
+
+    <div class="controls">
+      <button id="btn-refresh">Refresh Otomatis</button>
+      <button id="btn-use-sample">Isi Sampel</button>
+      <button id="btn-print">Cetak Podium</button>
+    </div>
+
+    <div style="margin-top:14px">
+      <label class="hint">Fallback: tempel JSON array klasemen (masukan objek dengan properti `name` dan `points` atau `score`):</label>
+      <textarea id="manual-json" placeholder='[ { "name":"Asep", "points": 12 }, { "name":"Budi","points":10 } ]'></textarea>
+    </div>
+  </div>
+
+  <script>
+    function normalizeEntries(arr){
+      if (!Array.isArray(arr)) return [];
+      return arr.map(item=>{
+        const name = item.name || item.player || item.display_name || item.fullname || item.label || item.email || item.username || item.nick || '—';
+        const pts = Number(item.points ?? item.score ?? item.total ?? item.pts ?? 0) || 0;
+        return { name: String(name), points: pts, raw: item };
+      });
+    }
+
+    function getStandingsAuto(){
+      try{
+        if (typeof computeStandings === 'function'){
+          const out = computeStandings(); if (Array.isArray(out)) return out;
+        }
+      }catch(e){ console.warn('computeStandings failed', e); }
+      try{ if (Array.isArray(window.standings)) return window.standings; }catch{}
+      try{ if (Array.isArray(window.__standingsData)) return window.__standingsData; }catch{}
+      return null;
+    }
+
+    function renderTop3(data){
+      const list = normalizeEntries(data).sort((a,b)=>b.points - a.points);
+      const top = [list[0]||null, list[1]||null, list[2]||null];
+      const container = document.getElementById('podium'); container.innerHTML = '';
+      const makeCard = (entry, pos)=>{
+        const div = document.createElement('div'); div.className = 'card ' + (pos===1? 'col-1': pos===2? 'col-2':'col-3');
+        const posTxt = pos===1? 'Juara 1' : pos===2? 'Juara 2' : 'Juara 3';
+        const badge = document.createElement('div'); badge.className = 'badge ' + (pos===1? 'gold': pos===2? 'silver':'bronze');
+        badge.textContent = pos===1? '1' : pos===2? '2' : '3';
+        const posEl = document.createElement('div'); posEl.className='pos'; posEl.textContent = posTxt;
+        const nameEl = document.createElement('div'); nameEl.className='name'; nameEl.textContent = entry? entry.name : '—';
+        const scoreEl = document.createElement('div'); scoreEl.className='score'; scoreEl.textContent = entry? ('Poin: ' + entry.points) : '';
+        if (!entry) div.classList.add('empty');
+        div.appendChild(badge); div.appendChild(posEl); div.appendChild(nameEl); div.appendChild(scoreEl);
+        return div;
+      };
+      // Layout order: 2 | 1 | 3 for visual podium
+      container.appendChild(makeCard(top[1],2));
+      container.appendChild(makeCard(top[0],1));
+      container.appendChild(makeCard(top[2],3));
+    }
+
+    function refresh(){
+      const auto = getStandingsAuto();
+      if (auto){ renderTop3(auto); return; }
+      // fallback to manual
+      try{
+        const text = document.getElementById('manual-json').value.trim();
+        if (text){ const parsed = JSON.parse(text); if (Array.isArray(parsed)) { renderTop3(parsed); return; } }
+      }catch(e){ /* ignore */ }
+      // sample if nothing
+      renderTop3([]);
+    }
+
+    document.getElementById('btn-refresh').addEventListener('click', refresh);
+    document.getElementById('btn-use-sample').addEventListener('click', ()=>{
+      const sample = [ { name:'Rafianto', points:26 }, { name:'Dewi', points:21 }, { name:'Bintang', points:18 }, { name:'Andi', points:12 } ];
+      document.getElementById('manual-json').value = JSON.stringify(sample, null, 2);
+      renderTop3(sample);
+    });
+
+    // Auto-refresh on load and listen for posted standings from opener
+    window.addEventListener('DOMContentLoaded', ()=>{
+      try{ refresh(); }catch{}
+      try{ if (window.opener){ window.opener.postMessage({ type: 'top3_ready' }, '*'); } }catch{}
+    });
+
+    // Receive standings via postMessage
+    window.addEventListener('message', (ev)=>{
+      try{
+        if (!ev.data || ev.data.type !== 'standings') return;
+        const payload = ev.data.payload;
+        if (Array.isArray(payload)) renderTop3(payload);
+      }catch(e){/* ignore */}
+    });
+
+    document.getElementById('btn-print').addEventListener('click', ()=>{ window.print(); });
+  </script>
+</body>
+</html>
