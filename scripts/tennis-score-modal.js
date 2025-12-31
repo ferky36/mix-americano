@@ -1315,6 +1315,34 @@ function confirmAction(){
                 closeBtn.textContent = __tsT('tennis.close','Tutup');
                 closeBtn.className = 'w-full py-3 bg-gray-300 hover:bg-gray-400 text-gray-900 font-semibold rounded-lg';
                 if (note) note.classList.remove('hidden');
+                // Add "Tampilkan Pemenang" button only for the last match
+                try{
+                  let showTop3Btn = modalBox.querySelector('#show-top3-btn');
+                  if (!showTop3Btn){
+                    showTop3Btn = document.createElement('button');
+                    showTop3Btn.id = 'show-top3-btn';
+                    showTop3Btn.className = 'w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg';
+                    showTop3Btn.textContent = __tsT('tennis.showTop3','Tampilkan Pemenang');
+                    if (closeBtn && closeBtn.parentNode){
+                      closeBtn.parentNode.insertBefore(showTop3Btn, closeBtn);
+                      const spacer2 = document.createElement('div'); spacer2.className = 'h-2'; closeBtn.parentNode.insertBefore(spacer2, closeBtn);
+                    } else { modalBox.appendChild(showTop3Btn); }
+                    showTop3Btn.addEventListener('click', ()=>{
+                      try{ hideOverlay(); }catch{}
+                      // small delay to allow modal close to render before opening inline podium modal
+                      setTimeout(()=>{
+                        try{
+                          // Prefer reading the rendered standings table (DOM) rather than recomputing.
+                          let standingsData = null;
+                          try{ const domData = getStandingsFromDom(); if (Array.isArray(domData) && domData.length) standingsData = domData; }catch{}
+                          try{ if (!standingsData && Array.isArray(window.standings) && window.standings.length) standingsData = window.standings; }catch{}
+                          // If no DOM or global standings present, open modal with empty array (do not recalc here).
+                          openTop3InlineModal(standingsData || []);
+                        }catch{}
+                      }, 120);
+                    });
+                  }
+                }catch{}
               } else {
                 if (nb) nb.classList.remove('hidden');
                 closeBtn.textContent = __tsT('tennis.notNow','Tidak, nanti dulu');
@@ -1347,6 +1375,162 @@ function confirmAction(){
     try{ if (finishBtnEl && !state.isMatchRunning && !state.isRecalcMode) finishBtnEl.classList.add('hidden'); }catch{}
     updateDisplay();
     try{ if (!state.isMatchRunning) releaseWakeLock(); }catch{}
+  }
+
+  // Open the top3 standings page in a popup and post standings data (handshake + fallback)
+  function openTop3Popup(standingsData){
+    try{
+      if (!standingsData) return false;
+      if (typeof window.open !== 'function') return false;
+      const popup = window.open('enhancement/top3-standings.html','top3_podium','width=900,height=700');
+      if (!popup) return false;
+      const onMsg = (ev)=>{
+        try{
+          if (ev.source === popup && ev.data && ev.data.type === 'top3_ready'){
+            popup.postMessage({ type: 'standings', payload: standingsData }, '*');
+            window.removeEventListener('message', onMsg);
+          }
+        }catch{}
+      };
+      window.addEventListener('message', onMsg);
+      setTimeout(()=>{ try{ popup.postMessage({ type: 'standings', payload: standingsData }, '*'); }catch{} }, 800);
+      return true;
+    }catch{ return false; }
+  }
+
+  // Read the rendered standings table from DOM and return an array of entries.
+  // Each entry: { rank, player, total, diff, win, lose, draw }
+  function getStandingsFromDom(){
+    try{
+      const tbody = document.querySelector('#standings tbody');
+      if (!tbody) return null;
+      const rows = [...tbody.querySelectorAll('tr')];
+      if (!rows.length) return [];
+      return rows.map(tr=>{
+        const cells = tr.querySelectorAll('td');
+        const rank = parseInt((cells[0]?.textContent||'').trim(),10) || null;
+        const player = (cells[1]?.textContent||'').trim();
+        const total = Number((cells[2]?.textContent||'').trim()) || 0;
+        const diff = Number((cells[3]?.textContent||'').trim()) || 0;
+        const win = Number((cells[4]?.textContent||'').trim()) || 0;
+        const lose = Number((cells[5]?.textContent||'').trim()) || 0;
+        const draw = Number((cells[6]?.textContent||'').trim()) || 0;
+        return { rank, player, total, diff, win, lose, draw };
+      });
+    }catch{ return null; }
+  }
+
+  // Fallback: embed podium page in an inline modal (iframe) and post standings
+  function openTop3InModal(standingsData){
+    try{
+      if (!standingsData) return;
+      // remove existing container if any
+      const existing = document.getElementById('top3-iframe-container');
+      if (existing) existing.remove();
+      const cont = document.createElement('div'); cont.id = 'top3-iframe-container';
+      cont.style.position = 'fixed'; cont.style.inset = '0'; cont.style.zIndex = 60; cont.style.display = 'flex'; cont.style.alignItems = 'center'; cont.style.justifyContent = 'center';
+      cont.style.background = 'rgba(0,0,0,0.6)';
+      const box = document.createElement('div'); box.style.width = 'min(980px,96%)'; box.style.height = '80%'; box.style.background = '#fff'; box.style.borderRadius = '12px'; box.style.overflow = 'hidden'; box.style.display = 'flex'; box.style.flexDirection = 'column';
+      const header = document.createElement('div'); header.style.display='flex'; header.style.justifyContent='space-between'; header.style.alignItems='center'; header.style.padding='10px 12px'; header.style.background='#f8fafc';
+      const title = document.createElement('div'); title.textContent = __tsT('tennis.podiumTitle','Podium — Top 3'); title.style.fontWeight='700'; title.style.color='#0f172a';
+      const closeBtn = document.createElement('button'); closeBtn.textContent = __tsT('tennis.close','Tutup'); closeBtn.style.border='none'; closeBtn.style.background='#ef4444'; closeBtn.style.color='#fff'; closeBtn.style.padding='8px 10px'; closeBtn.style.borderRadius='8px'; closeBtn.style.cursor='pointer';
+      header.appendChild(title); header.appendChild(closeBtn);
+      const iframe = document.createElement('iframe'); iframe.src = 'enhancement/top3-standings.html'; iframe.style.border='0'; iframe.style.width='100%'; iframe.style.flex='1 1 auto';
+      box.appendChild(header); box.appendChild(iframe); cont.appendChild(box); document.body.appendChild(cont);
+
+      const onMsgFromIframe = (ev)=>{
+        try{
+          if (ev.source === iframe.contentWindow && ev.data && ev.data.type === 'top3_ready'){
+            iframe.contentWindow.postMessage({ type:'standings', payload: standingsData }, '*');
+            window.removeEventListener('message', onMsgFromIframe);
+          }
+        }catch{}
+      };
+      window.addEventListener('message', onMsgFromIframe);
+      setTimeout(()=>{ try{ iframe.contentWindow.postMessage({ type:'standings', payload: standingsData }, '*'); }catch{} }, 800);
+
+      closeBtn.addEventListener('click', ()=>{ try{ cont.remove(); }catch{} });
+    }catch{}
+  }
+
+  // Build standings array from roundsByCourt + players (returns [{player, total, diff, win, rank, ...}])
+  function buildStandingsArray(){
+    try{
+      const playersList = Array.isArray(window.players) ? window.players : [];
+      const data = {}; playersList.forEach(p=>data[p]={total:0,diff:0,win:0,lose:0,draw:0});
+      const applyRound = (r)=>{
+        const a=Number(r?.scoreA||0), b=Number(r?.scoreB||0);
+        if(!(r?.a1&&r?.a2&&r?.b1&&r?.b2)) return;
+        [r.a1,r.a2].forEach(p=>{ if(data[p]){ data[p].total+=a; data[p].diff+=(a-b); }});
+        [r.b1,r.b2].forEach(p=>{ if(data[p]){ data[p].total+=b; data[p].diff+=(b-a); }});
+        if(a>0||b>0){
+          if(a>b){ [r.a1,r.a2].forEach(p=>data[p]&&data[p].win++); [r.b1,r.b2].forEach(p=>data[p]&&data[p].lose++); }
+          else if(a<b){ [r.b1,r.b2].forEach(p=>data[p]&&data[p].win++); [r.a1,r.a2].forEach(p=>data[p]&&data[p].lose++); }
+          else { [r.a1,r.a2,r.b1,r.b2].forEach(p=>{ if(data[p]) data[p].draw++; }); }
+        }
+      };
+      (window.roundsByCourt||[]).forEach(arr=>arr.forEach(applyRound));
+      let arr = Object.entries(data).map(([player,v])=>({ player, total:v.total, diff:v.diff, win:v.win, lose:v.lose, draw:v.draw }));
+      arr.sort((p,q)=>(q.total-p.total)||(q.diff-p.diff)||(q.win-p.win)||p.player.localeCompare(q.player));
+      let rank=1; arr.forEach((s,i)=>{ if(i>0){ const pv=arr[i-1]; const tie=(s.total===pv.total&&s.diff===pv.diff&&s.win===pv.win); rank=tie?rank:(i+1);} s.rank=rank; });
+      // map to friendly objects
+      return arr.map(s=>({ player: s.player, name: s.player, total: s.total, diff: s.diff, rank: s.rank, win: s.win }));
+    }catch{ return []; }
+  }
+
+  // Inline simple podium modal (no external files)
+  function openTop3InlineModal(standingsData){
+    try{
+      // accept non-array and coerce to empty list so modal always appears
+      standingsData = Array.isArray(standingsData) ? standingsData : [];
+      // if empty, try to build standings from rounds data
+      if (!standingsData.length){
+        try{ standingsData = buildStandingsArray(); }catch{}
+      }
+      // remove existing inline podium if any
+      const prev = document.getElementById('ts-top3-inline'); if (prev) prev.remove();
+      const overlay = document.createElement('div'); overlay.id = 'ts-top3-inline';
+      overlay.className = 'ts-top3-inline fixed inset-0 flex items-center justify-center p-4';
+      overlay.style.position = 'fixed'; overlay.style.left = '0'; overlay.style.top = '0'; overlay.style.width = '100%'; overlay.style.height = '100%';
+      overlay.style.background = 'rgba(2,6,23,0.55)'; overlay.style.backdropFilter = 'blur(6px)'; overlay.style.webkitBackdropFilter = 'blur(6px)';
+      overlay.style.zIndex = '999999'; overlay.setAttribute('aria-modal','true'); overlay.setAttribute('role','dialog');
+      const box = document.createElement('div'); box.style.width = 'min(820px,96%)'; box.style.maxWidth = '920px'; box.style.maxHeight='90%'; box.style.overflow='auto'; box.style.background='#ffffff'; box.style.borderRadius='12px'; box.style.padding='22px'; box.style.boxShadow='0 30px 80px rgba(2,6,23,0.6)';
+      const title = document.createElement('h3'); title.textContent = __tsT('tennis.podiumTitle','Podium — Top 3'); title.style.margin='0 0 8px 0'; title.style.color='#0f172a'; title.style.fontSize='18px'; title.style.fontWeight='700';
+      const row = document.createElement('div'); row.style.display='flex'; row.style.gap='18px'; row.style.alignItems='flex-end'; row.style.justifyContent='center';
+      // normalize and sort
+      const list = (standingsData || []).map(it=>({ name: (it.name||it.player||it.label||it.display_name||'—'), points: Number(it.points??it.total??it.score??0)||0 })).sort((a,b)=>b.points-a.points);
+      const top = [list[0]||null, list[1]||null, list[2]||null];
+      const make = (entry,pos)=>{
+        const c = document.createElement('div'); c.style.width='240px'; c.style.textAlign='center'; c.style.paddingBottom='6px';
+        const badge = document.createElement('div'); badge.style.width='72px'; badge.style.height='72px'; badge.style.borderRadius='999px'; badge.style.margin='6px auto'; badge.style.display='flex'; badge.style.alignItems='center'; badge.style.justifyContent='center'; badge.style.fontWeight='800'; badge.style.fontSize='22px'; badge.style.boxShadow='0 6px 18px rgba(2,6,23,0.45)';
+        if (pos===1){ badge.style.background='linear-gradient(180deg,#ffd54a,#ffb300)'; badge.style.color='#24180a'; }
+        else if (pos===2){ badge.style.background='linear-gradient(180deg,#f3f6fa,#cfd6df)'; badge.style.color='#0f172a'; }
+        else { badge.style.background='linear-gradient(180deg,#f0d6bf,#cfa07a)'; badge.style.color='#2b1606'; }
+        badge.textContent = pos;
+        const posEl = document.createElement('div'); posEl.textContent = pos===1? 'Juara 1' : pos===2? 'Juara 2' : 'Juara 3'; posEl.style.color='#6b7280'; posEl.style.fontSize='13px';
+        const nameEl = document.createElement('div'); nameEl.textContent = entry? entry.name : '—'; nameEl.style.fontWeight='700'; nameEl.style.marginTop='6px'; nameEl.style.color='var(--fg,#0b1220)';
+        const ptsEl = document.createElement('div'); ptsEl.textContent = entry? ('Poin: '+entry.points) : ''; ptsEl.style.color='var(--muted,#6b7280)'; ptsEl.style.fontSize='13px'; ptsEl.style.marginTop='4px';
+        c.appendChild(badge); c.appendChild(posEl); c.appendChild(nameEl); c.appendChild(ptsEl); return c;
+      };
+      // layout: 2 | 1 | 3
+      row.appendChild(make(top[1],2)); row.appendChild(make(top[0],1)); row.appendChild(make(top[2],3));
+      const footer = document.createElement('div'); footer.style.display='flex'; footer.style.gap='10px'; footer.style.justifyContent='center'; footer.style.marginTop='18px';
+      const btnClose = document.createElement('button'); btnClose.textContent = __tsT('tennis.close','Tutup'); btnClose.style.padding='10px 14px'; btnClose.style.borderRadius='10px'; btnClose.style.border='1px solid rgba(0,0,0,0.08)'; btnClose.style.background='transparent'; btnClose.style.cursor='pointer'; btnClose.style.color='var(--fg,#0b1220)';
+      // Print button removed as requested
+      footer.appendChild(btnClose);
+      // adapt theme (use CSS variables when possible)
+      const isDark = document.documentElement.classList.contains('dark');
+      if (isDark){ box.style.background = '#071026'; box.style.color = '#e6eef8'; title.style.color='#e6eef8'; overlay.style.background='rgba(2,6,23,0.65)'; }
+      else { box.style.background = '#ffffff'; box.style.color = '#0b1220'; title.style.color='#0f172a'; overlay.style.background='rgba(255,255,255,0.02)'; }
+      // set CSS vars for consistent muted/fg
+      box.style.setProperty('--muted', isDark? '#93a3bf' : '#6b7280');
+      box.style.setProperty('--fg', isDark? '#e6eef8' : '#0b1220');
+      // append and render
+      box.appendChild(title); box.appendChild(row); box.appendChild(footer); overlay.appendChild(box); document.body.appendChild(overlay);
+      // close when clicking outside the box
+      overlay.addEventListener('click', (ev)=>{ if (ev.target === overlay) { try{ overlay.remove(); }catch{} } });
+      btnClose.addEventListener('click', ()=>{ try{ overlay.remove(); }catch{} });
+    }catch{}
   }
 
   function showOverlay(){ ensureOverlay(); document.getElementById('tsOverlay').classList.remove('hidden'); document.getElementById('tsOverlay').classList.add('flex'); }
