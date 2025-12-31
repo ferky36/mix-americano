@@ -34,7 +34,7 @@ const __tsT = (k,f)=> (window.__i18n_get ? __i18n_get(k,f) : f);
           <div id="rally-finish-wrap" class="hidden ml-3 text-sm">
             <label class="inline-flex items-center gap-2">
               <input id="rally-finish-21" type="checkbox" class="h-4 w-4" />
-              <span id="rally-finish-label" class="text-sm text-gray-700">${__tsT('tennis.rally.finishAt21Label','Finish at 21 points')}</span>
+              <span id="rally-finish-label" class="text-sm text-gray-700 ts-rally-label">${__tsT('tennis.rally.finishAt21Label','Finish at 21 points')}</span>
             </label>
           </div>
         </div>
@@ -180,11 +180,10 @@ const __tsT = (k,f)=> (window.__i18n_get ? __i18n_get(k,f) : f);
       stroke:#e5e7eb;
       opacity:0.7;
     }
-    /* Dark mode: ensure rally finish label is bright/white for contrast */
-    .dark #rally-finish-label { color: #ffffff !important; }
-    @media (prefers-color-scheme: dark) {
-      #rally-finish-label { color: #ffffff !important; }
-    }
+    /* Rally label default color (light mode) and dark-mode overrides.
+       Use a specific class so inline styles won't block the media/.dark rules. */
+    #rally-finish-label.ts-rally-label { color: #374151; }
+    .dark #rally-finish-label.ts-rally-label { color: #ffffff !important; }
   `;
   const MAX_SERVE_BADGE_BALLS = 2;
   const renderServeBallSvg = (isGhost=false)=>`
@@ -392,6 +391,7 @@ const __tsT = (k,f)=> (window.__i18n_get ? __i18n_get(k,f) : f);
           state.rallyFinishAt21 = !!ev.target.checked;
           // reset prompt flag so it can trigger again when checkbox toggled on
           state.finishAt21Prompted = false;
+          try{ saveRallyFinishSetting(tsCtx.court ?? 'global', state.rallyFinishAt21); }catch{}
         });
       }
     }catch{}
@@ -707,6 +707,17 @@ const __tsT = (k,f)=> (window.__i18n_get ? __i18n_get(k,f) : f);
       }catch{}
     });
   }catch{}
+
+    // Persist Rally 'Finish at 21' setting to localStorage so it survives reloads
+    function _rallyStorageKey(courtIdx){
+      try{ const c = (typeof courtIdx!=='undefined' && courtIdx!==null) ? String(courtIdx) : 'global'; return `ts_rally_finish_${c}`; }catch{ return 'ts_rally_finish_global'; }
+    }
+    function saveRallyFinishSetting(courtIdx, value){
+      try{ const k=_rallyStorageKey(courtIdx); localStorage.setItem(k, value ? '1' : '0'); }catch{}
+    }
+    function loadRallyFinishSetting(courtIdx){
+      try{ const k=_rallyStorageKey(courtIdx); const v = localStorage.getItem(k); if (v===null) return null; return v==='1'; }catch{ return null; }
+    }
 
 function showConfirmationModal(actionType, opts){
     currentPendingAction = actionType;
@@ -1455,6 +1466,11 @@ function confirmAction(){
         const enabled = state.scoringMode==='RALLY' && !state.isRecalcMode && !state.isMatchRunning && (tsCtx.round === 0 || tsCtx.round == null);
         cb.disabled = !enabled;
         // preserve checked state when disabling so the setting remains effective during the match
+        try{
+          const stored = loadRallyFinishSetting(tsCtx.court ?? 'global');
+          if (stored !== null){ cb.checked = !!stored; state.rallyFinishAt21 = !!stored; }
+          else { cb.checked = !!state.rallyFinishAt21; }
+        }catch{}
       }
     }catch{}
     showOverlay(); updateDisplay();
