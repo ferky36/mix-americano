@@ -180,6 +180,11 @@ const __tsT = (k,f)=> (window.__i18n_get ? __i18n_get(k,f) : f);
       stroke:#e5e7eb;
       opacity:0.7;
     }
+    /* Dark mode: ensure rally finish label is bright/white for contrast */
+    .dark #rally-finish-label { color: #ffffff !important; }
+    @media (prefers-color-scheme: dark) {
+      #rally-finish-label { color: #ffffff !important; }
+    }
   `;
   const MAX_SERVE_BADGE_BALLS = 2;
   const renderServeBallSvg = (isGhost=false)=>`
