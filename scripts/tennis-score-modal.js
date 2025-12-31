@@ -299,8 +299,9 @@ const __tsT = (k,f)=> (window.__i18n_get ? __i18n_get(k,f) : f);
     isRecalcMode:false,
     pendingClearScore:false,
     serveCounts:{1:0,2:0,3:0,4:0},
-    serveHistory:[]
-    ,rallyFinishAt21:false, finishAt21Prompted:false
+    serveHistory:[],
+    wakeLockSentinel: null,
+    rallyFinishAt21:false, finishAt21Prompted:false
   };
 
   // DOM refs
@@ -671,6 +672,37 @@ const __tsT = (k,f)=> (window.__i18n_get ? __i18n_get(k,f) : f);
     }, 3000);
   }
 
+  // Wake Lock helpers: keep screen awake while match is running (if supported)
+  async function requestWakeLock(){
+    try{
+      if (!('wakeLock' in navigator)) return; // not supported
+      if (state.wakeLockSentinel) return; // already acquired
+      state.wakeLockSentinel = await navigator.wakeLock.request('screen');
+      try{ state.wakeLockSentinel.addEventListener('release', ()=>{ state.wakeLockSentinel = null; }); }catch{}
+      // console.log('WakeLock acquired');
+    }catch(err){ console.warn('WakeLock request failed', err); }
+  }
+  async function releaseWakeLock(){
+    try{
+      if (state.wakeLockSentinel){
+        await state.wakeLockSentinel.release();
+        state.wakeLockSentinel = null;
+      }
+    }catch(err){ console.warn('WakeLock release failed', err); }
+  }
+
+  // Reacquire wake lock on visibilitychange if match still running
+  try{
+    document.addEventListener('visibilitychange', async ()=>{
+      try{
+        if (document.visibilityState === 'visible' && state.isMatchRunning){
+          // re-request if lost
+          if (!state.wakeLockSentinel && 'wakeLock' in navigator){ await requestWakeLock(); }
+        }
+      }catch{}
+    });
+  }catch{}
+
 function showConfirmationModal(actionType, opts){
     currentPendingAction = actionType;
     pendingCloseAfterReset = !!(opts && opts.closeAfter);
@@ -758,7 +790,7 @@ function confirmAction(){
   }
 
   function transitionToLiveModeAfterForceReset(){
-    state.pendingClearScore = false;
+    state.pendingClearScore = false; try{ releaseWakeLock(); }catch{};
     state.isRecalcMode = false;
     state.isMatchFinished = false;
     state.isMatchRunning = false;
@@ -782,7 +814,7 @@ function confirmAction(){
   }
   function performMatchReset(){
     if (state.timerInterval){ clearInterval(state.timerInterval); state.timerInterval=null; }
-    state.isMatchRunning=false; resetMatch(true,true);
+    state.isMatchRunning=false; try{ releaseWakeLock(); }catch{}; resetMatch(true,true);
     setStartButtonLabel();
     startMatchBtn.classList.remove('bg-red-600','hover:bg-red-700','shadow-red-500/50');
     startMatchBtn.classList.add('bg-indigo-600','hover:bg-indigo-700','shadow-indigo-500/50');
@@ -884,6 +916,7 @@ function confirmAction(){
       }
       updateDisplay();
     }, 1000);
+    try{ requestWakeLock(); }catch{}
     updateDisplay();
   }
 
@@ -1133,7 +1166,7 @@ function confirmAction(){
     }
     const totalScore = state.gamesT1 + state.gamesT2;
     if (!fromTimer && totalScore===0){ tsShowToast(__tsT('tennis.warn.noScoreSave','PERINGATAN: Skor masih 0-0. Hasil kosong tidak disimpan.'), 'error'); return; }
-    state.isMatchFinished=true; state.isMatchRunning=false; state.gameWinPending=false;
+    state.isMatchFinished=true; state.isMatchRunning=false; state.gameWinPending=false; try{ releaseWakeLock(); }catch{};
     if (state.timerInterval){ clearInterval(state.timerInterval); state.timerInterval=null; setStartButtonLabel(); startMatchBtn.classList.remove('bg-red-600','hover:bg-red-700','shadow-red-500/50'); startMatchBtn.classList.add('bg-indigo-600','hover:bg-indigo-700','shadow-indigo-500/50'); if (!fromTimer) state.timerSeconds=0; }
     if (gameWonModal) gameWonModal.classList.add('hidden');
     let matchWinner; const scoreLabel = state.scoringMode==='RALLY' ? __tsT('tennis.totalPointsLabel','Total Poin') : __tsT('tennis.finalScoreLabel','Total Games');
@@ -1297,6 +1330,7 @@ function confirmAction(){
     if (!state.isMatchRunning && !state.isMatchFinished){ statusMessage.textContent = __tsT('tennis.status.chooseMode','Pilih mode skor dan tekan Mulai Pertandingan.'); statusMessage.className='text-center text-gray-500 mt-2 text-sm'; }
     try{ if (finishBtnEl && !state.isMatchRunning && !state.isRecalcMode) finishBtnEl.classList.add('hidden'); }catch{}
     updateDisplay();
+    try{ if (!state.isMatchRunning) releaseWakeLock(); }catch{}
   }
 
   function showOverlay(){ ensureOverlay(); document.getElementById('tsOverlay').classList.remove('hidden'); document.getElementById('tsOverlay').classList.add('flex'); }
