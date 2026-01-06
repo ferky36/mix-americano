@@ -6,7 +6,7 @@
   const byId = (id)=> document.getElementById(id);
   const qs = (s, r=document)=> r.querySelector(s);
   const qsa = (s, r=document)=> Array.from(r.querySelectorAll(s));
-  const escapeHtml = (s)=> String(s ?? '').replace(/[&<>"']/g, (c)=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
   const __c = (k, f)=> (window.__i18n_get ? __i18n_get(k, f) : f);
   const fmtDateID = (raw)=>{
     try{

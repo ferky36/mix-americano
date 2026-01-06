@@ -1,5 +1,9 @@
 ﻿"use strict";
 const __hT = (k, f)=> (window.__i18n_get ? __i18n_get(k, f) : f);
+// Global XSS sanitizer
+const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+window.escapeHtml = escapeHtml;
+
 // ================== Helpers ================== //
 // bisa disesuaikan urutannya
 const DEFAULT_PLAYERS_10 = [

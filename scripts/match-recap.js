@@ -898,9 +898,8 @@
     return '';
   }
 
-  function escapeHtml(s){
-    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
-  }
+
+
 
   function copyRecapText(){
     const title = (byId('appTitle')?.textContent||'Event').trim();
