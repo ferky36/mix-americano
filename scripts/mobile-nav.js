@@ -449,9 +449,8 @@
   }
   }
 
-  function escapeHtml(s){
-    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
-  }
+
+
 
   // Simple inline icons (tailwind-friendly, no extra CSS required)
   function calIcon(){

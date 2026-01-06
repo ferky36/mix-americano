@@ -25,15 +25,7 @@ async function askYN(msg){
     overlay.onclick = (e)=>{ if (e.target===overlay) cleanup(false); };
   });
 }
-function escapeHtml(s) {
-  return s.replace(
-    /[&<>'"]/g,
-    (c) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[
-        c
-      ])
-  );
-}
+
 function renderPlayersList() {
   const ul = byId("playersList");
   ul.innerHTML = "";

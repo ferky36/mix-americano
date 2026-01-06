@@ -541,8 +541,8 @@ const __tsT = (k,f)=> (window.__i18n_get ? __i18n_get(k,f) : f);
     };
     const teamANames = getTeamNames(1);
     const teamBNames = getTeamNames(2);
-    const safeTeamA = teamANames.length ? teamANames.join(' & ') : __tsT('tennis.teamA','Tim A');
-    const safeTeamB = teamBNames.length ? teamBNames.join(' & ') : __tsT('tennis.teamB','Tim B');
+    const safeTeamA = teamANames.length ? teamANames.map(escapeHtml).join(' & ') : __tsT('tennis.teamA','Tim A');
+    const safeTeamB = teamBNames.length ? teamBNames.map(escapeHtml).join(' & ') : __tsT('tennis.teamB','Tim B');
     const hasPlayers = teamANames.length || teamBNames.length;
     const html = hasPlayers
       ? `<div class="flex flex-col items-center text-gray-700 text-sm md:text-base gap-1">

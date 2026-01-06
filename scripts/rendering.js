@@ -312,7 +312,7 @@ function computeStandings(){
     const tr=document.createElement('tr');
     tr.className = s.rank===1?'rank-1': s.rank===2?'rank-2': s.rank===3?'rank-3':'';
     tr.innerHTML = `<td class="py-2 pr-4 font-semibold">${s.rank}</td>
-                    <td class="py-2 pr-4 font-medium">${s.player}</td>
+                    <td class="py-2 pr-4 font-medium">${escapeHtml(s.player)}</td>
                     <td class="py-2 pr-4">${s.total}</td>
                     <td class="py-2 pr-4">${s.diff}</td>
                     <td class="py-2 pr-4">${s.win}</td>
